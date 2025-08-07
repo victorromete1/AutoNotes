@@ -16,7 +16,7 @@ class FlashcardGenerator:
                 base_url="https://openrouter.ai/api/v1",
                 api_key=openrouter_key
             )
-            self.model = "deepseek/deepseek-r1:free"
+            self.model = "deepseek/deepseek-chat"
         elif openai_key:
             self.client = OpenAI(api_key=openai_key)
             self.model = "gpt-4o"

@@ -15,7 +15,7 @@ class NoteGenerator:
                 base_url="https://openrouter.ai/api/v1",
                 api_key=openrouter_key
             )
-            self.model = "deepseek/deepseek-r1:free"
+            self.model = "deepseek/deepseek-chat"
             self.provider = "OpenRouter (Free DeepSeek)"
         elif openai_key:
             # Fallback to OpenAI

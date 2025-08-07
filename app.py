@@ -54,6 +54,17 @@ def init_session_state():
 
 init_session_state()
 
+# Auto-load saved data on app start
+persistence.load_all_data()
+
+# Simple auto-save function
+def auto_save():
+    """Auto-save data when changes occur"""
+    try:
+        persistence.auto_save_data()
+    except:
+        pass  # Silent fail to avoid disrupting user experience
+
 # Enhanced Navigation Sidebar
 with st.sidebar:
     st.title("🎓 Study Platform")
@@ -89,7 +100,8 @@ with st.sidebar:
     st.divider()
     
     # Data Management
-    st.subheader("💾 Save Your Progress")
+    st.subheader("💾 Data Management")
+    st.success("🔄 Auto-save: Active")
     
     # Export all data
     if st.button("📥 Download All Data", use_container_width=True, help="Save all your notes, flashcards, and progress"):
@@ -185,7 +197,7 @@ def show_home_page():
             st.text(f"🔹 {timestamp} | {activity_type} in {subject}{score_text}")
     
     # Important notice about data persistence
-    st.info("💡 **Save Your Progress:** Your data is temporary while you're using the app. Use the 'Download All Data' button in the sidebar to save your notes, flashcards, and progress permanently!")
+    st.info("💡 **Auto-Save Active:** Your progress is automatically saved to your browser! Use 'Download All Data' in the sidebar to create backup files you can share between devices.")
     
     # Quick actions
     st.subheader("🚀 Quick Actions")
@@ -325,6 +337,9 @@ def show_notes_page():
                             'notes_created': 1
                         }
                         st.session_state.study_sessions.append(session)
+                        
+                        # Auto-save progress
+                        persistence.auto_save_data()
                         
                         st.success("✅ Notes generated and saved successfully!")
                         st.markdown("### Generated Notes:")

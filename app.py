@@ -1,6 +1,10 @@
 import streamlit as st
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
+import sys
+import os
+
+# Import our modules
 from note_generator import NoteGenerator
 from flashcard_generator import FlashcardGenerator
 from quiz_generator import QuizGenerator
@@ -8,217 +12,180 @@ from progress_tracker import ProgressTracker
 from pdf_report_generator import PDFReportGenerator
 from data_persistence import DataPersistence
 from advanced_quiz_system import AdvancedQuizSystem
-from utils import export_notes_as_text, sanitize_filename
-import base64
+from utils import sanitize_filename
 
-# Configure page
+# Page config
 st.set_page_config(
-    page_title="Advanced AI Study Platform",
-    page_icon="🎓",
+    page_title="AI Study Platform",
+    page_icon="📚",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
+# Initialize session state
+if 'notes' not in st.session_state:
+    st.session_state.notes = []
+if 'flashcards' not in st.session_state:
+    st.session_state.flashcards = []
+if 'study_sessions' not in st.session_state:
+    st.session_state.study_sessions = []
+if 'page' not in st.session_state:
+    st.session_state.page = "🏠 Home"
+
 # Initialize generators
 @st.cache_resource
-def get_generators():
+def initialize_generators():
     return {
         'notes': NoteGenerator(),
         'flashcards': FlashcardGenerator(),
         'quiz': QuizGenerator(),
         'progress': ProgressTracker(),
-        'pdf': PDFReportGenerator()
+        'reports': PDFReportGenerator()
     }
 
-generators = get_generators()
+generators = initialize_generators()
 persistence = DataPersistence()
-advanced_quiz = AdvancedQuizSystem(generators['quiz'])
 
-# Initialize comprehensive session state
-def init_session_state():
-    defaults = {
-        'notes': [],
-        'flashcards': [],
-        'quizzes': [],
-        'study_sessions': [],
-        'current_note': "",
-        'note_title': "",
-        'note_category': "General",
-        'current_flashcards': [],
-        'current_quiz': None,
-        'quiz_answers': {},
-        'page': 'Home'
-    }
-    
-    for key, default_value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = default_value
-
-init_session_state()
-
-# Auto-load saved data on app start
-persistence.load_all_data()
-
-# Simple auto-save function
 def auto_save():
-    """Auto-save data when changes occur"""
+    """Auto-save user data"""
     try:
         persistence.auto_save_data()
-    except:
-        pass  # Silent fail to avoid disrupting user experience
+    except Exception:
+        pass  # Silent auto-save
 
-# Enhanced Navigation Sidebar
-with st.sidebar:
-    st.title("🎓 Study Platform")
-    
-    # Show AI provider
-    try:
-        if hasattr(generators['notes'], 'provider'):
-            if "Free" in generators['notes'].provider:
-                st.success(f"🆓 {generators['notes'].provider}")
-            else:
-                st.info(f"🤖 {generators['notes'].provider}")
-    except:
-        st.info("🤖 AI Service Ready")
-    
-    st.divider()
-    
-    # Navigation
-    page = st.selectbox(
-        "📱 Navigate to:",
-        ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📄 Reports"],
-        index=["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📄 Reports"].index(st.session_state.page) if st.session_state.page in ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📄 Reports"] else 0
-    )
-    st.session_state.page = page
-    
-    st.divider()
-    
-    # Quick stats
-    st.subheader("📈 Quick Stats")
-    st.metric("Notes", len(st.session_state.notes))
-    st.metric("Flashcards", len(st.session_state.flashcards))
-    st.metric("Quizzes Taken", len(st.session_state.study_sessions))
-    
-    st.divider()
-    
-    # Data Management
-    st.subheader("💾 Data Management")
-    st.success("🔄 Auto-save: Active")
-    
-    # Export all data
-    if st.button("📥 Download All Data", use_container_width=True, help="Save all your notes, flashcards, and progress"):
-        exported_data = persistence.export_user_data()
+def show_sidebar():
+    with st.sidebar:
+        st.title("🎓 AI Study Platform")
+        st.markdown("---")
+        
+        # Navigation
+        pages = [
+            "🏠 Home",
+            "📝 Notes", 
+            "📚 Flashcards",
+            "🧠 Quizzes",
+            "📊 Progress",
+            "📄 Reports"
+        ]
+        
+        selected = st.radio("Navigate:", pages, key="navigation")
+        if selected != st.session_state.page:
+            st.session_state.page = selected
+            st.rerun()
+        
+        st.markdown("---")
+        
+        # Quick stats
+        st.subheader("📈 Quick Stats")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Notes", len(st.session_state.notes))
+            st.metric("Flashcards", len(st.session_state.flashcards))
+        with col2:
+            sessions = len(st.session_state.study_sessions)
+            st.metric("Sessions", sessions)
+            if sessions > 0:
+                avg_score = sum(s.get('score', 0) for s in st.session_state.study_sessions if 'score' in s) / max(1, len([s for s in st.session_state.study_sessions if 'score' in s]))
+                st.metric("Avg Score", f"{avg_score:.1f}%")
+        
+        st.markdown("---")
+        
+        # Data management
+        st.subheader("💾 Data Management")
+        
+        # Export data
+        all_data = {
+            'notes': st.session_state.notes,
+            'flashcards': st.session_state.flashcards,
+            'study_sessions': st.session_state.study_sessions,
+            'exported_at': datetime.now().isoformat()
+        }
+        
         st.download_button(
-            label="📁 Download Study Data",
-            data=exported_data,
-            file_name=f"study_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-            mime="application/json",
-            use_container_width=True
+            "📥 Export All Data",
+            data=json.dumps(all_data, indent=2),
+            file_name=f"study_data_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+            mime="application/json"
         )
-    
-    # Import data
-    uploaded_data = st.file_uploader(
-        "📤 Upload Study Data",
-        type=['json'],
-        help="Restore your saved progress",
-        key="data_upload"
-    )
-    
-    if uploaded_data:
-        try:
-            file_content = uploaded_data.read().decode('utf-8')
-            if persistence.import_user_data(file_content):
-                st.success("✅ Data imported successfully!")
+        
+        # Import data
+        uploaded_file = st.file_uploader("📤 Import Data", type=['json'])
+        if uploaded_file:
+            try:
+                data = json.load(uploaded_file)
+                if 'notes' in data:
+                    st.session_state.notes = data['notes']
+                if 'flashcards' in data:
+                    st.session_state.flashcards = data['flashcards']
+                if 'study_sessions' in data:
+                    st.session_state.study_sessions = data['study_sessions']
+                auto_save()
+                st.success("✅ Data imported!")
                 st.rerun()
-            else:
-                st.error("❌ Failed to import data")
-        except Exception as e:
-            st.error(f"Error importing data: {str(e)}")
-    
-    # Clear all data option
-    with st.expander("⚠️ Reset All Data"):
-        st.warning("This will delete all your notes, flashcards, and progress!")
-        if st.button("🗑️ Clear Everything", type="secondary"):
-            if st.button("⚠️ Confirm Delete All", type="primary"):
-                persistence.clear_all_data()
-                st.success("All data cleared!")
-                st.rerun()
+            except Exception as e:
+                st.error(f"Import failed: {str(e)}")
 
-# Page functions
 def show_home_page():
-    st.title("🎓 Advanced AI Study Platform")
-    st.markdown("### Your complete study companion with AI-powered learning tools")
+    st.title("🎓 Welcome to Your AI Study Platform")
     
-    # Feature overview
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns([2, 1])
     
     with col1:
         st.markdown("""
-        #### 📝 Smart Notes
-        - AI-generated study notes
-        - Multiple note types
-        - Upload & summarize content
-        - Category organization
+        ### 🚀 **Supercharge Your Learning with AI**
+        
+        Transform your study experience with our comprehensive AI-powered tools:
+        
+        📝 **Smart Notes** - Generate organized notes from any topic or uploaded content  
+        📚 **AI Flashcards** - Create interactive flashcards automatically  
+        🧠 **Intelligent Quizzes** - Take personalized quizzes with detailed feedback  
+        📊 **Progress Tracking** - Monitor your learning journey with detailed analytics  
+        📄 **Study Reports** - Get comprehensive progress reports
+        
+        ### 🌟 **Why Choose Our Platform?**
+        - **100% Free** - Uses DeepSeek AI for unlimited access
+        - **No Installation** - Works directly in your browser
+        - **Auto-Save** - Your progress is saved automatically
+        - **File Upload** - Support for text files and documents
         """)
     
     with col2:
-        st.markdown("""
-        #### 📚 Flashcards
-        - Auto-generate from notes
-        - Import/export flashcard files
-        - Spaced repetition
-        - Progress tracking
-        """)
-    
-    with col3:
-        st.markdown("""
-        #### 🧠 Quizzes
-        - Multiple choice, T/F, short answer
-        - AI-powered grading
-        - Detailed feedback
-        - Performance analytics
-        """)
-    
-    st.divider()
-    
-    # Recent activity
-    if st.session_state.study_sessions:
-        st.subheader("🕐 Recent Activity")
-        recent_sessions = sorted(st.session_state.study_sessions, 
-                               key=lambda x: x.get('timestamp', ''), reverse=True)[:5]
+        st.markdown("### 🏃‍♂️ **Quick Start**")
         
-        for session in recent_sessions:
-            activity_type = session.get('activity_type', 'study').title()
-            subject = session.get('subject', 'General')
-            timestamp = datetime.fromisoformat(session.get('timestamp', '')).strftime("%m/%d %H:%M")
-            
-            score_text = ""
-            if session.get('score') is not None:
-                score_text = f" - Score: {session.get('score', 0)}%"
-            
-            st.text(f"🔹 {timestamp} | {activity_type} in {subject}{score_text}")
-    
-    # Important notice about data persistence
-    st.info("💡 **Auto-Save Active:** Your progress is automatically saved to your browser! Use 'Download All Data' in the sidebar to create backup files you can share between devices.")
-    
-    # Quick actions
-    st.subheader("🚀 Quick Actions")
-    quick_col1, quick_col2, quick_col3 = st.columns(3)
-    
-    with quick_col1:
         if st.button("📝 Create Notes", use_container_width=True):
             st.session_state.page = "📝 Notes"
             st.rerun()
-    
-    with quick_col2:
-        if st.button("📚 Study Flashcards", use_container_width=True):
+        
+        if st.button("📚 Make Flashcards", use_container_width=True):
             st.session_state.page = "📚 Flashcards"
             st.rerun()
-    
-    with quick_col3:
+        
         if st.button("🧠 Take Quiz", use_container_width=True):
             st.session_state.page = "🧠 Quizzes"
             st.rerun()
+        
+        st.markdown("---")
+        
+        if st.session_state.notes or st.session_state.flashcards or st.session_state.study_sessions:
+            st.markdown("### 📈 **Recent Activity**")
+            
+            # Show recent items
+            all_items = []
+            
+            for note in st.session_state.notes[-3:]:
+                all_items.append(f"📝 {note.get('title', 'Untitled Note')}")
+            
+            for session in st.session_state.study_sessions[-3:]:
+                activity = session.get('activity_type', 'study')
+                if activity == 'quiz':
+                    score = session.get('score', 0)
+                    all_items.append(f"🧠 Quiz: {score:.1f}%")
+                elif activity == 'flashcards':
+                    cards = session.get('flashcards_studied', 0)
+                    all_items.append(f"📚 Studied {cards} cards")
+            
+            for item in all_items[-5:]:
+                st.write(f"• {item}")
 
 def show_notes_page():
     st.title("📝 AI Note Generation")
@@ -305,22 +272,23 @@ def show_notes_page():
         
         category = st.selectbox("Category:", all_categories)
     
-    # Generate button
-    col1, col2 = st.columns([1, 1])
+    # Action buttons
+    col1, col2 = st.columns(2)
+    
     with col1:
-        if st.button("🚀 Generate Notes", type="primary", use_container_width=True):
+        if st.button("📝 Generate Notes", type="primary", use_container_width=True):
             if user_input.strip():
-                with st.spinner("Generating notes... This may take a moment."):
+                with st.spinner("Creating notes with AI..."):
                     try:
                         generated_notes = generators['notes'].generate_notes(
                             user_input, 
                             note_type=note_type,
-                            detail_level=locals().get('detail_level', 'Intermediate')
+                            detail_level=detail_level if input_method == "📖 Topic/Subject" else "Intermediate"
                         )
                         
-                        # Auto-generate title if not provided
-                        if not note_title.strip():
-                            note_title = f"{note_type}: {user_input[:50]}..." if len(user_input) > 50 else f"{note_type}: {user_input}"
+                        # Generate title if not provided
+                        if not note_title:
+                            note_title = generators['notes'].generate_title(user_input)
                         
                         # Save note
                         new_note = {
@@ -336,13 +304,12 @@ def show_notes_page():
                             'timestamp': datetime.now().isoformat(),
                             'activity_type': 'study',
                             'subject': category,
-                            'duration_minutes': 5,  # Estimated time for note generation
+                            'duration_minutes': 5,
                             'notes_created': 1
                         }
                         st.session_state.study_sessions.append(session)
                         
-                        # Auto-save progress
-                        persistence.auto_save_data()
+                        auto_save()
                         
                         st.success("✅ Notes generated and saved successfully!")
                         st.markdown("### Generated Notes:")
@@ -363,14 +330,13 @@ def show_notes_page():
                         )
                         
                         if flashcards:
-                            # Add to flashcards collection
                             for card in flashcards:
                                 card['category'] = category
                             
                             st.session_state.flashcards.extend(flashcards)
+                            auto_save()
                             st.success(f"✅ Generated {len(flashcards)} flashcards!")
                             
-                            # Show preview
                             st.markdown("### Flashcard Preview:")
                             for i, card in enumerate(flashcards[:3], 1):
                                 with st.expander(f"Card {i}: {card['front'][:50]}..."):
@@ -414,6 +380,7 @@ def show_notes_page():
                 with col1:
                     if st.button("🗑️ Delete", key=f"del_note_{i}"):
                         st.session_state.notes.remove(note)
+                        auto_save()
                         st.rerun()
                 
                 with col2:
@@ -437,751 +404,436 @@ def show_notes_page():
                                     card['category'] = note.get('category', 'General')
                                 
                                 st.session_state.flashcards.extend(flashcards)
+                                auto_save()
                                 st.success(f"✅ Created {len(flashcards)} flashcards from this note!")
                             except Exception as e:
                                 st.error(f"Error: {str(e)}")
 
 def show_flashcards_page():
-    st.title("📚 Flashcards")
+    st.title("📚 AI Flashcards")
     
-    # Tabs for different flashcard functions
-    tab1, tab2, tab3 = st.tabs(["📖 Study", "➕ Create", "📂 Manage"])
+    if not hasattr(st.session_state, 'flashcards'):
+        st.session_state.flashcards = []
+    
+    tab1, tab2, tab3 = st.tabs(["📖 Study Session", "➕ Create Flashcards", "📚 My Collection"])
     
     with tab1:
-        st.subheader("📖 Study Session")
+        st.subheader("📖 Study Flashcards")
         
         if not st.session_state.flashcards:
-            st.info("No flashcards available. Create some first!")
+            st.info("📝 No flashcards available yet! Create some flashcards first using the Create tab.")
             return
         
-        # Filter flashcards for study
-        categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))
-        selected_category = st.selectbox("Study category:", ["All"] + categories)
+        # Study options
+        col1, col2 = st.columns(2)
+        with col1:
+            categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))
+            selected_category = st.selectbox("Select category:", ["All"] + categories)
         
+        with col2:
+            difficulty_filter = st.selectbox("Filter by difficulty:", ["All", "Easy", "Medium", "Hard"])
+        
+        # Filter flashcards
         study_cards = st.session_state.flashcards
         if selected_category != "All":
             study_cards = [card for card in study_cards if card.get('category', 'General') == selected_category]
+        if difficulty_filter != "All":
+            study_cards = [card for card in study_cards if card.get('difficulty', 'Medium') == difficulty_filter]
         
-        if study_cards:
-            if 'current_card_index' not in st.session_state:
+        if not study_cards:
+            st.warning("No flashcards match your filters.")
+            return
+        
+        st.info(f"🎯 {len(study_cards)} flashcards available for study")
+        
+        # Study session
+        if 'study_session_active' not in st.session_state:
+            if st.button("🚀 Start Study Session", type="primary"):
+                st.session_state.study_session_active = True
                 st.session_state.current_card_index = 0
                 st.session_state.show_answer = False
                 st.session_state.cards_studied = 0
                 st.session_state.cards_correct = 0
-            
+                st.rerun()
+        else:
+            # Study session in progress
             current_card = study_cards[st.session_state.current_card_index]
             
-            # Progress bar
+            # Progress
             progress = (st.session_state.current_card_index + 1) / len(study_cards)
             st.progress(progress, text=f"Card {st.session_state.current_card_index + 1} of {len(study_cards)}")
             
             # Card display
-            st.markdown("### 🎴 Flashcard")
+            st.markdown("---")
+            st.markdown("### 🎴 Question")
+            st.markdown(f"**{current_card['front']}**")
             
-            # Front of card
-            with st.container():
-                st.markdown(f"""
-                <div style="
-                    border: 2px solid #ddd; 
-                    border-radius: 10px; 
-                    padding: 20px; 
-                    margin: 10px 0; 
-                    background-color: #f9f9f9;
-                    min-height: 150px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    text-align: center;
-                ">
-                    <h4>{current_card['front']}</h4>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Answer section
             if st.session_state.show_answer:
                 st.markdown("### 💡 Answer")
-                with st.container():
-                    st.markdown(f"""
-                    <div style="
-                        border: 2px solid #4CAF50; 
-                        border-radius: 10px; 
-                        padding: 20px; 
-                        margin: 10px 0; 
-                        background-color: #e8f5e8;
-                        min-height: 100px;
-                    ">
-                        {current_card['back']}
-                    </div>
-                    """, unsafe_allow_html=True)
+                st.markdown(f"**{current_card['back']}**")
                 
                 # Self-assessment buttons
-                st.markdown("### How well did you know this?")
-                col1, col2, col3 = st.columns(3)
-                
+                col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    if st.button("❌ Incorrect", use_container_width=True):
-                        next_card(study_cards, correct=False)
-                
+                    if st.button("❌ Incorrect"):
+                        move_to_next_card(study_cards, False)
                 with col2:
-                    if st.button("🤔 Partial", use_container_width=True):
-                        next_card(study_cards, correct=True)
-                
+                    if st.button("✅ Correct"):
+                        move_to_next_card(study_cards, True)
                 with col3:
-                    if st.button("✅ Correct", use_container_width=True):
-                        st.session_state.cards_correct += 1
-                        next_card(study_cards, correct=True)
-            
+                    if st.button("⏭️ Skip"):
+                        move_to_next_card(study_cards, False)
+                with col4:
+                    if st.button("🛑 End Session"):
+                        end_flashcard_session()
             else:
-                if st.button("🔍 Show Answer", use_container_width=True):
+                if st.button("👀 Show Answer", type="primary"):
                     st.session_state.show_answer = True
                     st.rerun()
-            
-            # Study session stats
-            if st.session_state.cards_studied > 0:
-                accuracy = (st.session_state.cards_correct / st.session_state.cards_studied) * 100
-                st.metric("Session Accuracy", f"{accuracy:.1f}%")
-
-def next_card(study_cards, correct=False):
-    """Move to next card and track progress"""
-    st.session_state.cards_studied += 1
-    st.session_state.current_card_index += 1
-    st.session_state.show_answer = False
     
-    if st.session_state.current_card_index >= len(study_cards):
-        # Session complete
-        session = {
-            'timestamp': datetime.now().isoformat(),
-            'activity_type': 'flashcards',
-            'subject': 'Mixed' if len(set([card.get('category', 'General') for card in study_cards])) > 1 else study_cards[0].get('category', 'General'),
-            'duration_minutes': 10,  # Estimated
-            'flashcards_studied': st.session_state.cards_studied,
-            'correct_answers': st.session_state.cards_correct,
-            'questions_answered': st.session_state.cards_studied
-        }
-        st.session_state.study_sessions.append(session)
-        
-        st.success(f"🎉 Session complete! You studied {st.session_state.cards_studied} cards with {(st.session_state.cards_correct/st.session_state.cards_studied)*100:.1f}% accuracy!")
-        
-        # Reset for next session
-        del st.session_state.current_card_index
-        del st.session_state.show_answer
-        del st.session_state.cards_studied
-        del st.session_state.cards_correct
-    
-    st.rerun()
-
     with tab2:
-        st.subheader("➕ Create Flashcards")
+        st.subheader("➕ Create New Flashcards")
         
-        # Method selection
+        # Creation methods
         creation_method = st.radio(
-            "How do you want to create flashcards?",
-            ["📝 From Text/Notes", "📂 Upload .flashcard File", "✋ Manual Entry"],
+            "Choose creation method:",
+            ["📝 AI Generate from Text", "✋ Manual Entry"],
             horizontal=True
         )
         
-        if creation_method == "📝 From Text/Notes":
+        if creation_method == "📝 AI Generate from Text":
             content = st.text_area(
-                "Paste content to generate flashcards from:",
-                placeholder="Paste your notes, textbook content, or any study material...",
+                "Enter content to generate flashcards from:",
+                placeholder="Paste your study material, notes, or any text content...",
                 height=150
             )
             
             col1, col2, col3 = st.columns(3)
             with col1:
-                num_cards = st.slider("Number of cards:", 3, 20, 8)
+                num_cards = st.slider("Number of cards:", 3, 15, 6)
             with col2:
-                difficulty = st.selectbox("Difficulty:", ["Easy", "Medium", "Hard"])
+                difficulty = st.selectbox("Difficulty level:", ["Easy", "Medium", "Hard"])
             with col3:
                 category = st.text_input("Category:", value="General")
             
             if st.button("🚀 Generate Flashcards", type="primary"):
                 if content.strip():
-                    with st.spinner("Creating flashcards..."):
+                    with st.spinner("Creating flashcards with AI..."):
                         try:
-                            flashcards = generators['flashcards'].generate_flashcards(
+                            new_flashcards = generators['flashcards'].generate_flashcards(
                                 content, num_cards=num_cards, difficulty=difficulty
                             )
                             
-                            for card in flashcards:
+                            # Add metadata
+                            for card in new_flashcards:
                                 card['category'] = category
+                                card['created'] = datetime.now().isoformat()
+                                card['id'] = f"ai_{datetime.now().timestamp()}"
                             
-                            st.session_state.flashcards.extend(flashcards)
-                            st.success(f"✅ Generated {len(flashcards)} flashcards!")
+                            st.session_state.flashcards.extend(new_flashcards)
+                            auto_save()
                             
-                            # Preview
-                            for i, card in enumerate(flashcards[:3], 1):
-                                with st.expander(f"Preview Card {i}"):
-                                    st.write(f"**Front:** {card['front']}")
-                                    st.write(f"**Back:** {card['back']}")
+                            st.success(f"✅ Created {len(new_flashcards)} flashcards!")
+                            
+                            # Preview created cards
+                            with st.expander("📖 Preview Created Cards"):
+                                for i, card in enumerate(new_flashcards):
+                                    st.write(f"**Card {i+1}:**")
+                                    st.write(f"Front: {card['front']}")
+                                    st.write(f"Back: {card['back']}")
+                                    st.write("---")
                         
                         except Exception as e:
-                            st.error(f"Error: {str(e)}")
+                            st.error(f"Error creating flashcards: {str(e)}")
                 else:
-                    st.warning("Please enter content to generate flashcards from.")
-        
-        elif creation_method == "📂 Upload .flashcard File":
-            uploaded_file = st.file_uploader(
-                "Upload a .flashcard file:",
-                type=['flashcard', 'json'],
-                help="Upload previously exported flashcard files"
-            )
-            
-            if uploaded_file:
-                try:
-                    file_content = uploaded_file.read().decode('utf-8')
-                    loaded_flashcards = generators['flashcards'].load_flashcards_file(file_content)
-                    
-                    if loaded_flashcards:
-                        st.session_state.flashcards.extend(loaded_flashcards)
-                        st.success(f"✅ Loaded {len(loaded_flashcards)} flashcards!")
-                        
-                        # Preview
-                        for i, card in enumerate(loaded_flashcards[:3], 1):
-                            with st.expander(f"Loaded Card {i}"):
-                                st.write(f"**Front:** {card['front']}")
-                                st.write(f"**Back:** {card['back']}")
-                    else:
-                        st.error("No valid flashcards found in file.")
-                
-                except Exception as e:
-                    st.error(f"Error loading file: {str(e)}")
+                    st.warning("Please enter some content to generate flashcards from.")
         
         else:  # Manual Entry
-            st.markdown("#### Add Individual Flashcard")
+            st.markdown("#### Create Individual Flashcard")
             
-            with st.form("manual_flashcard"):
-                front = st.text_area("Front (Question/Term):", height=100)
-                back = st.text_area("Back (Answer/Definition):", height=100)
-                category = st.text_input("Category:", value="General")
-                difficulty = st.selectbox("Difficulty:", ["Easy", "Medium", "Hard"])
+            with st.form("add_flashcard"):
+                front_text = st.text_area("Front (Question/Term):", height=100)
+                back_text = st.text_area("Back (Answer/Definition):", height=100)
                 
-                if st.form_submit_button("➕ Add Flashcard"):
-                    if front.strip() and back.strip():
-                        new_card = {
-                            'front': front,
-                            'back': back,
-                            'category': category,
-                            'difficulty': difficulty,
-                            'created': datetime.now().isoformat(),
-                            'id': f"manual_{datetime.now().timestamp()}"
-                        }
-                        st.session_state.flashcards.append(new_card)
-                        auto_save()
-                        st.success("✅ Flashcard added successfully!")
-                    else:
-                        st.warning("Please fill in both front and back of the flashcard.")
+                col1, col2 = st.columns(2)
+                with col1:
+                    card_category = st.text_input("Category:", value="General")
+                with col2:
+                    card_difficulty = st.selectbox("Difficulty:", ["Easy", "Medium", "Hard"])
+                
+                submitted = st.form_submit_button("➕ Add Flashcard", type="primary")
+                
+                if submitted and front_text.strip() and back_text.strip():
+                    new_card = {
+                        'front': front_text.strip(),
+                        'back': back_text.strip(),
+                        'category': card_category,
+                        'difficulty': card_difficulty,
+                        'created': datetime.now().isoformat(),
+                        'id': f"manual_{datetime.now().timestamp()}"
+                    }
+                    st.session_state.flashcards.append(new_card)
+                    auto_save()
+                    st.success("✅ Flashcard added successfully!")
+                elif submitted:
+                    st.warning("Please fill in both front and back of the flashcard.")
     
     with tab3:
-        st.subheader("📂 Manage Flashcards")
+        st.subheader("📚 Flashcard Collection")
         
         if not st.session_state.flashcards:
-            st.info("No flashcards to manage. Create some first!")
+            st.info("No flashcards yet. Create some first!")
             return
         
-        # Export all flashcards
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📥 Export All Flashcards"):
-                flashcard_data = generators['flashcards'].save_flashcards_file(
-                    st.session_state.flashcards, 
-                    f"flashcards_{datetime.now().strftime('%Y%m%d')}"
-                )
-                
-                st.download_button(
-                    label="Download .flashcard file",
-                    data=flashcard_data,
-                    file_name=f"flashcards_{datetime.now().strftime('%Y%m%d_%H%M%S')}.flashcard",
-                    mime="application/json"
-                )
-        
-        with col2:
-            if st.button("🗑️ Clear All Flashcards", type="secondary"):
-                if st.button("⚠️ Confirm Delete All", type="primary"):
-                    st.session_state.flashcards = []
-                    st.success("All flashcards deleted.")
-                    st.rerun()
-        
-        # Category management
-        st.divider()
+        # Collection stats
+        total_cards = len(st.session_state.flashcards)
         categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))
-        selected_category = st.selectbox("View/Edit category:", ["All"] + categories)
         
-        filtered_cards = st.session_state.flashcards
-        if selected_category != "All":
-            filtered_cards = [card for card in filtered_cards if card.get('category', 'General') == selected_category]
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Cards", total_cards)
+        with col2:
+            st.metric("Categories", len(categories))
+        with col3:
+            # Export functionality
+            flashcard_data = json.dumps(st.session_state.flashcards, indent=2)
+            st.download_button(
+                "📥 Export All",
+                data=flashcard_data,
+                file_name=f"flashcards_{datetime.now().strftime('%Y%m%d')}.json",
+                mime="application/json"
+            )
         
-        st.write(f"**Showing {len(filtered_cards)} flashcards**")
+        # Filter and display cards
+        filter_col1, filter_col2 = st.columns(2)
+        with filter_col1:
+            filter_category = st.selectbox("Filter by category:", ["All"] + categories, key="collection_filter")
         
-        # Display flashcards
-        for i, card in enumerate(filtered_cards):
-            with st.expander(f"🎴 {card['front'][:50]}..." if len(card['front']) > 50 else f"🎴 {card['front']}"):
-                col1, col2 = st.columns([3, 1])
+        with filter_col2:
+            search_term = st.text_input("🔍 Search cards:", key="collection_search")
+        
+        # Apply filters
+        display_cards = st.session_state.flashcards
+        if filter_category != "All":
+            display_cards = [card for card in display_cards if card.get('category', 'General') == filter_category]
+        if search_term:
+            display_cards = [card for card in display_cards if 
+                           search_term.lower() in card['front'].lower() or 
+                           search_term.lower() in card['back'].lower()]
+        
+        # Display cards
+        for i, card in enumerate(display_cards):
+            with st.expander(f"🎴 {card['front'][:50]}... ({card.get('category', 'General')})"):
+                st.write(f"**Front:** {card['front']}")
+                st.write(f"**Back:** {card['back']}")
+                st.write(f"**Category:** {card.get('category', 'General')}")
+                st.write(f"**Difficulty:** {card.get('difficulty', 'Medium')}")
                 
-                with col1:
-                    st.write(f"**Category:** {card.get('category', 'General')}")
-                    st.write(f"**Front:** {card['front']}")
-                    st.write(f"**Back:** {card['back']}")
-                    st.write(f"**Difficulty:** {card.get('difficulty', 'Medium')}")
-                
-                with col2:
-                    if st.button("🗑️ Delete", key=f"del_card_{i}"):
-                        st.session_state.flashcards.remove(card)
-                        st.rerun()
+                if st.button("🗑️ Delete", key=f"delete_card_{i}"):
+                    st.session_state.flashcards.remove(card)
+                    auto_save()
+                    st.rerun()
+
+def move_to_next_card(study_cards, was_correct):
+    """Helper function to move to next card"""
+    if was_correct:
+        st.session_state.cards_correct += 1
+    
+    st.session_state.cards_studied += 1
+    st.session_state.current_card_index += 1
+    st.session_state.show_answer = False
+    
+    if st.session_state.current_card_index >= len(study_cards):
+        end_flashcard_session()
+    else:
+        st.rerun()
+
+def end_flashcard_session():
+    """End the flashcard study session"""
+    accuracy = (st.session_state.cards_correct / st.session_state.cards_studied) * 100 if st.session_state.cards_studied > 0 else 0
+    
+    # Save session data
+    session = {
+        'timestamp': datetime.now().isoformat(),
+        'activity_type': 'flashcards',
+        'subject': 'Mixed',
+        'duration_minutes': 15,
+        'flashcards_studied': st.session_state.cards_studied,
+        'correct_answers': st.session_state.cards_correct,
+        'questions_answered': st.session_state.cards_studied,
+        'score': accuracy
+    }
+    
+    if not hasattr(st.session_state, 'study_sessions'):
+        st.session_state.study_sessions = []
+    
+    st.session_state.study_sessions.append(session)
+    
+    st.success(f"🎉 Study session complete! You studied {st.session_state.cards_studied} cards with {accuracy:.1f}% accuracy!")
+    
+    # Clean up session state
+    for key in ['study_session_active', 'current_card_index', 'show_answer', 'cards_studied', 'cards_correct']:
+        if key in st.session_state:
+            del st.session_state[key]
+    
+    auto_save()
+    st.rerun()
 
 def show_quizzes_page():
-    st.title("🧠 Advanced Quiz System")
+    st.title("🧠 AI Quizzes")
     
-    tab1, tab2 = st.tabs(["📝 Take Quiz", "📊 Quiz History"])
+    # Initialize the advanced quiz system
+    if 'quiz_system' not in st.session_state:
+        st.session_state.quiz_system = AdvancedQuizSystem()
     
-    with tab1:
-        st.subheader("📝 Create & Take Quiz")
-        
-        # Check if quiz is in progress
-        if st.session_state.get('quiz_started', False) and not st.session_state.get('quiz_completed', False):
-            # Display ongoing quiz
-            if 'active_quiz_data' in st.session_state:
-                advanced_quiz.display_quiz_interface(st.session_state.active_quiz_data)
-            else:
-                st.error("Quiz data lost. Please start a new quiz.")
-                if st.button("🔄 Reset Quiz"):
-                    advanced_quiz._reset_quiz_state()
-                    st.rerun()
-        else:
-            # Quiz creation interface
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                quiz_source = st.radio(
-                    "Create quiz from:",
-                    ["📚 Existing Notes", "📝 New Content", "📤 Upload File"],
-                    horizontal=False
-                )
-            
-            with col2:
-                num_questions = st.slider("Number of questions:", 3, 15, 8)
-                difficulty = st.selectbox("Difficulty:", ["Easy", "Medium", "Hard"])
-            
-            content = ""
-            
-            # Handle different content sources
-            if quiz_source == "📚 Existing Notes":
-                if st.session_state.notes:
-                    note_titles = [f"{note['title']} ({note.get('category', 'General')})" for note in st.session_state.notes]
-                    selected_note_title = st.selectbox("Select note:", note_titles)
-                    
-                    if selected_note_title:
-                        # Extract the actual title (remove category)
-                        actual_title = selected_note_title.split(' (')[0]
-                        selected_note_obj = next((note for note in st.session_state.notes if note['title'] == actual_title), None)
-                        if selected_note_obj:
-                            content = selected_note_obj['content']
-                            st.text_area("Content preview:", value=content[:300] + "..." if len(content) > 300 else content, height=100, disabled=True)
-                else:
-                    st.info("No notes available. Create some notes first!")
-                    return
-            
-            elif quiz_source == "📝 New Content":
-                content = st.text_area(
-                    "Enter content for quiz:",
-                    placeholder="Paste study material, notes, or any content to create a quiz from...",
-                    height=200
-                )
-            
-            elif quiz_source == "📤 Upload File":
-                content = advanced_quiz.upload_content_for_quiz()
-            
-            # Create quiz button
-            if st.button("🚀 Create & Start Quiz", type="primary", use_container_width=True):
-                if content and content.strip():
-                    with st.spinner("Creating your personalized quiz... This may take a moment."):
-                        try:
-                            quiz_data = advanced_quiz.create_quiz_from_content(
-                                content=content,
-                                num_questions=num_questions,
-                                difficulty=difficulty
-                            )
-                            
-                            if quiz_data and quiz_data.get('questions'):
-                                st.session_state.active_quiz_data = quiz_data
-                                st.session_state.quiz_started = True
-                                st.session_state.quiz_completed = False
-                                st.session_state.current_question = 0
-                                st.session_state.quiz_answers = {}
-                                st.success("✅ Quiz created successfully! Starting now...")
-                                st.rerun()
-                            else:
-                                st.error("Failed to create quiz. Please check your content and try again.")
-                        
-                        except Exception as e:
-                            st.error(f"Error creating quiz: {str(e)}")
-                            st.info("Please try with different content or contact support if the issue persists.")
-                else:
-                    st.warning("Please provide content for the quiz.")
-    
-    with tab2:
-        st.subheader("📊 Quiz History & Progress")
-        
-        # Get quiz sessions
-        quiz_sessions = [s for s in st.session_state.get('study_sessions', []) if s.get('activity_type') == 'quiz']
-        
-        if quiz_sessions:
-            # Overall stats
-            col1, col2, col3, col4 = st.columns(4)
-            
-            total_quizzes = len(quiz_sessions)
-            avg_score = sum(s.get('score', 0) for s in quiz_sessions) / total_quizzes
-            highest_score = max(s.get('score', 0) for s in quiz_sessions)
-            recent_trend = "📈" if len(quiz_sessions) >= 2 and quiz_sessions[-1].get('score', 0) > quiz_sessions[-2].get('score', 0) else "📊"
-            
-            with col1:
-                st.metric("Total Quizzes", total_quizzes)
-            with col2:
-                st.metric("Average Score", f"{avg_score:.1f}%")
-            with col3:
-                st.metric("Best Score", f"{highest_score:.1f}%")
-            with col4:
-                st.metric("Trend", recent_trend)
-            
-            # Recent quiz history
-            st.subheader("Recent Quiz Results")
-            
-            for i, session in enumerate(reversed(quiz_sessions[-10:])):  # Show last 10
-                timestamp = datetime.fromisoformat(session['timestamp']).strftime("%Y-%m-%d %H:%M")
-                score = session.get('score', 0)
-                correct = session.get('correct_answers', 0)
-                total = session.get('questions_answered', session.get('total_questions', 0))
-                
-                # Color code based on performance
-                if score >= 90:
-                    score_color = "🟢"
-                elif score >= 80:
-                    score_color = "🟡" 
-                elif score >= 70:
-                    score_color = "🟠"
-                else:
-                    score_color = "🔴"
-                
-                with st.expander(f"{score_color} {timestamp} - {score:.1f}% ({correct}/{total})"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.write(f"**Score:** {score:.1f}%")
-                        st.write(f"**Questions:** {correct}/{total}")
-                    with col2:
-                        st.write(f"**Difficulty:** {session.get('difficulty', 'N/A')}")
-                        st.write(f"**Type:** {session.get('quiz_type', 'N/A')}")
-        else:
-            st.info("No quiz history yet. Take your first quiz to see your progress here!")
-
-# Quiz functions now handled by AdvancedQuizSystem
+    # Use the advanced quiz system
+    st.session_state.quiz_system.show_quiz_interface()
 
 def show_progress_page():
     st.title("📊 Progress Analytics")
     
+    tracker = generators['progress']
+    
     if not st.session_state.study_sessions:
-        st.info("No study data yet. Start studying to see your progress!")
+        st.info("📈 No study data yet. Start studying to see your progress here!")
         return
     
-    # Calculate progress statistics
-    progress_stats = {}
+    # Progress overview
+    progress_data = tracker.calculate_progress(st.session_state.study_sessions)
     
-    # Overall stats
-    overall_stats = generators['progress'].calculate_subject_stats(st.session_state.study_sessions)
-    progress_stats['overall'] = overall_stats
-    
-    # Subject-specific stats
-    subjects = list(set(s.get('subject', 'General') for s in st.session_state.study_sessions))
-    subject_stats = {}
-    for subject in subjects:
-        subject_stats[subject] = generators['progress'].calculate_subject_stats(
-            st.session_state.study_sessions, subject
-        )
-    progress_stats['subjects'] = subject_stats
-    
-    # Display overview metrics
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric(
-            "Total Sessions", 
-            overall_stats['total_sessions'],
-            help="Total number of study sessions completed"
-        )
-    
+        st.metric("Total Sessions", progress_data['total_sessions'])
     with col2:
-        hours = overall_stats['total_study_time'] / 60
-        st.metric(
-            "Study Time", 
-            f"{hours:.1f}h",
-            help="Total time spent studying"
-        )
-    
+        st.metric("Study Time", f"{progress_data['total_hours']:.1f}h")
     with col3:
-        st.metric(
-            "Average Score", 
-            f"{overall_stats['average_score']}%",
-            help="Average quiz score across all subjects"
-        )
-    
+        st.metric("Average Score", f"{progress_data['avg_score']:.1f}%")
     with col4:
-        trend = overall_stats['improvement_trend']
-        trend_emoji = "📈" if trend == "Improving" else "📉" if trend == "Declining" else "➡️"
-        st.metric(
-            "Trend", 
-            f"{trend_emoji} {trend}",
-            help="Performance trend based on recent quiz scores"
-        )
+        st.metric("This Week", f"{progress_data['sessions_this_week']} sessions")
     
-    # Charts
-    st.divider()
+    # Progress charts
+    st.subheader("📈 Performance Trends")
     
-    # Create charts
-    chart_tabs = st.tabs(["📈 Score Trends", "📊 Subject Breakdown", "📅 Activity Pattern"])
-    
-    with chart_tabs[0]:
-        st.subheader("📈 Quiz Score Trends")
-        chart_data = generators['progress'].create_progress_chart(
-            st.session_state.study_sessions, "score_over_time"
-        )
-        if chart_data:
-            st.image(f"data:image/png;base64,{chart_data}")
-        else:
-            st.info("Take more quizzes to see score trends!")
-    
-    with chart_tabs[1]:
-        st.subheader("📊 Study Time by Subject")
-        chart_data = generators['progress'].create_progress_chart(
-            st.session_state.study_sessions, "subject_breakdown"
-        )
-        if chart_data:
-            st.image(f"data:image/png;base64,{chart_data}")
-        else:
-            st.info("Study multiple subjects to see breakdown!")
-    
-    with chart_tabs[2]:
-        st.subheader("📅 Activity Frequency by Day")
-        chart_data = generators['progress'].create_progress_chart(
-            st.session_state.study_sessions, "activity_frequency"
-        )
-        if chart_data:
-            st.image(f"data:image/png;base64,{chart_data}")
-        else:
-            st.info("More study sessions needed for activity pattern analysis!")
-    
-    # Subject performance details
-    st.divider()
-    st.subheader("📚 Subject Performance Details")
-    
-    if subject_stats:
-        # Create a table of subject performance
-        performance_data = []
-        for subject, stats in subject_stats.items():
-            performance_data.append({
-                'Subject': subject,
-                'Sessions': stats['total_sessions'],
-                'Avg Score': f"{stats['average_score']}%",
-                'Accuracy': f"{stats['accuracy']}%",
-                'Trend': stats['improvement_trend'],
-                'Quiz Count': stats['quiz_sessions']
-            })
+    # Score over time chart
+    if progress_data['score_trend']:
+        import matplotlib.pyplot as plt
         
-        import pandas as pd
-        df = pd.DataFrame(performance_data)
-        st.dataframe(df, use_container_width=True)
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        dates = [datetime.fromisoformat(session['timestamp']).date() for session in st.session_state.study_sessions if 'score' in session]
+        scores = [session['score'] for session in st.session_state.study_sessions if 'score' in session]
+        
+        ax.plot(dates, scores, marker='o', linestyle='-', color='#1f77b4')
+        ax.set_title('Score Trend Over Time')
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Score (%)')
+        ax.grid(True, alpha=0.3)
+        
+        st.pyplot(fig)
     
-    # Strengths and weaknesses analysis
-    st.divider()
-    analysis = generators['progress'].get_strengths_and_weaknesses(st.session_state.study_sessions)
+    # Subject breakdown
+    st.subheader("📚 Subject Performance")
     
-    col1, col2 = st.columns(2)
+    subjects = {}
+    for session in st.session_state.study_sessions:
+        subject = session.get('subject', 'General')
+        if subject not in subjects:
+            subjects[subject] = {'sessions': 0, 'total_score': 0, 'avg_score': 0}
+        
+        subjects[subject]['sessions'] += 1
+        if 'score' in session:
+            subjects[subject]['total_score'] += session['score']
     
-    with col1:
-        st.subheader("💪 Your Strengths")
-        if analysis['strengths']:
-            for strength in analysis['strengths']:
-                st.success(f"✅ {strength}")
-        else:
-            st.info("Take more quizzes to identify your strengths!")
+    for subject in subjects:
+        if subjects[subject]['sessions'] > 0:
+            subjects[subject]['avg_score'] = subjects[subject]['total_score'] / subjects[subject]['sessions']
     
-    with col2:
-        st.subheader("📈 Areas for Improvement")
-        if analysis['needs_improvement']:
-            for weakness in analysis['needs_improvement']:
-                st.warning(f"⚠️ {weakness}")
-        else:
-            st.success("🎉 Great job! No clear weaknesses identified.")
-    
-    # Recommendations
-    st.divider()
-    st.subheader("🎯 Personalized Recommendations")
-    
-    recommendations = generators['progress'].generate_study_recommendations(st.session_state.study_sessions)
-    for i, rec in enumerate(recommendations, 1):
-        st.info(f"{i}. {rec}")
-    
-    # Weekly summary
-    st.divider()
-    st.subheader("📅 This Week's Summary")
-    
-    weekly_summary = generators['progress'].get_weekly_summary(st.session_state.study_sessions)
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Sessions This Week", weekly_summary['total_sessions'])
-        st.metric("Study Time This Week", f"{weekly_summary['total_study_time']} min")
-    
-    with col2:
-        st.write("**Subjects Studied:**")
-        for subject, stats in weekly_summary['subjects'].items():
-            st.write(f"• {subject}: {stats['total_sessions']} sessions")
+    if subjects:
+        for subject, data in subjects.items():
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.write(f"**{subject}**")
+                st.progress(data['avg_score'] / 100)
+            with col2:
+                st.metric("Avg", f"{data['avg_score']:.1f}%")
 
 def show_reports_page():
     st.title("📄 Study Reports")
     
     if not st.session_state.study_sessions:
-        st.info("No study data yet. Complete some study sessions to generate reports!")
+        st.info("📄 No study data available yet. Complete some activities to generate reports!")
         return
     
-    st.markdown("Generate comprehensive PDF reports of your study progress and performance.")
+    report_generator = generators['reports']
     
     # Report options
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("📊 Progress Report")
-        st.markdown("""
-        **Includes:**
-        - Overall performance summary
-        - Subject-by-subject breakdown
-        - Strengths and improvement areas
-        - Study habits analysis
-        - Personalized recommendations
-        - Recent activity log
-        """)
-        
-        if st.button("📥 Generate Progress Report", type="primary", use_container_width=True):
-            generate_progress_report()
+        report_type = st.selectbox(
+            "Report Type:",
+            ["Complete Progress Report", "Flashcard Collection", "Quiz Performance", "Study Summary"]
+        )
     
     with col2:
-        st.subheader("📚 Flashcard Report")
-        st.markdown("""
-        **Includes:**
-        - All your flashcards organized by category
-        - Study statistics
-        - Flashcard performance metrics
-        - Ready for printing
-        """)
-        
-        if st.button("📥 Generate Flashcard Report", type="primary", use_container_width=True):
-            generate_flashcard_report()
+        time_period = st.selectbox(
+            "Time Period:",
+            ["All Time", "Last 7 Days", "Last 30 Days", "This Month"]
+        )
     
-    # Report history (if we want to store previous reports)
-    st.divider()
-    st.subheader("📋 Quick Stats for Reports")
-    
-    # Calculate stats for report preview
-    total_sessions = len(st.session_state.study_sessions)
-    quiz_sessions = [s for s in st.session_state.study_sessions if s.get('activity_type') == 'quiz']
-    avg_score = sum(s.get('score', 0) for s in quiz_sessions) / len(quiz_sessions) if quiz_sessions else 0
-    subjects = len(set(s.get('subject', 'General') for s in st.session_state.study_sessions))
-    
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Total Sessions", total_sessions)
-    with col2:
-        st.metric("Quizzes Taken", len(quiz_sessions))
-    with col3:
-        st.metric("Average Score", f"{avg_score:.1f}%" if quiz_sessions else "N/A")
-    with col4:
-        st.metric("Subjects Studied", subjects)
+    if st.button("📄 Generate Report", type="primary"):
+        with st.spinner("Generating your report..."):
+            try:
+                if report_type == "Complete Progress Report":
+                    pdf_data = report_generator.generate_progress_report(
+                        st.session_state.study_sessions,
+                        st.session_state.notes,
+                        st.session_state.flashcards
+                    )
+                    
+                    st.download_button(
+                        "📥 Download Progress Report",
+                        data=pdf_data,
+                        file_name=f"progress_report_{datetime.now().strftime('%Y%m%d')}.pdf",
+                        mime="application/pdf"
+                    )
+                
+                elif report_type == "Flashcard Collection":
+                    if st.session_state.flashcards:
+                        pdf_data = report_generator.export_flashcards_to_pdf(st.session_state.flashcards)
+                        
+                        st.download_button(
+                            "📥 Download Flashcard Collection",
+                            data=pdf_data,
+                            file_name=f"flashcards_{datetime.now().strftime('%Y%m%d')}.pdf",
+                            mime="application/pdf"
+                        )
+                    else:
+                        st.warning("No flashcards available to export.")
+                
+                st.success("✅ Report generated successfully!")
+                
+            except Exception as e:
+                st.error(f"Error generating report: {str(e)}")
 
-def generate_progress_report():
-    """Generate and download progress report PDF"""
-    with st.spinner("Generating your progress report..."):
-        try:
-            # Calculate comprehensive progress stats
-            progress_stats = {}
-            
-            # Overall stats
-            overall_stats = generators['progress'].calculate_subject_stats(st.session_state.study_sessions)
-            progress_stats['overall'] = overall_stats
-            
-            # Subject-specific stats
-            subjects = list(set(s.get('subject', 'General') for s in st.session_state.study_sessions))
-            subject_stats = {}
-            for subject in subjects:
-                subject_stats[subject] = generators['progress'].calculate_subject_stats(
-                    st.session_state.study_sessions, subject
-                )
-            progress_stats['subjects'] = subject_stats
-            
-            # Generate PDF
-            pdf_data = generators['pdf'].generate_progress_report(
-                user_data={},  # Could include user name, etc.
-                sessions=st.session_state.study_sessions,
-                progress_stats=progress_stats
-            )
-            
-            # Offer download
-            st.download_button(
-                label="📥 Download Progress Report",
-                data=pdf_data,
-                file_name=f"study_progress_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                mime="application/pdf"
-            )
-            
-            st.success("✅ Progress report generated successfully!")
-        
-        except Exception as e:
-            st.error(f"Error generating report: {str(e)}")
-
-def generate_flashcard_report():
-    """Generate and download flashcard report PDF"""
-    if not st.session_state.flashcards:
-        st.warning("No flashcards available to include in report.")
-        return
+# Main app
+def main():
+    show_sidebar()
     
-    with st.spinner("Generating your flashcard report..."):
-        try:
-            # Calculate flashcard stats
-            flashcard_sessions = [s for s in st.session_state.study_sessions 
-                                if s.get('activity_type') == 'flashcards']
-            
-            study_stats = {
-                'sessions': len(flashcard_sessions),
-                'cards_studied': sum(s.get('flashcards_studied', 0) for s in flashcard_sessions),
-                'mastered': sum(s.get('correct_answers', 0) for s in flashcard_sessions)
-            }
-            
-            # Generate PDF
-            pdf_data = generators['pdf'].generate_flashcard_report(
-                flashcards=st.session_state.flashcards,
-                study_stats=study_stats
-            )
-            
-            # Offer download
-            st.download_button(
-                label="📥 Download Flashcard Report",
-                data=pdf_data,
-                file_name=f"flashcard_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                mime="application/pdf"
-            )
-            
-            st.success("✅ Flashcard report generated successfully!")
-        
-        except Exception as e:
-            st.error(f"Error generating flashcard report: {str(e)}")
+    # Route to appropriate page
+    if st.session_state.page == "🏠 Home":
+        show_home_page()
+    elif st.session_state.page == "📝 Notes":
+        show_notes_page()
+    elif st.session_state.page == "📚 Flashcards":
+        show_flashcards_page()
+    elif st.session_state.page == "🧠 Quizzes":
+        show_quizzes_page()
+    elif st.session_state.page == "📊 Progress":
+        show_progress_page()
+    elif st.session_state.page == "📄 Reports":
+        show_reports_page()
 
-# Main content routing (after all functions are defined)
-if st.session_state.page == "🏠 Home":
-    show_home_page()
-elif st.session_state.page == "📝 Notes":
-    show_notes_page()
-elif st.session_state.page == "📚 Flashcards":
-    show_flashcards_page()
-elif st.session_state.page == "🧠 Quizzes":
-    show_quizzes_page()
-elif st.session_state.page == "📊 Progress":
-    show_progress_page()
-elif st.session_state.page == "📄 Reports":
-    show_reports_page()
+if __name__ == "__main__":
+    main()

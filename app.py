@@ -6,6 +6,7 @@ from flashcard_generator import FlashcardGenerator
 from quiz_generator import QuizGenerator
 from progress_tracker import ProgressTracker
 from pdf_report_generator import PDFReportGenerator
+from data_persistence import DataPersistence
 from utils import export_notes_as_text, sanitize_filename
 import base64
 
@@ -29,6 +30,7 @@ def get_generators():
     }
 
 generators = get_generators()
+persistence = DataPersistence()
 
 # Initialize comprehensive session state
 def init_session_state():
@@ -83,6 +85,50 @@ with st.sidebar:
     st.metric("Notes", len(st.session_state.notes))
     st.metric("Flashcards", len(st.session_state.flashcards))
     st.metric("Quizzes Taken", len(st.session_state.study_sessions))
+    
+    st.divider()
+    
+    # Data Management
+    st.subheader("💾 Save Your Progress")
+    
+    # Export all data
+    if st.button("📥 Download All Data", use_container_width=True, help="Save all your notes, flashcards, and progress"):
+        exported_data = persistence.export_user_data()
+        st.download_button(
+            label="📁 Download Study Data",
+            data=exported_data,
+            file_name=f"study_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json",
+            use_container_width=True
+        )
+    
+    # Import data
+    uploaded_data = st.file_uploader(
+        "📤 Upload Study Data",
+        type=['json'],
+        help="Restore your saved progress",
+        key="data_upload"
+    )
+    
+    if uploaded_data:
+        try:
+            file_content = uploaded_data.read().decode('utf-8')
+            if persistence.import_user_data(file_content):
+                st.success("✅ Data imported successfully!")
+                st.rerun()
+            else:
+                st.error("❌ Failed to import data")
+        except Exception as e:
+            st.error(f"Error importing data: {str(e)}")
+    
+    # Clear all data option
+    with st.expander("⚠️ Reset All Data"):
+        st.warning("This will delete all your notes, flashcards, and progress!")
+        if st.button("🗑️ Clear Everything", type="secondary"):
+            if st.button("⚠️ Confirm Delete All", type="primary"):
+                persistence.clear_all_data()
+                st.success("All data cleared!")
+                st.rerun()
 
 # Page functions
 def show_home_page():
@@ -137,6 +183,9 @@ def show_home_page():
                 score_text = f" - Score: {session.get('score', 0)}%"
             
             st.text(f"🔹 {timestamp} | {activity_type} in {subject}{score_text}")
+    
+    # Important notice about data persistence
+    st.info("💡 **Save Your Progress:** Your data is temporary while you're using the app. Use the 'Download All Data' button in the sidebar to save your notes, flashcards, and progress permanently!")
     
     # Quick actions
     st.subheader("🚀 Quick Actions")

@@ -437,7 +437,19 @@ def show_notes_page():
                                     card['category'] = note.get('category', 'General')
                                 
                                 st.session_state.flashcards.extend(flashcards)
+                                auto_save()
                                 st.success(f"✅ Created {len(flashcards)} flashcards from this note!")
+                                
+                                # Add to study sessions
+                                session = {
+                                    'timestamp': datetime.now().isoformat(),
+                                    'activity_type': 'flashcards_created',
+                                    'subject': note.get('category', 'General'),
+                                    'flashcards_created': len(flashcards),
+                                    'duration_minutes': 2
+                                }
+                                st.session_state.study_sessions.append(session)
+                                st.rerun()
                             except Exception as e:
                                 st.error(f"Error: {str(e)}")
 
@@ -607,13 +619,30 @@ def next_card(study_cards, correct=False):
                                 card['category'] = category
                             
                             st.session_state.flashcards.extend(flashcards)
+                            auto_save()
                             st.success(f"✅ Generated {len(flashcards)} flashcards!")
                             
                             # Preview
+                            st.markdown("### 📖 Preview Created Cards:")
                             for i, card in enumerate(flashcards[:3], 1):
                                 with st.expander(f"Preview Card {i}"):
                                     st.write(f"**Front:** {card['front']}")
                                     st.write(f"**Back:** {card['back']}")
+                                    st.write(f"**Category:** {card['category']}")
+                                    st.write(f"**Difficulty:** {card.get('difficulty', 'Medium')}")
+                            
+                            if len(flashcards) > 3:
+                                st.info(f"+ {len(flashcards) - 3} more cards created!")
+                            
+                            # Add to study sessions
+                            session = {
+                                'timestamp': datetime.now().isoformat(),
+                                'activity_type': 'flashcards_created',
+                                'subject': category,
+                                'flashcards_created': len(flashcards),
+                                'duration_minutes': 2
+                            }
+                            st.session_state.study_sessions.append(session)
                         
                         except Exception as e:
                             st.error(f"Error: {str(e)}")
@@ -634,13 +663,19 @@ def next_card(study_cards, correct=False):
                     
                     if loaded_flashcards:
                         st.session_state.flashcards.extend(loaded_flashcards)
+                        auto_save()
                         st.success(f"✅ Loaded {len(loaded_flashcards)} flashcards!")
                         
                         # Preview
+                        st.markdown("### 📖 Loaded Cards Preview:")
                         for i, card in enumerate(loaded_flashcards[:3], 1):
                             with st.expander(f"Loaded Card {i}"):
                                 st.write(f"**Front:** {card['front']}")
                                 st.write(f"**Back:** {card['back']}")
+                                st.write(f"**Category:** {card.get('category', 'General')}")
+                        
+                        if len(loaded_flashcards) > 3:
+                            st.info(f"+ {len(loaded_flashcards) - 3} more cards loaded!")
                     else:
                         st.error("No valid flashcards found in file.")
                 

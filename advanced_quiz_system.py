@@ -367,6 +367,14 @@ class AdvancedQuizSystem:
             st.session_state.study_sessions = []
         
         st.session_state.study_sessions.append(quiz_result)
+        
+        # Auto-save the data
+        try:
+            from data_persistence import DataPersistence
+            persistence = DataPersistence()
+            persistence.auto_save_data()
+        except:
+            pass  # Silent fail to avoid disrupting user experience
     
     def _show_progress_comparison(self):
         """Show comparison with previous quiz attempts"""

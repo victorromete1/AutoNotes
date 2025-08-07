@@ -7,6 +7,7 @@ from quiz_generator import QuizGenerator
 from progress_tracker import ProgressTracker
 from pdf_report_generator import PDFReportGenerator
 from data_persistence import DataPersistence
+from advanced_quiz_system import AdvancedQuizSystem
 from utils import export_notes_as_text, sanitize_filename
 import base64
 
@@ -31,6 +32,7 @@ def get_generators():
 
 generators = get_generators()
 persistence = DataPersistence()
+advanced_quiz = AdvancedQuizSystem(generators['quiz'])
 
 # Initialize comprehensive session state
 def init_session_state():
@@ -258,14 +260,15 @@ def show_notes_page():
         )
         
         if uploaded_file:
-            # Process uploaded file
-            file_content = ""
-            if uploaded_file.type == "text/plain":
-                file_content = str(uploaded_file.read(), "utf-8")
-            else:
-                st.warning("PDF and DOCX processing will be added soon. For now, please copy and paste text.")
-            
-            user_input = file_content
+            try:
+                if uploaded_file.type == "text/plain":
+                    file_content = str(uploaded_file.read(), "utf-8")
+                    user_input = file_content
+                    st.success(f"✅ File uploaded: {uploaded_file.name}")
+                else:
+                    st.warning("Currently supporting text files. PDF and DOCX support coming soon!")
+            except Exception as e:
+                st.error(f"Error reading file: {str(e)}")
         
         user_input = st.text_area(
             "Or paste text content:",
@@ -664,6 +667,7 @@ def next_card(study_cards, correct=False):
                             'id': f"manual_{datetime.now().timestamp()}"
                         }
                         st.session_state.flashcards.append(new_card)
+                        auto_save()
                         st.success("✅ Flashcard added successfully!")
                     else:
                         st.warning("Please fill in both front and back of the flashcard.")
@@ -726,287 +730,150 @@ def next_card(study_cards, correct=False):
                         st.rerun()
 
 def show_quizzes_page():
-    st.title("🧠 Quizzes")
+    st.title("🧠 Advanced Quiz System")
     
-    tab1, tab2, tab3 = st.tabs(["📝 Take Quiz", "➕ Create Quiz", "📊 Quiz History"])
+    tab1, tab2 = st.tabs(["📝 Take Quiz", "📊 Quiz History"])
     
     with tab1:
-        st.subheader("📝 Take a Quiz")
+        st.subheader("📝 Create & Take Quiz")
         
         # Check if quiz is in progress
-        if st.session_state.current_quiz:
-            display_quiz()
+        if st.session_state.get('quiz_started', False) and not st.session_state.get('quiz_completed', False):
+            # Display ongoing quiz
+            if 'active_quiz_data' in st.session_state:
+                advanced_quiz.display_quiz_interface(st.session_state.active_quiz_data)
+            else:
+                st.error("Quiz data lost. Please start a new quiz.")
+                if st.button("🔄 Reset Quiz"):
+                    advanced_quiz._reset_quiz_state()
+                    st.rerun()
         else:
-            # Quiz setup
+            # Quiz creation interface
             col1, col2 = st.columns(2)
             
             with col1:
                 quiz_source = st.radio(
                     "Create quiz from:",
-                    ["📚 Existing Notes", "📝 New Content"],
-                    horizontal=True
+                    ["📚 Existing Notes", "📝 New Content", "📤 Upload File"],
+                    horizontal=False
                 )
             
             with col2:
-                quiz_type = st.selectbox(
-                    "Quiz Type:",
-                    ["multiple_choice", "true_false", "short_answer", "fill_in_blank"]
-                )
-            
-            # Configuration
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                num_questions = st.slider("Number of questions:", 3, 15, 5)
-            with col2:
+                num_questions = st.slider("Number of questions:", 3, 15, 8)
                 difficulty = st.selectbox("Difficulty:", ["Easy", "Medium", "Hard"])
-            with col3:
-                if quiz_source == "📚 Existing Notes":
-                    if st.session_state.notes:
-                        note_titles = [note['title'] for note in st.session_state.notes]
-                        selected_note = st.selectbox("Select note:", note_titles)
-                    else:
-                        st.info("No notes available. Create some notes first!")
-                        return
             
-            # Content input
-            if quiz_source == "📝 New Content":
+            content = ""
+            
+            # Handle different content sources
+            if quiz_source == "📚 Existing Notes":
+                if st.session_state.notes:
+                    note_titles = [f"{note['title']} ({note.get('category', 'General')})" for note in st.session_state.notes]
+                    selected_note_title = st.selectbox("Select note:", note_titles)
+                    
+                    if selected_note_title:
+                        # Extract the actual title (remove category)
+                        actual_title = selected_note_title.split(' (')[0]
+                        selected_note_obj = next((note for note in st.session_state.notes if note['title'] == actual_title), None)
+                        if selected_note_obj:
+                            content = selected_note_obj['content']
+                            st.text_area("Content preview:", value=content[:300] + "..." if len(content) > 300 else content, height=100, disabled=True)
+                else:
+                    st.info("No notes available. Create some notes first!")
+                    return
+            
+            elif quiz_source == "📝 New Content":
                 content = st.text_area(
                     "Enter content for quiz:",
                     placeholder="Paste study material, notes, or any content to create a quiz from...",
-                    height=150
+                    height=200
                 )
-            else:
-                if st.session_state.notes:
-                    selected_note_obj = next((note for note in st.session_state.notes if note['title'] == selected_note), None)
-                    content = selected_note_obj['content'] if selected_note_obj else ""
-                    st.text_area("Content preview:", value=content[:300] + "..." if len(content) > 300 else content, height=100, disabled=True)
+            
+            elif quiz_source == "📤 Upload File":
+                content = advanced_quiz.upload_content_for_quiz()
             
             # Create quiz button
             if st.button("🚀 Create & Start Quiz", type="primary", use_container_width=True):
-                if content.strip():
-                    with st.spinner("Creating your quiz..."):
+                if content and content.strip():
+                    with st.spinner("Creating your personalized quiz... This may take a moment."):
                         try:
-                            quiz_data = generators['quiz'].generate_quiz(
-                                content, quiz_type=quiz_type, 
-                                num_questions=num_questions, difficulty=difficulty
+                            quiz_data = advanced_quiz.create_quiz_from_content(
+                                content=content,
+                                num_questions=num_questions,
+                                difficulty=difficulty
                             )
                             
-                            if quiz_data:
-                                st.session_state.current_quiz = quiz_data
+                            if quiz_data and quiz_data.get('questions'):
+                                st.session_state.active_quiz_data = quiz_data
+                                st.session_state.quiz_started = True
+                                st.session_state.quiz_completed = False
+                                st.session_state.current_question = 0
                                 st.session_state.quiz_answers = {}
-                                st.session_state.quiz_start_time = datetime.now()
-                                st.success("✅ Quiz created successfully!")
+                                st.success("✅ Quiz created successfully! Starting now...")
                                 st.rerun()
                             else:
-                                st.error("Failed to create quiz. Please try again.")
+                                st.error("Failed to create quiz. Please check your content and try again.")
                         
                         except Exception as e:
                             st.error(f"Error creating quiz: {str(e)}")
+                            st.info("Please try with different content or contact support if the issue persists.")
                 else:
                     st.warning("Please provide content for the quiz.")
-
-def display_quiz():
-    """Display the current quiz interface"""
-    quiz = st.session_state.current_quiz
     
-    st.markdown(f"### 🧠 {quiz.get('title', 'Quiz')}")
-    st.markdown(f"**Type:** {quiz.get('type', 'Unknown').replace('_', ' ').title()}")
-    st.markdown(f"**Difficulty:** {quiz.get('difficulty', 'Medium')}")
-    
-    # Progress
-    total_questions = len(quiz.get('questions', []))
-    answered = len(st.session_state.quiz_answers)
-    progress = answered / total_questions if total_questions > 0 else 0
-    st.progress(progress, text=f"Progress: {answered}/{total_questions} questions answered")
-    
-    # Questions
-    for i, question in enumerate(quiz.get('questions', [])):
-        st.markdown(f"#### Question {i+1}")
-        st.markdown(question.get('question', ''))
-        
-        answer_key = f"q_{i}"
-        
-        if quiz.get('type') == 'multiple_choice':
-            options = question.get('options', [])
-            selected = st.radio(
-                "Select your answer:",
-                options,
-                key=answer_key,
-                index=None
-            )
-            if selected:
-                st.session_state.quiz_answers[answer_key] = selected[0]  # Store letter (A, B, C, D)
-        
-        elif quiz.get('type') == 'true_false':
-            selected = st.radio(
-                "Select your answer:",
-                ["True", "False"],
-                key=answer_key,
-                index=None
-            )
-            if selected:
-                st.session_state.quiz_answers[answer_key] = selected
-        
-        elif quiz.get('type') == 'short_answer':
-            answer = st.text_area(
-                "Your answer:",
-                key=answer_key,
-                height=100
-            )
-            if answer.strip():
-                st.session_state.quiz_answers[answer_key] = answer
-        
-        elif quiz.get('type') == 'fill_in_blank':
-            answer = st.text_input(
-                "Fill in the blank:",
-                key=answer_key
-            )
-            if answer.strip():
-                st.session_state.quiz_answers[answer_key] = answer
-        
-        st.divider()
-    
-    # Submit quiz
-    if len(st.session_state.quiz_answers) == total_questions:
-        if st.button("📋 Submit Quiz", type="primary", use_container_width=True):
-            submit_quiz()
-    else:
-        remaining = total_questions - len(st.session_state.quiz_answers)
-        st.info(f"Please answer {remaining} more question{'s' if remaining > 1 else ''} to submit the quiz.")
-    
-    # Cancel quiz
-    if st.button("❌ Cancel Quiz", type="secondary"):
-        st.session_state.current_quiz = None
-        st.session_state.quiz_answers = {}
-        st.rerun()
-
-def submit_quiz():
-    """Submit and grade the current quiz"""
-    quiz = st.session_state.current_quiz
-    answers = st.session_state.quiz_answers
-    
-    with st.spinner("Grading your quiz..."):
-        try:
-            results = generators['quiz'].grade_quiz(quiz, answers)
-            
-            if results:
-                # Store quiz result
-                quiz_session = {
-                    'timestamp': datetime.now().isoformat(),
-                    'activity_type': 'quiz',
-                    'subject': 'Mixed',  # Could be improved to detect subject
-                    'duration_minutes': 15,  # Estimated
-                    'score': results['score'],
-                    'questions_answered': results['total'],
-                    'correct_answers': results['correct'],
-                    'quiz_type': quiz.get('type', 'unknown'),
-                    'difficulty': quiz.get('difficulty', 'Medium')
-                }
-                st.session_state.study_sessions.append(quiz_session)
-                
-                # Display results
-                st.success(f"🎉 Quiz completed!")
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Score", f"{results['score']:.1f}%")
-                with col2:
-                    st.metric("Grade", results['grade_letter'])
-                with col3:
-                    st.metric("Correct", f"{results['correct']}/{results['total']}")
-                
-                # Detailed feedback
-                st.subheader("📋 Detailed Feedback")
-                
-                for feedback in results['feedback']:
-                    with st.expander(f"Question {feedback['question_num']}: {'✅' if feedback['is_correct'] else '❌'}"):
-                        st.write(f"**Question:** {feedback['question']}")
-                        st.write(f"**Your Answer:** {feedback['user_answer']}")
-                        st.write(f"**Correct Answer:** {feedback['correct_answer']}")
-                        
-                        if feedback.get('explanation'):
-                            st.write(f"**Explanation:** {feedback['explanation']}")
-                        
-                        if feedback.get('sample_answer'):
-                            st.write(f"**Sample Answer:** {feedback['sample_answer']}")
-                
-                # Performance insights
-                if results['score'] >= 90:
-                    st.success("🌟 Excellent work! You've mastered this material.")
-                elif results['score'] >= 75:
-                    st.info("👍 Good job! Consider reviewing the topics you missed.")
-                else:
-                    st.warning("📚 You might want to study this material more before trying again.")
-                
-                # Clear current quiz
-                st.session_state.current_quiz = None
-                st.session_state.quiz_answers = {}
-                
-                if st.button("🔄 Take Another Quiz"):
-                    st.rerun()
-        
-        except Exception as e:
-            st.error(f"Error grading quiz: {str(e)}")
-
     with tab2:
-        st.subheader("➕ Create Custom Quiz")
-        st.info("Use the 'Take Quiz' tab to create quizzes from your content!")
-    
-    with tab3:
-        st.subheader("📊 Quiz History")
+        st.subheader("📊 Quiz History & Progress")
         
-        quiz_sessions = [s for s in st.session_state.study_sessions if s.get('activity_type') == 'quiz']
+        # Get quiz sessions
+        quiz_sessions = [s for s in st.session_state.get('study_sessions', []) if s.get('activity_type') == 'quiz']
         
-        if not quiz_sessions:
-            st.info("No quiz history yet. Take your first quiz!")
-            return
-        
-        # Sort by date, most recent first
-        quiz_sessions.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
-        
-        # Summary stats
-        avg_score = sum(s.get('score', 0) for s in quiz_sessions) / len(quiz_sessions)
-        total_questions = sum(s.get('questions_answered', 0) for s in quiz_sessions)
-        total_correct = sum(s.get('correct_answers', 0) for s in quiz_sessions)
-        overall_accuracy = (total_correct / total_questions * 100) if total_questions > 0 else 0
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Quizzes Taken", len(quiz_sessions))
-        with col2:
-            st.metric("Average Score", f"{avg_score:.1f}%")
-        with col3:
-            st.metric("Questions Answered", total_questions)
-        with col4:
-            st.metric("Overall Accuracy", f"{overall_accuracy:.1f}%")
-        
-        st.divider()
-        
-        # Quiz history list
-        for i, session in enumerate(quiz_sessions):
-            date = datetime.fromisoformat(session.get('timestamp', '')).strftime("%m/%d/%Y %H:%M")
-            score = session.get('score', 0)
-            correct = session.get('correct_answers', 0)
-            total = session.get('questions_answered', 0)
-            quiz_type = session.get('quiz_type', 'Unknown').replace('_', ' ').title()
-            difficulty = session.get('difficulty', 'Medium')
+        if quiz_sessions:
+            # Overall stats
+            col1, col2, col3, col4 = st.columns(4)
             
-            # Color code based on performance
-            if score >= 90:
-                score_color = "🟢"
-            elif score >= 75:
-                score_color = "🟡"
-            else:
-                score_color = "🔴"
+            total_quizzes = len(quiz_sessions)
+            avg_score = sum(s.get('score', 0) for s in quiz_sessions) / total_quizzes
+            highest_score = max(s.get('score', 0) for s in quiz_sessions)
+            recent_trend = "📈" if len(quiz_sessions) >= 2 and quiz_sessions[-1].get('score', 0) > quiz_sessions[-2].get('score', 0) else "📊"
             
-            with st.expander(f"{score_color} {date} - {quiz_type} ({difficulty}) - {score:.1f}%"):
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.write(f"**Score:** {score:.1f}%")
-                    st.write(f"**Correct:** {correct}/{total}")
-                with col2:
-                    st.write(f"**Type:** {quiz_type}")
-                    st.write(f"**Difficulty:** {difficulty}")
+            with col1:
+                st.metric("Total Quizzes", total_quizzes)
+            with col2:
+                st.metric("Average Score", f"{avg_score:.1f}%")
+            with col3:
+                st.metric("Best Score", f"{highest_score:.1f}%")
+            with col4:
+                st.metric("Trend", recent_trend)
+            
+            # Recent quiz history
+            st.subheader("Recent Quiz Results")
+            
+            for i, session in enumerate(reversed(quiz_sessions[-10:])):  # Show last 10
+                timestamp = datetime.fromisoformat(session['timestamp']).strftime("%Y-%m-%d %H:%M")
+                score = session.get('score', 0)
+                correct = session.get('correct_answers', 0)
+                total = session.get('questions_answered', session.get('total_questions', 0))
+                
+                # Color code based on performance
+                if score >= 90:
+                    score_color = "🟢"
+                elif score >= 80:
+                    score_color = "🟡" 
+                elif score >= 70:
+                    score_color = "🟠"
+                else:
+                    score_color = "🔴"
+                
+                with st.expander(f"{score_color} {timestamp} - {score:.1f}% ({correct}/{total})"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Score:** {score:.1f}%")
+                        st.write(f"**Questions:** {correct}/{total}")
+                    with col2:
+                        st.write(f"**Difficulty:** {session.get('difficulty', 'N/A')}")
+                        st.write(f"**Type:** {session.get('quiz_type', 'N/A')}")
+        else:
+            st.info("No quiz history yet. Take your first quiz to see your progress here!")
+
+# Quiz functions now handled by AdvancedQuizSystem
 
 def show_progress_page():
     st.title("📊 Progress Analytics")

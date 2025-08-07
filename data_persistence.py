@@ -1,7 +1,6 @@
 import streamlit as st
 import json
 from datetime import datetime
-import streamlit.components.v1 as components
 
 class DataPersistence:
     """Handle saving and loading user data to browser local storage"""
@@ -82,63 +81,34 @@ class DataPersistence:
         <div style="display: none;">Auto-load component</div>
         """
         
-        components.html(html_code, height=0)
+        st.components.v1.html(html_code, height=0)
     
     def _save_to_local_storage(self, key, data):
         """Save data to browser local storage using JavaScript"""
-        json_data = json.dumps(data)
-        
-        # Create JavaScript code to save to localStorage
-        html_code = f"""
-        <script>
-        try {{
-            localStorage.setItem('{key}', {json.dumps(json_data)});
-            console.log('Data saved to localStorage successfully');
-        }} catch(e) {{
-            console.error('Error saving to localStorage:', e);
-        }}
-        </script>
-        """
-        
-        # Execute JavaScript (this will be hidden from user)
-        components.html(html_code, height=0)
+        try:
+            json_data = json.dumps(data, default=str)
+            
+            # Create JavaScript code to save to localStorage
+            html_code = f"""
+            <script>
+            try {{
+                localStorage.setItem('{key}', {json.dumps(json_data)});
+                console.log('Auto-save completed');
+            }} catch(e) {{
+                console.warn('Auto-save failed:', e);
+            }}
+            </script>
+            """
+            
+            # Execute JavaScript silently
+            st.components.v1.html(html_code, height=0)
+        except Exception:
+            pass  # Silent fail for auto-save
     
     def _load_from_local_storage(self, key, default_value):
-        """Load data from browser local storage using JavaScript"""
-        # Create a unique component key to avoid caching issues
-        component_key = f"load_{key}_{hash(str(datetime.now()))}"
-        
-        html_code = f"""
-        <script>
-        try {{
-            const data = localStorage.getItem('{key}');
-            if (data) {{
-                const parsedData = JSON.parse(data);
-                // Send data back to Streamlit using window.parent.postMessage
-                window.parent.postMessage({{
-                    type: 'localStorage_data',
-                    key: '{key}',
-                    data: parsedData
-                }}, '*');
-            }} else {{
-                window.parent.postMessage({{
-                    type: 'localStorage_data',
-                    key: '{key}',
-                    data: null
-                }}, '*');
-            }}
-        }} catch(e) {{
-            console.error('Error loading from localStorage:', e);
-            window.parent.postMessage({{
-                type: 'localStorage_data',
-                key: '{key}',
-                data: null
-            }}, '*');
-        }}
-        </script>
-        """
-        
-        # For now, we'll use a simpler approach - return default and let auto-save handle persistence
+        """Load data from browser local storage - simplified for auto-save approach"""
+        # For the auto-save system, we primarily rely on manual download/upload
+        # The JavaScript save runs in background but loading is handled by manual file upload
         return default_value
     
     def export_user_data(self):

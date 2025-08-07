@@ -712,57 +712,58 @@ def next_card(study_cards, correct=False):
         
         if not st.session_state.flashcards:
             st.info("No flashcards to manage. Create some first!")
-            return
-        
-        # Export all flashcards
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("📥 Export All Flashcards"):
-                flashcard_data = generators['flashcards'].save_flashcards_file(
-                    st.session_state.flashcards, 
-                    f"flashcards_{datetime.now().strftime('%Y%m%d')}"
-                )
-                
-                st.download_button(
-                    label="Download .flashcard file",
-                    data=flashcard_data,
-                    file_name=f"flashcards_{datetime.now().strftime('%Y%m%d_%H%M%S')}.flashcard",
-                    mime="application/json"
-                )
-        
-        with col2:
-            if st.button("🗑️ Clear All Flashcards", type="secondary"):
-                if st.button("⚠️ Confirm Delete All", type="primary"):
-                    st.session_state.flashcards = []
-                    st.success("All flashcards deleted.")
-                    st.rerun()
-        
-        # Category management
-        st.divider()
-        categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))
-        selected_category = st.selectbox("View/Edit category:", ["All"] + categories)
-        
-        filtered_cards = st.session_state.flashcards
-        if selected_category != "All":
-            filtered_cards = [card for card in filtered_cards if card.get('category', 'General') == selected_category]
-        
-        st.write(f"**Showing {len(filtered_cards)} flashcards**")
-        
-        # Display flashcards
-        for i, card in enumerate(filtered_cards):
-            with st.expander(f"🎴 {card['front'][:50]}..." if len(card['front']) > 50 else f"🎴 {card['front']}"):
-                col1, col2 = st.columns([3, 1])
-                
-                with col1:
-                    st.write(f"**Category:** {card.get('category', 'General')}")
-                    st.write(f"**Front:** {card['front']}")
-                    st.write(f"**Back:** {card['back']}")
-                    st.write(f"**Difficulty:** {card.get('difficulty', 'Medium')}")
-                
-                with col2:
-                    if st.button("🗑️ Delete", key=f"del_card_{i}"):
-                        st.session_state.flashcards.remove(card)
+        else:
+            # Export all flashcards
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("📥 Export All Flashcards"):
+                    flashcard_data = generators['flashcards'].save_flashcards_file(
+                        st.session_state.flashcards, 
+                        f"flashcards_{datetime.now().strftime('%Y%m%d')}"
+                    )
+                    
+                    st.download_button(
+                        label="Download .flashcard file",
+                        data=flashcard_data,
+                        file_name=f"flashcards_{datetime.now().strftime('%Y%m%d_%H%M%S')}.flashcard",
+                        mime="application/json"
+                    )
+            
+            with col2:
+                if st.button("🗑️ Clear All Flashcards", type="secondary"):
+                    if st.button("⚠️ Confirm Delete All", type="primary"):
+                        st.session_state.flashcards = []
+                        auto_save()
+                        st.success("All flashcards deleted.")
                         st.rerun()
+            
+            # Category management
+            st.divider()
+            categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))
+            selected_category = st.selectbox("View/Edit category:", ["All"] + categories)
+            
+            filtered_cards = st.session_state.flashcards
+            if selected_category != "All":
+                filtered_cards = [card for card in filtered_cards if card.get('category', 'General') == selected_category]
+            
+            st.write(f"**Showing {len(filtered_cards)} flashcards**")
+            
+            # Display flashcards
+            for i, card in enumerate(filtered_cards):
+                with st.expander(f"🎴 {card['front'][:50]}..." if len(card['front']) > 50 else f"🎴 {card['front']}"):
+                    col1, col2 = st.columns([3, 1])
+                    
+                    with col1:
+                        st.write(f"**Category:** {card.get('category', 'General')}")
+                        st.write(f"**Front:** {card['front']}")
+                        st.write(f"**Back:** {card['back']}")
+                        st.write(f"**Difficulty:** {card.get('difficulty', 'Medium')}")
+                    
+                    with col2:
+                        if st.button("🗑️ Delete", key=f"del_card_{i}"):
+                            st.session_state.flashcards.remove(card)
+                            auto_save()
+                            st.rerun()
 
 def show_quizzes_page():
     st.title("🧠 Advanced Quiz System")

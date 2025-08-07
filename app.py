@@ -36,6 +36,13 @@ if 'note_category' not in st.session_state:
 st.title("📝 AI Study Notes Generator")
 st.markdown("Generate comprehensive study notes with the power of AI")
 
+# Show current AI provider
+if hasattr(note_gen, 'provider'):
+    if "Free" in note_gen.provider:
+        st.success(f"🆓 Using: {note_gen.provider} - Completely FREE!")
+    else:
+        st.info(f"🤖 Using: {note_gen.provider}")
+
 # Sidebar for note management
 with st.sidebar:
     st.header("📚 Note Management")
@@ -251,8 +258,9 @@ with st.expander("ℹ️ How to Use This App"):
     - You can manually edit any generated content before saving
     
     **API Key Setup:**
-    - Make sure your OpenAI API key is set in the environment variables
-    - The app uses GPT-4o for the best note generation quality
+    - For 100% FREE usage: Get an OpenRouter API key at openrouter.ai (uses DeepSeek AI)
+    - Alternative: Use OpenAI API key (small cost but higher quality)
+    - The app automatically detects which key you have and uses the appropriate AI service
     """)
 
 # Display current stats

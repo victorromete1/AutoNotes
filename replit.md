@@ -1,8 +1,8 @@
-# AI Study Notes Generator
+# Advanced AI Study Platform
 
 ## Overview
 
-This is a Streamlit-based web application that generates comprehensive study notes using OpenAI's GPT-4o model. The application allows users to input topics or content and receive AI-generated study notes with customizable detail levels and note types. Users can manage their notes through categorization, filtering, and export functionality.
+This is a comprehensive Streamlit-based study platform that integrates multiple AI-powered learning tools. The platform features note generation, flashcard creation, quiz systems, progress tracking, and detailed PDF reporting. It uses DeepSeek AI through OpenRouter for completely free operation, with OpenAI as a fallback option.
 
 ## User Preferences
 
@@ -11,28 +11,50 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend Architecture
-- **Framework**: Streamlit for web interface
-- **Layout**: Wide layout with expandable sidebar for note management
-- **State Management**: Streamlit session state for persistent data storage across user interactions
-- **Caching**: `@st.cache_resource` decorator for efficient resource management of the note generator instance
+- **Framework**: Streamlit with multi-page navigation system
+- **Layout**: Wide layout with enhanced sidebar navigation
+- **State Management**: Comprehensive session state for notes, flashcards, quizzes, and progress tracking
+- **Navigation**: Tab-based interface with dedicated pages for each major feature
+- **Responsive Design**: Adaptive layouts for different screen sizes
 
 ### Backend Architecture
-- **Core Logic**: Object-oriented design with separate `NoteGenerator` class for AI operations
-- **API Integration**: OpenAI API client for GPT-4o model interactions
-- **Modular Design**: Separation of concerns with dedicated utility functions in `utils.py`
-- **Error Handling**: Built-in validation for API keys and user inputs
+- **Modular Design**: Separate classes for each major functionality:
+  - `NoteGenerator`: AI-powered note creation and summarization
+  - `FlashcardGenerator`: Automated flashcard creation from content
+  - `QuizGenerator`: Multi-format quiz creation and AI grading
+  - `ProgressTracker`: Analytics and performance tracking
+  - `PDFReportGenerator`: Comprehensive report generation
+- **AI Integration**: Dual API support (OpenRouter/DeepSeek for free usage, OpenAI as fallback)
+- **Error Handling**: Comprehensive validation and graceful error recovery
 
 ### Data Management
-- **Session Storage**: Notes stored in Streamlit session state as list of dictionaries
-- **Note Structure**: Each note contains title, content, category, timestamp, and metadata
-- **Categorization**: Dynamic category system allowing users to organize notes by subject
-- **Export Functionality**: Text-based export system for offline access
+- **Session Storage**: Multi-dimensional data structure storing:
+  - Notes with categorization and metadata
+  - Flashcards with difficulty levels and study tracking
+  - Quiz results with detailed performance analytics
+  - Study sessions with progress metrics
+- **File Management**: Import/export functionality for flashcards (.flashcard format)
+- **Progress Persistence**: Comprehensive activity logging for analytics
 
-### AI Integration
-- **Model**: OpenAI GPT-4o (latest model as of May 2024)
-- **Prompt Engineering**: Dynamic prompt creation based on note type and detail level
-- **Customization**: Multiple note types (Summary, Detailed Notes, Q&A, etc.) and detail levels (Basic, Intermediate, Advanced)
-- **Response Handling**: Structured response processing with error handling
+### Advanced Features
+- **Flashcard System**: 
+  - AI-generated flashcards from any content
+  - Interactive study sessions with self-assessment
+  - Import/export capabilities
+  - Spaced repetition tracking
+- **Quiz System**:
+  - Multiple question types (MCQ, T/F, short answer, fill-in-blank)
+  - AI-powered grading with detailed feedback
+  - Performance analytics and improvement suggestions
+- **Progress Analytics**:
+  - Subject-wise performance tracking
+  - Visual charts and trend analysis
+  - Strengths/weaknesses identification
+  - Personalized study recommendations
+- **PDF Reporting**:
+  - Comprehensive progress reports
+  - Flashcard collections for printing
+  - Professional formatting with charts and analysis
 
 ## External Dependencies
 
@@ -42,11 +64,13 @@ Preferred communication style: Simple, everyday language.
 
 ### Python Libraries
 - **streamlit**: Web application framework
-- **openai**: Official OpenAI Python client
-- **datetime**: Built-in library for timestamp management
-- **json**: Built-in library for data serialization
-- **re**: Built-in library for filename sanitization
-- **os**: Built-in library for environment variable access
+- **openai**: Official OpenAI Python client (also used for OpenRouter API)
+- **reportlab**: PDF generation for comprehensive reports
+- **matplotlib**: Chart and graph generation for analytics
+- **pandas**: Data analysis and processing
+- **fpdf2**: Alternative PDF generation
+- **Pillow**: Image processing capabilities
+- **datetime, json, re, os**: Built-in libraries for various utilities
 
 ### Development Environment
 - **Python Runtime**: Compatible with standard Python environments

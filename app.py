@@ -453,6 +453,43 @@ def show_notes_page():
                             except Exception as e:
                                 st.error(f"Error: {str(e)}")
 
+def next_card(study_cards, correct=False):
+    """Move to next card and track progress"""
+    if 'cards_studied' not in st.session_state:
+        st.session_state.cards_studied = 0
+    if 'cards_correct' not in st.session_state:
+        st.session_state.cards_correct = 0
+    
+    st.session_state.cards_studied += 1
+    if correct:
+        st.session_state.cards_correct += 1
+    
+    st.session_state.current_card_index += 1
+    st.session_state.show_answer = False
+    
+    if st.session_state.current_card_index >= len(study_cards):
+        # Session complete
+        session = {
+            'timestamp': datetime.now().isoformat(),
+            'activity_type': 'flashcards',
+            'subject': 'Mixed' if len(set([card.get('category', 'General') for card in study_cards])) > 1 else study_cards[0].get('category', 'General'),
+            'duration_minutes': 10,
+            'flashcards_studied': st.session_state.cards_studied,
+            'correct_answers': st.session_state.cards_correct,
+            'questions_answered': st.session_state.cards_studied
+        }
+        st.session_state.study_sessions.append(session)
+        auto_save()
+        
+        st.success(f"Session complete! You studied {st.session_state.cards_studied} cards with {(st.session_state.cards_correct/st.session_state.cards_studied)*100:.1f}% accuracy!")
+        
+        # Reset for next session
+        for key in ['current_card_index', 'show_answer', 'cards_studied', 'cards_correct']:
+            if key in st.session_state:
+                del st.session_state[key]
+    
+    st.rerun()
+
 def show_flashcards_page():
     st.title("📚 Flashcards")
     
@@ -540,7 +577,6 @@ def show_flashcards_page():
                 
                 with col3:
                     if st.button("✅ Correct", use_container_width=True):
-                        st.session_state.cards_correct += 1
                         next_card(study_cards, correct=True)
             
             else:
@@ -552,35 +588,6 @@ def show_flashcards_page():
             if st.session_state.cards_studied > 0:
                 accuracy = (st.session_state.cards_correct / st.session_state.cards_studied) * 100
                 st.metric("Session Accuracy", f"{accuracy:.1f}%")
-
-def next_card(study_cards, correct=False):
-    """Move to next card and track progress"""
-    st.session_state.cards_studied += 1
-    st.session_state.current_card_index += 1
-    st.session_state.show_answer = False
-    
-    if st.session_state.current_card_index >= len(study_cards):
-        # Session complete
-        session = {
-            'timestamp': datetime.now().isoformat(),
-            'activity_type': 'flashcards',
-            'subject': 'Mixed' if len(set([card.get('category', 'General') for card in study_cards])) > 1 else study_cards[0].get('category', 'General'),
-            'duration_minutes': 10,  # Estimated
-            'flashcards_studied': st.session_state.cards_studied,
-            'correct_answers': st.session_state.cards_correct,
-            'questions_answered': st.session_state.cards_studied
-        }
-        st.session_state.study_sessions.append(session)
-        
-        st.success(f"🎉 Session complete! You studied {st.session_state.cards_studied} cards with {(st.session_state.cards_correct/st.session_state.cards_studied)*100:.1f}% accuracy!")
-        
-        # Reset for next session
-        del st.session_state.current_card_index
-        del st.session_state.show_answer
-        del st.session_state.cards_studied
-        del st.session_state.cards_correct
-    
-    st.rerun()
 
     with tab2:
         st.subheader("➕ Create Flashcards")

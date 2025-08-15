@@ -10,7 +10,6 @@ class AdvancedQuizSystem:
 
     def __init__(self, quiz_generator):
         self.quiz_generator = quiz_generator
-
 	def create_quiz_from_content(self, content, num_questions=10, difficulty="Medium", question_type="Mixed Questions"):
 		"""Create a quiz from provided content with specified question types"""
 		try:
@@ -70,8 +69,6 @@ class AdvancedQuizSystem:
 		except Exception as e:
 			st.error(f"Error creating quiz: {str(e)}")
 			return None
-
-
 
     def display_quiz_interface(self, quiz_data):
         """Display the interactive quiz interface"""

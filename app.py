@@ -499,7 +499,7 @@ elif st.session_state.page == "🧠 Quizzes":
         # First create the form elements
             col1, col2 = st.columns(2)
             with col1:
-                source = st.radio("Quiz source:", ["📚 My Notes", "📝 New Content"])
+                source = st.radio("Quiz source:", ["📚 My Notes", "📝 New Content","📂 Upload file"])
                 question_type = st.selectbox(
         "Question Type:",
         options=[

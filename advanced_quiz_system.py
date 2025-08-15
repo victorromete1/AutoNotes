@@ -13,32 +13,27 @@ class AdvancedQuizSystem:
     def create_quiz_from_content(self, content, num_questions=10, difficulty="Medium", question_type="Mixed Questions"):
         """Create a quiz from provided content with specified question types"""
         try:
-            # Generate quiz from content
+            # Map UI-friendly labels to internal quiz_type values for QuizGenerator
+            question_type_map = {
+                "Multiple Choice Only": "multiple_choice",
+                "True/False Only": "true_false",
+                "Short Answer Only": "short_answer",
+                "Mixed Questions": "mixed"
+            }
+            quiz_type_internal = question_type_map.get(question_type, "multiple_choice")
+
+            # Generate quiz from content with correct type
             quiz_data = self.quiz_generator.generate_quiz(
                 content=content,
                 num_questions=num_questions,
-                difficulty=difficulty
+                difficulty=difficulty,
+                quiz_type=quiz_type_internal
             )
 
             if not quiz_data or not isinstance(quiz_data, dict):
                 return None
 
-            questions = quiz_data.get('questions', [])
-
-            # Filter questions based on question_type
-            if question_type != "Mixed Questions":
-                question_type_map = {
-                    "Multiple Choice Only": "multiple_choice",
-                    "True/False Only": "true_false",
-                    "Short Answer Only": "short_answer"
-                }
-                target_type = question_type_map.get(question_type)
-                if target_type:
-                    questions = [q for q in questions if q.get('type') == target_type]
-
-            # Limit to requested number of questions
-            questions = questions[:num_questions]
-
+            # No need to filter questions by type here, QuizGenerator already does that
             formatted_quiz = {
                 'title': quiz_data.get('title', 'Study Quiz'),
                 'description': quiz_data.get('description', 'Test your knowledge'),
@@ -46,18 +41,18 @@ class AdvancedQuizSystem:
                 'metadata': {
                     'created': datetime.now().isoformat(),
                     'difficulty': difficulty,
-                    'total_questions': len(questions),
+                    'total_questions': len(quiz_data.get('questions', [])),
                     'original_content': content,
                     'question_type': question_type
                 }
             }
 
-            for i, q in enumerate(questions):
+            for i, q in enumerate(quiz_data.get('questions', [])):
                 if isinstance(q, dict):
                     formatted_quiz['questions'].append({
                         'id': i + 1,
                         'question': q.get('question', ''),
-                        'type': q.get('type', 'multiple_choice'),
+                        'type': q.get('type', quiz_type_internal),
                         'options': q.get('options', []),
                         'correct_answer': q.get('correct_answer', ''),
                         'explanation': q.get('explanation', ''),
@@ -69,6 +64,8 @@ class AdvancedQuizSystem:
         except Exception as e:
             st.error(f"Error creating quiz: {str(e)}")
             return None
+
+
 
 
     def display_quiz_interface(self, quiz_data):

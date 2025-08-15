@@ -1,68 +1,76 @@
-import streamlit as st
+# advanced_quiz_system.py
 import json
 import re
 from datetime import datetime
-from quiz_generator import QuizGenerator
+from typing import Any, Dict, List, Optional, Union
+import streamlit as st
 
 
 class AdvancedQuizSystem:
-    """Enhanced quiz system with comprehensive features"""
-
     def __init__(self, quiz_generator):
+        """
+        Enhanced quiz system with comprehensive features from both versions.
+        Maintains compatibility with app.py while incorporating improvements.
+        """
         self.quiz_generator = quiz_generator
-    def create_quiz_from_content(self, content, num_questions=10, difficulty="Medium", question_type="Mixed Questions"):
+
+    # -----------------------------
+    # Public Interface (app.py compatible)
+    # -----------------------------
+
+    def create_quiz_from_content(self, content: str, num_questions: int = 10,
+                               difficulty: str = "Medium", question_type: str = "Mixed Questions") -> Optional[Dict[str, Any]]:
         """Create a quiz from provided content with specified question types"""
         try:
-            # Generate quiz from content
+            # Map UI labels to internal types
+            question_type_map = {
+                "Multiple Choice Only": "multiple_choice",
+                "True/False Only": "true_false",
+                "Short Answer Only": "short_answer",
+                "Mixed Questions": "mixed"
+            }
+            quiz_type_internal = question_type_map.get(question_type, "multiple_choice")
+
+            # Generate quiz
             quiz_data = self.quiz_generator.generate_quiz(
                 content=content,
                 num_questions=num_questions,
-                difficulty=difficulty
+                difficulty=difficulty,
+                quiz_type=quiz_type_internal
             )
 
             if not quiz_data or not isinstance(quiz_data, dict):
+                st.error("Failed to generate quiz: invalid data returned")
                 return None
 
-            questions = quiz_data.get('questions', [])
+            # Normalize questions
+            normalized = self._normalize_questions(quiz_data, fallback_type=quiz_type_internal)
 
-            # Filter questions based on question_type
-            if question_type != "Mixed Questions":
-                question_type_map = {
-                    "Multiple Choice Only": "multiple_choice",
-                    "True/False Only": "true_false",
-                    "Short Answer Only": "short_answer"
-                }
-                target_type = question_type_map.get(question_type)
-                if target_type:
-                    questions = [q for q in questions if q.get('type') == target_type]
-
-            # Limit to requested number of questions
-            questions = questions[:num_questions]
-
+            # Build formatted quiz (app.py compatible structure)
             formatted_quiz = {
-                'title': quiz_data.get('title', 'Study Quiz'),
-                'description': quiz_data.get('description', 'Test your knowledge'),
+                'title': normalized.get('title', 'Study Quiz'),
+                'description': normalized.get('description', 'Test your knowledge'),
                 'questions': [],
                 'metadata': {
                     'created': datetime.now().isoformat(),
                     'difficulty': difficulty,
-                    'total_questions': len(questions),
+                    'total_questions': len(normalized.get('questions', [])),
                     'original_content': content,
-                    'question_type': question_type
+                    'question_type': question_type  # Preserve original UI label
                 }
             }
 
-            for i, q in enumerate(questions):
-                if isinstance(q, dict):
-                    formatted_quiz['questions'].append({
-                        'id': i + 1,
-                        'question': q.get('question', ''),
-                        'type': q.get('type', 'multiple_choice'),
-                        'options': q.get('options', []),
-                        'correct_answer': q.get('correct_answer', ''),
-                        'explanation': q.get('explanation', ''),
-                        'points': 1
-                    })
+            # Format questions with all required fields
+            for i, q in enumerate(normalized.get('questions', [])):
+                formatted_quiz['questions'].append({
+                    'id': i + 1,
+                    'question': q.get('question', '').strip(),
+                    'type': q.get('type', quiz_type_internal),
+                    'options': q.get('options', []),
+                    'correct_answer': str(q.get('correct_answer', '')),
+                    'explanation': q.get('explanation', ''),
+                    'points': q.get('points', 1)
+                })
 
             return formatted_quiz
 
@@ -70,9 +78,8 @@ class AdvancedQuizSystem:
             st.error(f"Error creating quiz: {str(e)}")
             return None
 
-
     def display_quiz_interface(self, quiz_data):
-        """Display the interactive quiz interface"""
+        """Display the interactive quiz interface (app.py compatible)"""
         if not quiz_data:
             st.error("No quiz data available")
             return
@@ -113,8 +120,159 @@ class AdvancedQuizSystem:
         else:
             self._display_quiz_results(quiz_data)
 
+    def display_quiz_history(self):
+        """Display quiz history with retake functionality (app.py compatible)"""
+        quiz_sessions = [s for s in st.session_state.get('study_sessions', []) 
+                        if s.get('activity_type') == 'quiz']
+
+        if not quiz_sessions:
+            st.info("No quiz history yet. Complete your first quiz to see results!")
+            return
+
+        st.header("📚 Quiz History")
+
+        # Stats summary
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Quizzes", len(quiz_sessions))
+        avg_score = sum(s['score'] for s in quiz_sessions) / len(quiz_sessions)
+        col2.metric("Average Score", f"{avg_score:.1f}%")
+        best_score = max(s['score'] for s in quiz_sessions)
+        col3.metric("Best Score", f"{best_score:.1f}%")
+
+        # Filter options
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            filter_difficulty = st.selectbox("Filter by difficulty:", ["All"] + sorted(list(set(s['difficulty'] for s in quiz_sessions))))
+        with col2:
+            filter_type = st.selectbox("Filter by type:", ["All"] + sorted(list(set(s.get('question_type', 'Mixed Questions') for s in quiz_sessions))))
+        with col3:
+            sort_by = st.selectbox("Sort by:", ["Date (Newest)", "Date (Oldest)", "Score (Highest)", "Score (Lowest)"])
+
+        # Apply filters and sorting
+        filtered_sessions = self._filter_and_sort_sessions(quiz_sessions, filter_difficulty, filter_type, sort_by)
+
+        # Display sessions
+        st.subheader("Quiz Attempts")
+        for i, session in enumerate(filtered_sessions):
+            with st.expander(f"{session['title']} - {session['score']:.1f}% - {session['timestamp'][:10]}"):
+                col1, col2 = st.columns([3,1])
+                with col1:
+                    st.write(f"📅 Date: {session['timestamp'][:10]}")
+                    st.write(f"🔢 Score: {session['score']:.1f}% ({session['correct_answers']}/{session['total_questions']})")
+                    st.write(f"📊 Difficulty: {session['difficulty']}")
+                    st.write(f"❓ Type: {session.get('question_type', 'Mixed Questions')}")
+                    st.write(f"⏱️ Time: {session.get('time_taken', 'N/A')}")
+
+                with col2:
+                    if st.button("🔄 Retake This Quiz", key=f"retake_{i}"):
+                        st.session_state.retake_quiz = {
+                            'content': session['original_content'],
+                            'num_questions': session['total_questions'],
+                            'difficulty': session['difficulty'],
+                            'question_type': session.get('question_type', 'Mixed Questions')
+                        }
+                        st.session_state.page = "🧠 Quizzes"
+                        st.session_state.quiz_active = False
+                        st.rerun()
+
+    # -----------------------------
+    # Grading and Results (app.py compatible)
+    # -----------------------------
+
+    def grade_submission(self, quiz: Dict[str, Any], user_answers: Dict[int, Any]) -> Dict[str, Any]:
+        """Grade user answers with improved robustness"""
+        total = 0
+        correct = 0
+        details = []
+
+        for q in quiz.get('questions', []):
+            qid = q.get('id')
+            if qid is None:
+                continue
+
+            total += 1
+            result = self._grade_question(q, user_answers.get(qid))
+            if result['is_correct']:
+                correct += 1
+            details.append(result)
+
+        return {
+            'score': correct,
+            'total': total,
+            'percent': (correct / total * 100) if total else 0,
+            'details': details,
+            'graded_at': datetime.now().isoformat()
+        }
+
+    def _display_quiz_results(self, quiz_data):
+        """Display comprehensive quiz results (app.py compatible)"""
+        st.header("🎉 Quiz Complete!")
+        st.subheader(f"Quiz Type: {quiz_data['metadata']['question_type']}")
+
+        # Grade the quiz
+        grading_result = self.grade_submission(
+            quiz_data,
+            st.session_state.quiz_state['answers']
+        )
+
+        # Convert to app.py expected format
+        results = []
+        question_types = {}
+        for detail in grading_result['details']:
+            q_type = detail['type']
+            if q_type not in question_types:
+                question_types[q_type] = {'correct': 0, 'total': 0}
+            question_types[q_type]['total'] += 1
+            if detail['is_correct']:
+                question_types[q_type]['correct'] += 1
+
+            results.append({
+                'question_number': detail.get('question_id', 0),
+                'question': detail['question'],
+                'user_answer': detail['user_answer'],
+                'correct_answer': detail['correct_answer'],
+                'is_correct': detail['is_correct'],
+                'explanation': detail['explanation'],
+                'type': q_type
+            })
+
+        time_taken = datetime.now() - st.session_state.quiz_state['start_time']
+
+        # Display score summary
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Score", f"{grading_result['percent']:.1f}%")
+        col2.metric("Correct", f"{grading_result['score']}/{grading_result['total']}")
+        col3.metric("Time Taken", f"{time_taken.seconds//60}m {time_taken.seconds%60}s")
+
+        # Performance insights
+        self._display_performance_analysis(grading_result['percent'], question_types, results)
+
+        # Save results
+        self._save_quiz_results(quiz_data, results, grading_result['percent'], time_taken)
+
+        # Navigation
+        col1, col2 = st.columns(2)
+        if col1.button("🔄 Retake Quiz", type="primary"):
+            self._reset_quiz_state()
+            st.session_state.retake_quiz = {
+                'content': quiz_data['metadata']['original_content'],
+                'num_questions': quiz_data['metadata']['total_questions'],
+                'difficulty': quiz_data['metadata']['difficulty'],
+                'question_type': quiz_data['metadata']['question_type']
+            }
+            st.rerun()
+
+        if col2.button("⬅️ Back to Quiz Setup"):
+            self._reset_quiz_state()
+            st.session_state.quiz_active = False
+            st.rerun()
+
+    # -----------------------------
+    # Helper Methods (app.py compatible)
+    # -----------------------------
+
     def _display_question(self, question, index):
-        """Display a single question"""
+        """Display a single question (app.py compatible)"""
         st.subheader(f"Question {index + 1}")
         st.markdown(f"**Type:** {question['type'].replace('_', ' ').title()}")
         st.write(question['question'])
@@ -144,7 +302,7 @@ class AdvancedQuizSystem:
             st.info("🔵 Answered")
 
     def _display_navigation(self, total, current):
-        """Display navigation buttons"""
+        """Display navigation buttons (app.py compatible)"""
         col1, col2, col3 = st.columns([1,1,1])
 
         with col1:
@@ -168,120 +326,8 @@ class AdvancedQuizSystem:
                 else:
                     st.warning("Please answer the question first")
 
-    def _display_quiz_results(self, quiz_data):
-        """Display comprehensive quiz results"""
-        st.header("🎉 Quiz Complete!")
-        st.subheader(f"Quiz Type: {quiz_data['metadata']['question_type']}")
-
-        total = len(quiz_data['questions'])
-        correct = 0
-        results = []
-        question_types = {}
-        time_taken = datetime.now() - st.session_state.quiz_state['start_time']
-
-        for i, q in enumerate(quiz_data['questions']):
-            user_answer = st.session_state.quiz_state['answers'].get(i, "No answer")
-            is_correct = self._grade_answer(user_answer, q['correct_answer'], q['type'])
-
-            if is_correct:
-                correct += 1
-
-            # Track performance by question type
-            q_type = q['type']
-            if q_type not in question_types:
-                question_types[q_type] = {'correct': 0, 'total': 0}
-            question_types[q_type]['total'] += 1
-            if is_correct:
-                question_types[q_type]['correct'] += 1
-
-            results.append({
-                'question': q['question'],
-                'user_answer': user_answer['answer'] if isinstance(user_answer, dict) else user_answer,
-                'correct_answer': q['correct_answer'],
-                'is_correct': is_correct,
-                'explanation': q.get('explanation', ''),
-                'type': q['type'],
-                'question_number': i+1
-            })
-
-        score = (correct / total) * 100
-
-        # Display score summary
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Score", f"{score:.1f}%")
-        col2.metric("Correct", f"{correct}/{total}")
-        col3.metric("Time Taken", f"{time_taken.seconds//60}m {time_taken.seconds%60}s")
-
-        # Performance insights
-        st.subheader("📊 Detailed Performance Analysis")
-        
-        # Overall performance assessment
-        with st.expander("🔍 Overall Performance", expanded=True):
-            self._display_performance_analysis(score, question_types, results)
-        
-        # Question-by-question review
-        with st.expander("📝 Question-by-Question Review", expanded=False):
-            for r in results:
-                with st.container():
-                    col1, col2 = st.columns([4,1])
-                    with col1:
-                        st.write(f"**Q{r['question_number']}:** {r['question']}")
-                        st.caption(f"Type: {r['type'].replace('_', ' ').title()}")
-                    with col2:
-                        st.markdown("**Correct** ✅" if r['is_correct'] else "**Incorrect** ❌")
-                    
-                    with st.expander(f"View details for Q{r['question_number']}", expanded=False):
-                        if not r['is_correct']:
-                            st.error(f"❌ Your answer: {r['user_answer']}")
-                            st.success(f"✓ Correct answer: {r['correct_answer']}")
-                        else:
-                            st.success(f"✅ Your answer: {r['user_answer']}")
-                        
-                        if r['explanation']:
-                            st.info(f"💡 Explanation: {r['explanation']}")
-                    st.divider()
-
-        # Question type breakdown
-        with st.expander("📈 Question Type Breakdown", expanded=False):
-            for q_type, stats in question_types.items():
-                type_name = q_type.replace('_', ' ').title()
-                accuracy = (stats['correct'] / stats['total']) * 100
-                
-                col1, col2 = st.columns([2,3])
-                with col1:
-                    st.metric(f"{type_name} Accuracy", f"{accuracy:.1f}%")
-                with col2:
-                    st.progress(accuracy/100)
-            
-            # Difficulty adjustment suggestion
-            if score > 80 and quiz_data['metadata']['difficulty'] != "Hard":
-                st.info("💡 You're doing well! Consider increasing the difficulty next time.")
-            elif score < 50 and quiz_data['metadata']['difficulty'] != "Easy":
-                st.warning("💡 This was challenging. You might want to try an easier level next time.")
-
-        # Save results
-        self._save_quiz_results(quiz_data, results, score, time_taken)
-
-        # Navigation
-        col1, col2 = st.columns(2)
-        if col1.button("🔄 Retake Quiz", type="primary"):
-            self._reset_quiz_state()
-            st.session_state.retake_quiz = {
-                'content': quiz_data['metadata']['original_content'],
-                'num_questions': quiz_data['metadata']['total_questions'],
-                'difficulty': quiz_data['metadata']['difficulty'],
-                'question_type': quiz_data['metadata']['question_type']
-            }
-            st.rerun()
-
-        if col2.button("⬅️ Back to Quiz Setup"):
-            self._reset_quiz_state()
-            st.session_state.quiz_active = False
-            st.rerun()
-
     def _display_performance_analysis(self, score, question_types, results):
-        """Display detailed performance analysis and recommendations"""
-        # Overall performance assessment
+        """Display detailed performance analysis (app.py compatible)"""
         if score >= 90:
             st.success("🌟 Outstanding performance! You've mastered this material.")
         elif score >= 80:
@@ -309,7 +355,7 @@ class AdvancedQuizSystem:
         if incorrect:
             st.subheader("🔍 Focus Areas")
             st.write("You missed these concepts:")
-            for i, r in enumerate(incorrect[:5]):  # Show top 5 missed
+            for i, r in enumerate(incorrect[:5]):
                 st.write(f"- {r['question'][:100]}...")
 
         # Study recommendations
@@ -325,119 +371,8 @@ class AdvancedQuizSystem:
             st.write("- Practice with similar quizzes")
             st.write("- Study in shorter, more frequent sessions")
 
-    def display_quiz_history(self):
-        """Display quiz history with retake functionality"""
-        quiz_sessions = [s for s in st.session_state.get('study_sessions', []) 
-                        if s.get('activity_type') == 'quiz']
-
-        if not quiz_sessions:
-            st.info("No quiz history yet. Complete your first quiz to see results!")
-            return
-
-        st.header("📚 Quiz History")
-
-        # Stats summary
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total Quizzes", len(quiz_sessions))
-        avg_score = sum(s['score'] for s in quiz_sessions) / len(quiz_sessions)
-        col2.metric("Average Score", f"{avg_score:.1f}%")
-        best_score = max(s['score'] for s in quiz_sessions)
-        col3.metric("Best Score", f"{best_score:.1f}%")
-
-        # Filter options
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            filter_difficulty = st.selectbox("Filter by difficulty:", ["All"] + sorted(list(set(s['difficulty'] for s in quiz_sessions))))
-        with col2:
-            filter_type = st.selectbox("Filter by type:", ["All"] + sorted(list(set(s.get('question_type', 'Mixed Questions') for s in quiz_sessions))))
-        with col3:
-            sort_by = st.selectbox("Sort by:", ["Date (Newest)", "Date (Oldest)", "Score (Highest)", "Score (Lowest)"])
-
-        # Apply filters
-        filtered_sessions = quiz_sessions
-        if filter_difficulty != "All":
-            filtered_sessions = [s for s in filtered_sessions if s['difficulty'] == filter_difficulty]
-        if filter_type != "All":
-            filtered_sessions = [s for s in filtered_sessions if s.get('question_type', 'Mixed Questions') == filter_type]
-
-        # Apply sorting
-        reverse_sort = True
-        if sort_by == "Date (Newest)":
-            key = lambda x: x['timestamp']
-        elif sort_by == "Date (Oldest)":
-            key = lambda x: x['timestamp']
-            reverse_sort = False
-        elif sort_by == "Score (Highest)":
-            key = lambda x: x['score']
-        else:  # "Score (Lowest)"
-            key = lambda x: x['score']
-            reverse_sort = False
-
-        filtered_sessions = sorted(filtered_sessions, key=key, reverse=reverse_sort)
-
-        # Recent attempts
-        st.subheader("Quiz Attempts")
-        for i, session in enumerate(filtered_sessions):
-            with st.expander(f"{session['title']} - {session['score']:.1f}% - {session['timestamp'][:10]}"):
-                col1, col2 = st.columns([3,1])
-                with col1:
-                    st.write(f"📅 Date: {session['timestamp'][:10]}")
-                    st.write(f"🔢 Score: {session['score']:.1f}% ({session['correct_answers']}/{session['total_questions']})")
-                    st.write(f"📊 Difficulty: {session['difficulty']}")
-                    st.write(f"❓ Type: {session.get('question_type', 'Mixed Questions')}")
-                    st.write(f"⏱️ Time: {session.get('time_taken', 'N/A')}")
-
-                with col2:
-                    if st.button("🔄 Retake This Quiz", key=f"retake_{i}"):
-                        st.session_state.retake_quiz = {
-                            'content': session['original_content'],
-                            'num_questions': session['total_questions'],
-                            'difficulty': session['difficulty'],
-                            'question_type': session.get('question_type', 'Mixed Questions')
-                        }
-                        st.session_state.page = "🧠 Quizzes"
-                        st.session_state.quiz_active = False
-                        st.rerun()
-
-    def _extract_answer_letter(self, answer):
-        """Extract letter from multiple choice answer"""
-        match = re.match(r'^([A-Za-z])[\)\.]?\s*', str(answer).strip())
-        return match.group(1).upper() if match else ""
-
-    def _grade_answer(self, user_answer, correct_answer, q_type):
-        """Grade a single answer"""
-        if not user_answer or user_answer == "No answer":
-            return False
-
-        if q_type in ['multiple_choice', 'true_false']:
-            if isinstance(user_answer, dict):
-                return user_answer['letter'].upper() == str(correct_answer).upper()
-            return str(user_answer).upper() == str(correct_answer).upper()
-
-        elif q_type in ['short_answer', 'fill_blank']:
-            user_clean = re.sub(r'[^\w\s]', '', str(user_answer).lower().strip())
-            correct_clean = re.sub(r'[^\w\s]', '', str(correct_answer).lower().strip())
-            return user_clean == correct_clean
-
-        return False
-
-    def _get_letter_grade(self, percentage):
-        """Convert percentage to letter grade"""
-        if percentage >= 97: return "A+"
-        elif percentage >= 93: return "A"
-        elif percentage >= 90: return "A-"
-        elif percentage >= 87: return "B+"
-        elif percentage >= 83: return "B"
-        elif percentage >= 80: return "B-"
-        elif percentage >= 77: return "C+"
-        elif percentage >= 73: return "C"
-        elif percentage >= 70: return "C-"
-        elif percentage >= 67: return "D+"
-        elif percentage >= 65: return "D"
-        else: return "F"
-
     def _save_quiz_results(self, quiz_data, results, score, time_taken):
-        """Save quiz results to session state"""
+        """Save quiz results to session state (app.py compatible)"""
         quiz_result = {
             'timestamp': datetime.now().isoformat(),
             'title': quiz_data['title'],
@@ -457,8 +392,238 @@ class AdvancedQuizSystem:
         st.session_state.study_sessions.append(quiz_result)
 
     def _reset_quiz_state(self):
-        """Reset quiz state"""
+        """Reset quiz state (app.py compatible)"""
         if 'quiz_state' in st.session_state:
             del st.session_state.quiz_state
         if 'retake_quiz' in st.session_state:
             del st.session_state.retake_quiz
+
+    def _extract_answer_letter(self, answer):
+        """Extract letter from multiple choice answer (app.py compatible)"""
+        match = re.match(r'^([A-Za-z])[\)\.]?\s*', str(answer).strip())
+        return match.group(1).upper() if match else ""
+
+    # -----------------------------
+    # Enhanced Methods (from new version)
+    # -----------------------------
+
+    def _normalize_questions(self, quiz_data: Dict[str, Any], fallback_type: str) -> Dict[str, Any]:
+        """Enhanced question normalization from new version"""
+        data = dict(quiz_data)
+        questions = data.get("questions", [])
+        
+        if not isinstance(questions, list):
+            raw = json.dumps(quiz_data) if not isinstance(quiz_data, str) else quiz_data
+            cleaned = self._clean_model_json(raw)
+            try:
+                candidate = json.loads(cleaned)
+                questions = candidate.get("questions", [])
+                data.update(candidate)
+            except Exception:
+                questions = []
+
+        normalized_questions = []
+        for q in questions:
+            if not isinstance(q, dict):
+                if isinstance(q, str):
+                    q = self._try_parse_question_dict(q) or {}
+                else:
+                    continue
+
+            # Ensure required fields
+            q = self._ensure_question_fields(q, fallback_type)
+            normalized_questions.append(q)
+
+        data["questions"] = normalized_questions
+        return data
+
+    def _ensure_question_fields(self, q: Dict[str, Any], fallback_type: str) -> Dict[str, Any]:
+        """Ensure all required question fields exist with proper values"""
+        # Determine question type
+        qtype = (q.get("type") or fallback_type or "").lower()
+        if qtype not in ("multiple_choice", "true_false", "short_answer", "mixed"):
+            qtype = fallback_type or "multiple_choice"
+        q["type"] = qtype
+
+        # Ensure correct_answer exists
+        if "correct_answer" not in q or not q.get("correct_answer"):
+            for alt in ("sample_answer", "expected_answer", "answer", "key_points"):
+                if q.get(alt):
+                    q["correct_answer"] = q[alt]
+                    break
+            
+            if not q.get("correct_answer") and qtype == "true_false":
+                inferred = self._infer_true_false_from_text(q.get("explanation", "")) or ""
+                q["correct_answer"] = inferred
+
+        # Clean fields
+        q["question"] = (q.get("question") or "").strip()
+        q["explanation"] = q.get("explanation", "")
+        q["correct_answer"] = str(q.get("correct_answer", ""))
+
+        # Handle question type specifics
+        if qtype == "multiple_choice":
+            opts = q.get("options", [])
+            if not isinstance(opts, list) or not opts:
+                opts = self._extract_options_from_text(q.get("question", ""))
+            q["options"] = opts
+            q["correct_answer"] = self._normalize_mc_correct(q["correct_answer"], opts)
+
+        return q
+
+    def _grade_question(self, question: Dict[str, Any], user_answer: Any) -> Dict[str, Any]:
+        """Grade a single question with improved robustness"""
+        qtype = (question.get("type") or "").lower()
+        correct_answer = str(question.get("correct_answer", "")).strip()
+        explanation = question.get("explanation", "")
+        
+        is_correct = False
+        normalized_user = self._coerce_answer_for_type(user_answer, qtype)
+        normalized_correct = self._coerce_answer_for_type(correct_answer, qtype)
+
+        if qtype == "multiple_choice":
+            is_correct = self._compare_mc_answer(normalized_user, normalized_correct, question)
+        elif qtype == "true_false":
+            is_correct = str(normalized_user).lower() == str(normalized_correct).lower()
+        else:  # short_answer or unknown
+            if isinstance(normalized_user, str) and isinstance(normalized_correct, str):
+                u = normalized_user.strip().lower()
+                c = normalized_correct.strip().lower()
+                is_correct = (u == c) or (c in u) or (u in c)
+
+        return {
+            "question_id": question.get("id", 0),
+            "question": question.get("question", ""),
+            "type": qtype,
+            "user_answer": user_answer,
+            "correct_answer": correct_answer,
+            "is_correct": is_correct,
+            "explanation": explanation,
+            "points_awarded": 1 if is_correct else 0
+        }
+
+    # -----------------------------
+    # Utility Methods (from new version)
+    # -----------------------------
+
+    def _clean_model_json(self, text: str) -> str:
+        """Clean common LLM JSON issues"""
+        if not isinstance(text, str):
+            try:
+                text = json.dumps(text)
+            except Exception:
+                text = str(text)
+
+        text = re.sub(r"^\s*```(?:json)?\s*", "", text.strip(), flags=re.IGNORECASE)
+        text = re.sub(r"\s*```\s*$", "", text, flags=re.IGNORECASE)
+        text = text.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
+        text = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F]", " ", text)
+        text = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', text)
+        text = re.sub(r",\s*([}\]])", r"\1", text)
+        return text
+
+    def _try_parse_question_dict(self, qtext: str) -> Optional[Dict[str, Any]]:
+        """Try to parse a single question represented as a JSON string"""
+        if not isinstance(qtext, str):
+            return None
+        cleaned = self._clean_model_json(qtext)
+        try:
+            obj = json.loads(cleaned)
+            return obj if isinstance(obj, dict) else None
+        except Exception:
+            return None
+
+    def _infer_true_false_from_text(self, text: str) -> Optional[str]:
+        """Heuristic to pull True/False from text"""
+        if not text or not isinstance(text, str):
+            return None
+        m = re.search(r"\b(true|false)\b", text, flags=re.IGNORECASE)
+        return m.group(1).capitalize() if m else None
+
+    def _extract_options_from_text(self, text: str) -> List[str]:
+        """Extract MC options from text"""
+        if not text:
+            return []
+        matches = re.findall(r"(?:^|\s)[A-D]\)\s*([^;|\n]+)", text)
+        return [m.strip() for m in matches] if matches else []
+
+    def _normalize_mc_correct(self, correct: Any, options: List[str]) -> str:
+        """Normalize MC correct answer to option key or text"""
+        if correct is None:
+            return ""
+        c = str(correct).strip()
+
+        if re.fullmatch(r"[A-Z]", c, flags=re.IGNORECASE):
+            return c.upper()
+
+        for idx, opt in enumerate(options):
+            if c.lower() == str(opt).strip().lower():
+                return opt
+
+        m = re.match(r"([A-Da-d])\b", c)
+        if m:
+            return m.group(1).upper()
+
+        return c
+
+    def _coerce_answer_for_type(self, ans: Any, qtype: str) -> Any:
+        """Normalize answers by type"""
+        if qtype == "true_false":
+            if isinstance(ans, bool):
+                return "True" if ans else "False"
+            if isinstance(ans, str):
+                s = ans.strip().lower()
+                if s in ("true", "t", "yes", "y", "1"):
+                    return "True"
+                if s in ("false", "f", "no", "n", "0"):
+                    return "False"
+        if isinstance(ans, str):
+            return ans.strip()
+        return ans
+
+    def _compare_mc_answer(self, user_ans: Any, correct_ans: Any, q: Dict[str, Any]) -> bool:
+        """Robust MC answer comparison"""
+        options = [str(o).strip() for o in q.get("options", [])]
+        if not options:
+            return str(user_ans).strip().lower() == str(correct_ans).strip().lower()
+
+        letters = [chr(ord('A') + i) for i in range(len(options))]
+        letter_to_text = dict(zip(letters, options))
+
+        u = str(user_ans).strip()
+        c = str(correct_ans).strip()
+
+        if c.upper() in letter_to_text:
+            if u.upper() == c.upper():
+                return True
+            return u.lower() == letter_to_text[c.upper()].lower()
+
+        if c:
+            if u.lower() == c.lower():
+                return True
+            for L, txt in letter_to_text.items():
+                if txt.lower() == c.lower():
+                    return u.upper() == L
+        return False
+
+    def _filter_and_sort_sessions(self, sessions, filter_difficulty, filter_type, sort_by):
+        """Filter and sort quiz sessions"""
+        filtered = sessions
+        if filter_difficulty != "All":
+            filtered = [s for s in filtered if s['difficulty'] == filter_difficulty]
+        if filter_type != "All":
+            filtered = [s for s in filtered if s.get('question_type', 'Mixed Questions') == filter_type]
+
+        reverse = True
+        if sort_by == "Date (Newest)":
+            key = lambda x: x['timestamp']
+        elif sort_by == "Date (Oldest)":
+            key = lambda x: x['timestamp']
+            reverse = False
+        elif sort_by == "Score (Highest)":
+            key = lambda x: x['score']
+        else:  # "Score (Lowest)"
+            key = lambda x: x['score']
+            reverse = False
+
+        return sorted(filtered, key=key, reverse=reverse)

@@ -6,24 +6,22 @@ from datetime import datetime
 
 class FlashcardGenerator:
     def __init__(self):
-        """Initialize the flashcard generator with AI client."""
-        # Try OpenRouter first (completely free)
-        #openrouter_key = os.getenv("OPENROUTER_API_KEY")
-        openrouter_key = st.secrets["OPENAI_API_KEY"]
-        openai_key = os.getenv("OPENAI_API_KEY")
+        """Initialize the flashcard generator with DeepSeek via OpenRouter (no OpenAI fallback)."""
         
-        if openrouter_key:
-            self.client = OpenAI(
-                base_url="https://openrouter.ai/api/v1",
-                api_key=openrouter_key
-            )
-            self.model = "deepseek/deepseek-chat"
-        elif openai_key:
-            self.client = OpenAI(api_key=openai_key)
-            self.model = "gpt-4o"
-        else:
-            st.error("⚠️ No API key found. Please set either OPENROUTER_API_KEY or OPENAI_API_KEY.")
+        # Get OpenRouter API key from Streamlit secrets or environment
+        openrouter_key = st.secrets.get("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_API_KEY")
+        
+        if not openrouter_key:
+            st.error("⚠️ No OpenRouter API key found. Please set OPENROUTER_API_KEY.")
             st.stop()
+        
+        # Always use OpenRouter client
+        self.client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=openrouter_key
+        )
+        self.model = "deepseek/deepseek-chat"
+
     
     def generate_flashcards(self, content, num_cards=10, difficulty="Medium"):
         """Generate flashcards from given content."""

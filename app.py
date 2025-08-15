@@ -495,6 +495,10 @@ elif st.session_state.page == "🧠 Quizzes":
         else:
             st.subheader("📝 Create New Quiz")
 
+        # Initialize content variable
+            content = ""
+
+        # First create the form elements
             col1, col2 = st.columns(2)
             with col1:
                 source = st.radio("Quiz source:", ["📚 My Notes", "📝 New Content"])
@@ -502,8 +506,7 @@ elif st.session_state.page == "🧠 Quizzes":
                 num_questions = st.slider("Questions:", 3, 15, 8)
                 difficulty = st.selectbox("Difficulty:", ["Easy", "Medium", "Hard"])
 
-            content = ""
-
+        # Then handle content based on source selection
             if source == "📚 My Notes":
                 if st.session_state.notes:
                     note_titles = [n['title'] for n in st.session_state.notes]
@@ -514,10 +517,9 @@ elif st.session_state.page == "🧠 Quizzes":
                         st.text_area("Preview:", value=content[:200] + "...", height=100, disabled=True)
                 else:
                     st.info("No notes available. Create some first!")
-
             else:  # New Content
                 content = st.text_area("Enter content:", height=200, 
-                                     placeholder="Paste study material...")
+                                    placeholder="Paste study material...")
 
             if st.button("🚀 Create & Start Quiz", type="primary", use_container_width=True):
                 if content.strip():
@@ -541,14 +543,13 @@ elif st.session_state.page == "🧠 Quizzes":
                             st.error(f"Error: {str(e)}")
                 else:
                     st.warning("Please provide content for the quiz.")
-
     with tab2:
         st.subheader("📊 Quiz History")
 
         quiz_sessions = [s for s in st.session_state.study_sessions if s.get('activity_type') == 'quiz']
 
         if quiz_sessions:
-            # Stats
+            # Stats (keep existing code)
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("Total Quizzes", len(quiz_sessions))
@@ -559,9 +560,9 @@ elif st.session_state.page == "🧠 Quizzes":
                 best_score = max(s.get('score', 0) for s in quiz_sessions)
                 st.metric("Best Score", f"{best_score:.1f}%")
 
-            # History
+            # History with Retake button
             st.subheader("Recent Results")
-            for session in reversed(quiz_sessions[-10:]):
+            for i, session in enumerate(reversed(quiz_sessions[-10:])):
                 timestamp = datetime.fromisoformat(session['timestamp']).strftime("%Y-%m-%d %H:%M")
                 score = session.get('score', 0)
                 correct = session.get('correct_answers', 0)
@@ -572,9 +573,20 @@ elif st.session_state.page == "🧠 Quizzes":
                 with st.expander(f"{color} {timestamp} - {score:.1f}% ({correct}/{total})"):
                     st.write(f"**Score:** {score:.1f}%")
                     st.write(f"**Difficulty:** {session.get('difficulty', 'N/A')}")
+
+                    # Add Retake button
+                    if st.button("🔄 Retake This Quiz", key=f"retake_{i}"):
+                        # Store the original quiz content to recreate it
+                        st.session_state.retake_quiz_content = session.get('original_content', '')
+                        st.session_state.retake_quiz_config = {
+                            'num_questions': session.get('total_questions', 10),
+                            'difficulty': session.get('difficulty', 'Medium')
+                        }
+                        st.session_state.page = "🧠 Quizzes"
+                        st.session_state.quiz_active = False  # Force new quiz creation
+                        st.rerun()
         else:
             st.info("No quiz history yet. Take your first quiz!")
-
 elif st.session_state.page == "📊 Progress":
     st.title("📊 Learning Analytics")
 

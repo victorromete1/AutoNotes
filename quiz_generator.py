@@ -58,22 +58,44 @@ class QuizGenerator:
         return quiz_data
 
     def _generate_mixed_quiz(self, content, num_questions, difficulty):
-        mc_count = max(1, num_questions // 3)
-        tf_count = max(1, num_questions // 3)
-        sa_count = num_questions - mc_count - tf_count
-
-        mc_quiz = self.generate_quiz(content, "multiple_choice", mc_count, difficulty) or {}
-        tf_quiz = self.generate_quiz(content, "true_false", tf_count, difficulty) or {}
-        sa_quiz = self.generate_quiz(content, "short_answer", sa_count, difficulty) or {}
-
+        """Generate a quiz with randomly mixed question types.
+        
+        Args:
+            content: The content to generate questions from
+            num_questions: Total number of questions to generate
+            difficulty: Difficulty level ('Easy', 'Medium', 'Hard')
+            
+        Returns:
+            dict: Dictionary of mixed questions with keys like 'Q1', 'Q2', etc.
+        """
+        # Define possible question types and their weights
+        question_types = [
+            ("multiple_choice", 0.5),   # 50% chance
+            ("true_false", 0.3),       # 30% chance  
+            ("short_answer", 0.2)      # 20% chance
+        ]
+        
         mixed_quiz = {}
-        question_number = 1
-
-        for quiz_part in (mc_quiz, tf_quiz, sa_quiz):
-            for _, q_data in quiz_part.items():
-                mixed_quiz[f"Q{question_number}"] = q_data
-                question_number += 1
-
+        
+        for i in range(1, num_questions + 1):
+            # Weighted random selection of question type
+            chosen_type = random.choices(
+                [t[0] for t in question_types],
+                weights=[t[1] for t in question_types],
+                k=1
+            )[0]
+            
+            # Generate single question of chosen type
+            quiz_part = self.generate_quiz(content, chosen_type, 1, difficulty) or {}
+            
+            # Extract the question data (should only be one question)
+            for q_key, q_data in quiz_part.items():
+                if q_key.startswith('Q'):  # Only process question entries
+                    # Ensure question has type field
+                    q_data['type'] = chosen_type
+                    mixed_quiz[f"Q{i}"] = q_data
+                    break
+        
         return mixed_quiz
 
     def _preprocess_content(self, content: str) -> str:

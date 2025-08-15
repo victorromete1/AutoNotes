@@ -36,44 +36,29 @@ class QuizGenerator:
             return "anthropic/claude-3-haiku"
         return "gpt-4-turbo"
 
-    def generate_quiz(
-        self,
-        content: str,
-        quiz_type: str,
-        num_questions: int = 5,
-        difficulty: str = "Medium"
-    ) -> Optional[Dict]:
-        """Generate quiz questions from content."""
-        if not content.strip():
-            st.error("❌ No content provided for quiz.")
-            return None
+    def generate_quiz(self, content, quiz_type, num_questions=5, difficulty="Medium"):
+        type_map = {
+            "Multiple Choice Only": "multiple_choice",
+            "True/False Only": "true_false",
+            "Short Answer Only": "short_answer",
+            "Mixed Questions": "mixed",
+            "multiple_choice": "multiple_choice",
+            "true_false": "true_false",
+            "short_answer": "short_answer",
+            "mixed": "mixed"
+        }
+        quiz_type = type_map.get(quiz_type, quiz_type)
 
-        try:
-            content = self._preprocess_content(content)
+        if quiz_type == "mixed":
+            return self._generate_mixed_quiz(content, num_questions, difficulty)
 
-            if quiz_type == "mixed":
-                return self._generate_mixed_quiz(content, num_questions, difficulty)
+        prompt = self._create_prompt(content, quiz_type, num_questions, difficulty)
+        response = self._get_api_response(prompt)
+        quiz_data = self._parse_response(response, quiz_type)
+        return quiz_data
 
-            prompt = self._create_prompt(content, quiz_type, num_questions, difficulty)
-            response = self._get_api_response(prompt)
-            quiz_data = self._parse_response(response, quiz_type)
-
-            quiz_data.update({
-                "quiz_id": f"quiz_{datetime.now().timestamp()}",
-                "created": datetime.now().isoformat(),
-                "type": quiz_type,
-                "difficulty": difficulty,
-                "source_content": content[:1000] + "..." if len(content) > 1000 else content
-            })
-            return quiz_data
-
-        except Exception as e:
-            st.error(f"Quiz generation failed: {e}")
-            return None
-
-    def _generate_mixed_quiz(self, content: str, num_questions: int, difficulty: str) -> Dict:
-        """Generate mixed-type quiz."""
-        mc_count = max(1, num_questions // 2)
+    def _generate_mixed_quiz(self, content, num_questions, difficulty):
+        mc_count = max(1, num_questions // 3)
         tf_count = max(1, num_questions // 3)
         sa_count = num_questions - mc_count - tf_count
 
@@ -81,23 +66,15 @@ class QuizGenerator:
         tf_quiz = self.generate_quiz(content, "true_false", tf_count, difficulty) or {}
         sa_quiz = self.generate_quiz(content, "short_answer", sa_count, difficulty) or {}
 
-        combined = {
-            "title": f"Mixed Quiz ({difficulty})",
-            "questions": [],
-            "type": "mixed",
-            "difficulty": difficulty,
-            "quiz_id": f"quiz_{datetime.now().timestamp()}",
-            "created": datetime.now().isoformat()
-        }
+        mixed_quiz = {}
+        question_number = 1
 
-        for quiz, qtype in [(mc_quiz, "multiple_choice"), (tf_quiz, "true_false"), (sa_quiz, "short_answer")]:
-            if quiz.get("questions"):
-                for q in quiz["questions"]:
-                    q["type"] = qtype
-                    combined["questions"].append(q)
+        for quiz_part in (mc_quiz, tf_quiz, sa_quiz):
+            for _, q_data in quiz_part.items():
+                mixed_quiz[f"Q{question_number}"] = q_data
+                question_number += 1
 
-        random.shuffle(combined["questions"])
-        return combined
+        return mixed_quiz
 
     def _preprocess_content(self, content: str) -> str:
         """Clean and trim content."""

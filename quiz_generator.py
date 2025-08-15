@@ -160,7 +160,14 @@ class QuizGenerator:
             raise
     def grade_short_answer(self, prompt: str) -> str:
         """
-        Use the same model to quickly check correctness of a short answer.
+        Uses the quiz generator's LLM to check short answer correctness.
+        Returns 'true' or 'false'.
         """
-        response = self.model_api_call(prompt)  # Or however you're calling your model
-        return response
+        # If you already have a method to talk to your model (e.g., self.model_api_call),
+        # reuse it here:
+        try:
+            response = self.model_api_call(prompt)  # Replace with your actual call
+            return str(response).strip().lower()
+        except Exception as e:
+            return "false"
+

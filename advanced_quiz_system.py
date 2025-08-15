@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 import streamlit as st
-
+from quiz_generator import QuizGenerator
 
 class AdvancedQuizSystem:
     def __init__(self, quiz_generator):

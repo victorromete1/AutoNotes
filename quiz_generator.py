@@ -7,13 +7,14 @@ from typing import Dict
 
 class QuizGenerator:
     def __init__(self):
-        """Initialize the quiz generator with Anthropic Claude via OpenRouter."""
-        # Get OpenRouter key from Streamlit secrets
-        openrouter_key = st.secrets.get("OPENROUTER_API_KEY")
+        """Initialize the quiz generator with Anthropic Claude via OpenRouter (no OpenAI fallback)."""
+        
+        # Get OpenRouter API key from Streamlit secrets or environment
+        openrouter_key = st.secrets.get("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_API_KEY")
 
         if not openrouter_key:
-            st.error("❌ OPENROUTER_API_KEY not found in Streamlit secrets.")
-            st.info("🆓 You can get an OpenRouter API key at https://openrouter.ai")
+            st.error("❌ OPENROUTER_API_KEY not found.")
+            st.info("🆓 Get one for free at https://openrouter.ai")
             st.stop()
 
         # Always use OpenRouter client
@@ -24,8 +25,9 @@ class QuizGenerator:
         self.model = "anthropic/claude-3-haiku"
         self.provider = "OpenRouter (Claude 3 Haiku)"
 
-        # Debug: confirm base_url in UI
+        # Optional debug log in Streamlit
         st.write(f"✅ Using {self.provider} — base_url: {self.client.base_url}")
+
 
     def generate_quiz(self, content, quiz_type, num_questions=5, difficulty="Medium"):
         type_map = {

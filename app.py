@@ -452,6 +452,55 @@ elif st.session_state.page == "📚 Flashcards":
                     doc = docx.Document(uploaded_file)
                     content = "\n".join([p.text for p in doc.paragraphs])
                 st.text_area("Preview:", value=content[:200] + "...", height=100, disabled=True)
+                            content = st.text_area("Paste content:", placeholder="Enter study material...", height=150)
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                num_cards = st.slider("Number of cards:", 3, 20, 8)
+            with col2:
+                difficulty = st.selectbox("Difficulty:", ["Easy", "Medium", "Hard"])
+            with col3:
+                category = st.text_input("Category:", value="General")
+
+            if st.button("🚀 Generate Flashcards", type="primary"):
+                if content.strip():
+                    with st.spinner("Creating flashcards..."):
+                        try:
+                            flashcards = generators['flashcards'].generate_flashcards(
+                                content, num_cards=num_cards, difficulty=difficulty
+                            )
+
+                            for card in flashcards:
+                                card['category'] = category
+
+                            st.session_state.flashcards.extend(flashcards)
+                            auto_save()
+                            st.success(f"✅ Generated {len(flashcards)} flashcards!")
+
+                            # Log activity
+                            session = {
+                                'timestamp': datetime.now().isoformat(),
+                                'activity_type': 'flashcards_created',
+                                'subject': category,
+                                'flashcards_created': len(flashcards)
+                            }
+                            st.session_state.study_sessions.append(session)
+                            auto_save()
+
+                            # Preview
+                            st.markdown("### Preview:")
+                            for i, card in enumerate(flashcards[:3], 1):
+                                with st.expander(f"Card {i}"):
+                                    st.write(f"**Front:** {card['front']}")
+                                    st.write(f"**Back:** {card['back']}")
+
+                            if len(flashcards) > 3:
+                                st.info(f"+ {len(flashcards) - 3} more cards created!")
+
+                        except Exception as e:
+                            st.error(f"Error: {str(e)}")
+                else:
+                    st.warning("Please enter content.")
             
 
     with tab3:

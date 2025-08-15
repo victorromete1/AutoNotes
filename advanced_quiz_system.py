@@ -215,7 +215,7 @@ class AdvancedQuizSystem:
             st.session_state.quiz_state['answers']
         )
 
-        # Convert to app.py expected format
+        # Convert to app.py expected format + per-question dropdown
         results = []
         question_types = {}
         for detail in grading_result['details']:
@@ -235,6 +235,15 @@ class AdvancedQuizSystem:
                 'explanation': detail['explanation'],
                 'type': q_type
             })
+
+            # Question detail dropdown
+            with st.expander(f"Q{detail.get('question_id', 0)}: {detail['question'][:80]}{'...' if len(detail['question'])>80 else ''}"):
+                st.markdown(f"**Your answer:** {detail['user_answer']}")
+                st.markdown(f"**Correct answer:** {detail['correct_answer']}")
+                st.markdown(f"**Result:** {'✅ Correct' if detail['is_correct'] else '❌ Incorrect'}")
+                if detail.get('explanation'):
+                    st.caption(f"💡 {detail['explanation']}")
+
 
         time_taken = datetime.now() - st.session_state.quiz_state['start_time']
 
@@ -489,7 +498,16 @@ class AdvancedQuizSystem:
             if isinstance(normalized_user, str) and isinstance(normalized_correct, str):
                 u = normalized_user.strip().lower()
                 c = normalized_correct.strip().lower()
-                is_correct = (u == c) or (c in u) or (u in c)
+                # First, quick fuzzy check
+                if (u == c) or (c in u) or (u in c):
+                    is_correct = True
+                else:
+                    # Use AI to judge correctness more flexibly
+                    is_correct = self._ai_check_short_answer(
+                        question.get("question", ""),
+                        correct_answer,
+                        user_answer
+                    )
 
         return {
             "question_id": question.get("id", 0),
@@ -627,3 +645,23 @@ class AdvancedQuizSystem:
             reverse = False
 
         return sorted(filtered, key=key, reverse=reverse)
+    def _ai_check_short_answer(self, question_text: str, correct_answer: str, user_answer: str) -> bool:
+        """
+        Ask the quiz_generator model to judge if the user's short answer is correct.
+        This allows for semantic matches, synonyms, etc.
+        """
+        try:
+            prompt = (
+                "You are grading a short answer question.\n"
+                f"Question: {question_text}\n"
+                f"Correct Answer: {correct_answer}\n"
+                f"Student's Answer: {user_answer}\n"
+                "Respond only with 'true' if the student's answer is correct, "
+                "or 'false' if it is incorrect. No other text."
+            )
+            result = self.quiz_generator.grade_short_answer(prompt)
+            return str(result).strip().lower().startswith("t")
+        except Exception as e:
+            st.warning(f"AI short answer check failed: {e}")
+            return False
+

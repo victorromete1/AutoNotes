@@ -1,40 +1,31 @@
 import json
-import os
 import re
 import random
 from openai import OpenAI
 import streamlit as st
-from datetime import datetime
-from typing import Optional, Dict
+from typing import Dict
 
 class QuizGenerator:
     def __init__(self):
-        """Initialize API client."""
-        self.client = self._initialize_client()
-        self.model = self._select_model()
+        """Initialize the quiz generator with Anthropic Claude via OpenRouter."""
+        # Get OpenRouter key from Streamlit secrets
+        openrouter_key = st.secrets.get("OPENROUTER_API_KEY")
 
-    def _initialize_client(self) -> OpenAI:
-        """Set up API client from secrets or environment."""
-        try:
-            if "OPENROUTER_API_KEY" in st.secrets:
-                return OpenAI(
-                    base_url="https://openrouter.ai/api/v1",
-                    api_key=st.secrets["OPENROUTER_API_KEY"]
-                )
-            if "OPENAI_API_KEY" in st.secrets:
-                return OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-            if os.getenv("OPENAI_API_KEY"):
-                return OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-            raise ValueError("❌ No API key found for quiz generation.")
-        except Exception as e:
-            st.error(f"API initialization failed: {e}")
+        if not openrouter_key:
+            st.error("❌ OPENROUTER_API_KEY not found in Streamlit secrets.")
+            st.info("🆓 You can get an OpenRouter API key at https://openrouter.ai")
             st.stop()
 
-    def _select_model(self) -> str:
-        """Pick best available model."""
-        if "OPENROUTER_API_KEY" in st.secrets:
-            return "anthropic/claude-3-haiku"
-        return "gpt-4-turbo"
+        # Always use OpenRouter client
+        self.client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=openrouter_key
+        )
+        self.model = "anthropic/claude-3-haiku"
+        self.provider = "OpenRouter (Claude 3 Haiku)"
+
+        # Debug: confirm base_url in UI
+        st.write(f"✅ Using {self.provider} — base_url: {self.client.base_url}")
 
     def generate_quiz(self, content, quiz_type, num_questions=5, difficulty="Medium"):
         type_map = {
@@ -58,57 +49,28 @@ class QuizGenerator:
         return quiz_data
 
     def _generate_mixed_quiz(self, content, num_questions, difficulty):
-        """Generate a quiz with randomly mixed question types.
-        
-        Args:
-            content: The content to generate questions from
-            num_questions: Total number of questions to generate
-            difficulty: Difficulty level ('Easy', 'Medium', 'Hard')
-            
-        Returns:
-            dict: Dictionary of mixed questions with keys like 'Q1', 'Q2', etc.
-        """
-        # Define possible question types and their weights
         question_types = [
-            ("multiple_choice", 0.5),   # 50% chance
-            ("true_false", 0.3),       # 30% chance  
-            ("short_answer", 0.2)      # 20% chance
+            ("multiple_choice", 0.5),
+            ("true_false", 0.3),
+            ("short_answer", 0.2)
         ]
-        
         mixed_quiz = {}
-        
+
         for i in range(1, num_questions + 1):
-            # Weighted random selection of question type
             chosen_type = random.choices(
                 [t[0] for t in question_types],
                 weights=[t[1] for t in question_types],
                 k=1
             )[0]
-            
-            # Generate single question of chosen type
             quiz_part = self.generate_quiz(content, chosen_type, 1, difficulty) or {}
-            
-            # Extract the question data (should only be one question)
             for q_key, q_data in quiz_part.items():
-                if q_key.startswith('Q'):  # Only process question entries
-                    # Ensure question has type field
+                if q_key.startswith('Q'):
                     q_data['type'] = chosen_type
                     mixed_quiz[f"Q{i}"] = q_data
                     break
-        
         return mixed_quiz
 
-    def _preprocess_content(self, content: str) -> str:
-        """Clean and trim content."""
-        content = re.sub(r'\s+', ' ', content).strip()
-        content = content.encode('ascii', 'ignore').decode('ascii')
-        if len(content) > 20000:
-            content = content[:20000]
-            st.warning("⚠️ Content truncated to 20,000 characters.")
-        return content
-
     def _create_prompt(self, content: str, quiz_type: str, num_questions: int, difficulty: str) -> str:
-        """Prompt template."""
         templates = {
             "multiple_choice": f"""
             Create {num_questions} {difficulty} difficulty multiple choice questions from this content.
@@ -130,7 +92,6 @@ class QuizGenerator:
         return templates[quiz_type]
 
     def _get_api_response(self, prompt: str) -> str:
-        """Call LLM API."""
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[
@@ -144,7 +105,6 @@ class QuizGenerator:
         return response.choices[0].message.content
 
     def _parse_response(self, response: str, quiz_type: str) -> Dict:
-        """Ensure JSON is valid."""
         try:
             cleaned = re.sub(r'^```json\s*|\s*```$', '', response.strip())
             quiz_data = json.loads(cleaned)
@@ -157,16 +117,3 @@ class QuizGenerator:
             st.error(f"❌ JSON parse error: {e}")
             st.text_area("Raw API output:", response, height=300)
             raise
-    def grade_short_answer(self, prompt: str) -> str:
-        """
-        Uses the quiz generator's LLM to check short answer correctness.
-        Returns 'true' or 'false'.
-        """
-        # If you already have a method to talk to your model (e.g., self.model_api_call),
-        # reuse it here:
-        try:
-            response = self.model_api_call(prompt)  # Replace with your actual call
-            return str(response).strip().lower()
-        except Exception as e:
-            return "false"
-

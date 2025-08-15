@@ -1,5 +1,7 @@
 import streamlit as st
 import json
+from PyPDF2 import PdfReader
+import docx
 from datetime import datetime, timedelta
 from note_generator import NoteGenerator
 from flashcard_generator import FlashcardGenerator

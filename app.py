@@ -500,9 +500,6 @@ elif st.session_state.page == "🧠 Quizzes":
             col1, col2 = st.columns(2)
             with col1:
                 source = st.radio("Quiz source:", ["📚 My Notes", "📝 New Content"])
-            with col2:
-                num_questions = st.slider("Questions:", 3, 15, 8)
-                difficulty = st.selectbox("Difficulty:", ["Easy", "Medium", "Hard"])
                 question_type = st.selectbox(
         "Question Type:",
         options=[
@@ -513,6 +510,9 @@ elif st.session_state.page == "🧠 Quizzes":
         ],
         index=3  # Default to Mixed Questions
     )
+            with col2:
+                num_questions = st.slider("Questions:", 3, 15, 8)
+                difficulty = st.selectbox("Difficulty:", ["Easy", "Medium", "Hard"])
 
         # Then handle content based on source selection
             if source == "📚 My Notes":

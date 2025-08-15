@@ -1,10 +1,9 @@
-# advanced_quiz_system.py
 import json
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 import streamlit as st
-from quiz_generator import QuizGenerator
+
 
 class AdvancedQuizSystem:
     def __init__(self, quiz_generator):
@@ -88,7 +87,7 @@ class AdvancedQuizSystem:
         if 'quiz_state' not in st.session_state:
             st.session_state.quiz_state = {
                 'current_question': 0,
-                'answers': {},
+                'answers': {},  # <-- now keyed by question id
                 'started': True,
                 'completed': False,
                 'start_time': datetime.now()
@@ -107,7 +106,7 @@ class AdvancedQuizSystem:
             progress = 1.0
             status = "Quiz completed!"
         else:
-            progress = (current) / total
+            progress = (current) / total if total else 0.0
             status = f"Question {current + 1} of {total}"
 
         st.progress(progress)
@@ -116,7 +115,7 @@ class AdvancedQuizSystem:
         # Display current question or results
         if not st.session_state.quiz_state['completed']:
             self._display_question(quiz_data['questions'][current], current)
-            self._display_navigation(total, current)
+            self._display_navigation(quiz_data, total, current)
         else:
             self._display_quiz_results(quiz_data)
 
@@ -209,7 +208,7 @@ class AdvancedQuizSystem:
         st.header("🎉 Quiz Complete!")
         st.subheader(f"Quiz Type: {quiz_data['metadata']['question_type']}")
 
-        # Grade the quiz
+        # Grade the quiz — ensure mapping by question id
         grading_result = self.grade_submission(
             quiz_data,
             st.session_state.quiz_state['answers']
@@ -236,15 +235,6 @@ class AdvancedQuizSystem:
                 'type': q_type
             })
 
-            # Question detail dropdown
-            with st.expander(f"Q{detail.get('question_id', 0)}: {detail['question'][:80]}{'...' if len(detail['question'])>80 else ''}"):
-                st.markdown(f"**Your answer:** {detail['user_answer']}")
-                st.markdown(f"**Correct answer:** {detail['correct_answer']}")
-                st.markdown(f"**Result:** {'✅ Correct' if detail['is_correct'] else '❌ Incorrect'}")
-                if detail.get('explanation'):
-                    st.caption(f"💡 {detail['explanation']}")
-
-
         time_taken = datetime.now() - st.session_state.quiz_state['start_time']
 
         # Display score summary
@@ -255,6 +245,17 @@ class AdvancedQuizSystem:
 
         # Performance insights
         self._display_performance_analysis(grading_result['percent'], question_types, results)
+
+        # Per-question insights dropdowns ("hover-like" via expanders)
+        st.subheader("🔎 Question Insights")
+        for d in results:
+            q_label = f"Q{d['question_number']}: {d['question'][:80]}{'...' if len(d['question'])>80 else ''}"
+            with st.expander(q_label):
+                st.markdown(f"**Your answer:** {d['user_answer']}")
+                st.markdown(f"**Correct answer:** {d['correct_answer']}")
+                st.markdown(f"**Result:** {'✅ Correct' if d['is_correct'] else '❌ Incorrect'}")
+                if d.get('explanation'):
+                    st.caption(f"💡 {d['explanation']}")
 
         # Save results
         self._save_quiz_results(quiz_data, results, grading_result['percent'], time_taken)
@@ -286,31 +287,43 @@ class AdvancedQuizSystem:
         st.markdown(f"**Type:** {question['type'].replace('_', ' ').title()}")
         st.write(question['question'])
 
-        key = f"q_{index}"
+        qid = question.get('id', index + 1)
+        key = f"q_{qid}"
+
+        # Use help= parameter to emulate a small hover tooltip
+        help_text = "Open the insights dropdown on the results page to review your answer vs correct answer."
 
         if question['type'] == 'multiple_choice':
             options = question.get('options', [])
-            selected = st.radio("Select answer:", options, key=key, index=None)
-            if selected:
-                st.session_state.quiz_state['answers'][index] = {
+            selected = st.radio("Select answer:", options, key=key, index=None, help=help_text)
+            if selected is not None and selected != "":
+                st.session_state.quiz_state['answers'][qid] = {
                     'answer': selected,
                     'letter': self._extract_answer_letter(selected)
                 }
 
         elif question['type'] == 'true_false':
-            selected = st.radio("Select answer:", ["True", "False"], key=key, index=None)
-            if selected:
-                st.session_state.quiz_state['answers'][index] = selected
+            selected = st.radio("Select answer:", ["True", "False"], key=key, index=None, help=help_text)
+            if selected is not None and selected != "":
+                st.session_state.quiz_state['answers'][qid] = selected
 
         elif question['type'] in ['short_answer', 'fill_blank']:
-            answer = st.text_input("Your answer:", key=key)
-            if answer:
-                st.session_state.quiz_state['answers'][index] = answer
+            default_val = ""
+            if qid in st.session_state.quiz_state['answers'] and isinstance(st.session_state.quiz_state['answers'][qid], str):
+                default_val = st.session_state.quiz_state['answers'][qid]
+            answer = st.text_input("Your answer:", value=default_val, key=key, help=help_text, placeholder="Type your answer here")
+            if answer is not None:
+                st.session_state.quiz_state['answers'][qid] = answer
+        else:
+            # Fallback to short answer if an unknown type slips through
+            answer = st.text_input("Your answer:", key=key, help=help_text, placeholder="Type your answer here")
+            if answer is not None:
+                st.session_state.quiz_state['answers'][qid] = answer
 
-        if index in st.session_state.quiz_state['answers']:
+        if qid in st.session_state.quiz_state['answers']:
             st.info("🔵 Answered")
 
-    def _display_navigation(self, total, current):
+    def _display_navigation(self, quiz_data, total, current):
         """Display navigation buttons (app.py compatible)"""
         col1, col2, col3 = st.columns([1,1,1])
 
@@ -321,7 +334,9 @@ class AdvancedQuizSystem:
 
         with col2:
             if current < total - 1 and st.button("Next →"):
-                if current in st.session_state.quiz_state['answers']:
+                # require current question answered before moving on
+                current_qid = quiz_data['questions'][current]['id']
+                if current_qid in st.session_state.quiz_state['answers']:
                     st.session_state.quiz_state['current_question'] += 1
                     st.rerun()
                 else:
@@ -329,7 +344,8 @@ class AdvancedQuizSystem:
 
         with col3:
             if current == total - 1 and st.button("🏁 Finish Quiz"):
-                if current in st.session_state.quiz_state['answers']:
+                current_qid = quiz_data['questions'][current]['id']
+                if current_qid in st.session_state.quiz_state['answers']:
                     st.session_state.quiz_state['completed'] = True
                     st.rerun()
                 else:
@@ -350,7 +366,7 @@ class AdvancedQuizSystem:
         st.subheader("By Question Type")
         for q_type, stats in question_types.items():
             type_name = q_type.replace('_', ' ').title()
-            accuracy = (stats['correct'] / stats['total']) * 100
+            accuracy = (stats['correct'] / stats['total']) * 100 if stats['total'] else 0
 
             if accuracy >= 80:
                 st.success(f"• {type_name}: {accuracy:.1f}% accuracy")
@@ -451,7 +467,16 @@ class AdvancedQuizSystem:
         # Determine question type
         qtype = (q.get("type") or fallback_type or "").lower()
         if qtype not in ("multiple_choice", "true_false", "short_answer", "mixed"):
-            qtype = fallback_type or "multiple_choice"
+            # Anything unknown becomes short_answer so a text box appears
+            qtype = "short_answer"
+        # If "mixed" sneaks through at the per-question level, infer from structure
+        if qtype == "mixed":
+            if isinstance(q.get("options"), list) and q.get("options"):
+                qtype = "multiple_choice"
+            elif isinstance(q.get("correct_answer"), str) and q.get("correct_answer").strip().lower() in ("true", "false"):
+                qtype = "true_false"
+            else:
+                qtype = "short_answer"
         q["type"] = qtype
 
         # Ensure correct_answer exists
@@ -460,7 +485,6 @@ class AdvancedQuizSystem:
                 if q.get(alt):
                     q["correct_answer"] = q[alt]
                     break
-            
             if not q.get("correct_answer") and qtype == "true_false":
                 inferred = self._infer_true_false_from_text(q.get("explanation", "")) or ""
                 q["correct_answer"] = inferred
@@ -502,7 +526,7 @@ class AdvancedQuizSystem:
                 if (u == c) or (c in u) or (u in c):
                     is_correct = True
                 else:
-                    # Use AI to judge correctness more flexibly
+                    # Use AI to judge correctness more flexibly (best-effort)
                     is_correct = self._ai_check_short_answer(
                         question.get("question", ""),
                         correct_answer,
@@ -525,20 +549,25 @@ class AdvancedQuizSystem:
     # -----------------------------
 
     def _clean_model_json(self, text: str) -> str:
-        """Clean common LLM JSON issues"""
+        """Clean common LLM JSON issues (robust to code fences)"""
         if not isinstance(text, str):
             try:
                 text = json.dumps(text)
             except Exception:
                 text = str(text)
 
-        text = re.sub(r"^\s*```(?:json)?\s*", "", text.strip(), flags=re.IGNORECASE)
-        text = re.sub(r"\s*```\s*$", "", text, flags=re.IGNORECASE)
-        text = text.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
-        text = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F]", " ", text)
-        text = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', text)
-        text = re.sub(r",\s*([}\]])", r"\1", text)
-        return text
+        s = text.strip()
+        # Remove ```json / ``` fences at start and end
+        s = re.sub(r"^```(?:json)?\s*", "", s, flags=re.IGNORECASE)
+        s = re.sub(r"```\s*$", "", s, flags=re.IGNORECASE)
+        # Normalize quotes and control chars
+        s = s.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
+        s = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F]", " ", s)
+        # Fix stray backslashes
+        s = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', s)
+        # Remove trailing commas
+        s = re.sub(r",\s*([}\]])", r"\1", s)
+        return s
 
     def _try_parse_question_dict(self, qtext: str) -> Optional[Dict[str, Any]]:
         """Try to parse a single question represented as a JSON string"""
@@ -571,13 +600,16 @@ class AdvancedQuizSystem:
             return ""
         c = str(correct).strip()
 
+        # If a single letter was provided
         if re.fullmatch(r"[A-Z]", c, flags=re.IGNORECASE):
             return c.upper()
 
+        # If exact option text was provided
         for idx, opt in enumerate(options):
             if c.lower() == str(opt).strip().lower():
                 return opt
 
+        # If answer starts with a letter like "B) ..."
         m = re.match(r"([A-Da-d])\b", c)
         if m:
             return m.group(1).upper()
@@ -608,17 +640,24 @@ class AdvancedQuizSystem:
         letters = [chr(ord('A') + i) for i in range(len(options))]
         letter_to_text = dict(zip(letters, options))
 
-        u = str(user_ans).strip()
+        # Pull stored values
+        if isinstance(user_ans, dict) and 'answer' in user_ans:
+            u = str(user_ans['answer']).strip()
+        else:
+            u = str(user_ans).strip()
         c = str(correct_ans).strip()
 
+        # If correct is a letter (A/B/C/D)
         if c.upper() in letter_to_text:
             if u.upper() == c.upper():
                 return True
             return u.lower() == letter_to_text[c.upper()].lower()
 
+        # If correct is exact text
         if c:
             if u.lower() == c.lower():
                 return True
+            # If user picked a letter that corresponds to the correct text
             for L, txt in letter_to_text.items():
                 if txt.lower() == c.lower():
                     return u.upper() == L
@@ -645,23 +684,31 @@ class AdvancedQuizSystem:
             reverse = False
 
         return sorted(filtered, key=key, reverse=reverse)
-    def _ai_check_short_answer(self, question_text: str, correct_answer: str, user_answer: str) -> bool:
+
+    # -----------------------------
+    # AI-assisted short answer grading
+    # -----------------------------
+
+    def _ai_check_short_answer(self, question_text: str, correct_answer: str, user_answer: Union[str, Any]) -> bool:
         """
         Ask the quiz_generator model to judge if the user's short answer is correct.
-        This allows for semantic matches, synonyms, etc.
+        Returns True/False. If the generator lacks the method or fails, fall back to False.
+        The generator should implement grade_short_answer(prompt: str) -> str ('true'/'false').
         """
         try:
-            prompt = (
-                "You are grading a short answer question.\n"
-                f"Question: {question_text}\n"
-                f"Correct Answer: {correct_answer}\n"
-                f"Student's Answer: {user_answer}\n"
-                "Respond only with 'true' if the student's answer is correct, "
-                "or 'false' if it is incorrect. No other text."
-            )
-            result = self.quiz_generator.grade_short_answer(prompt)
-            return str(result).strip().lower().startswith("t")
+            if hasattr(self.quiz_generator, 'grade_short_answer') and callable(getattr(self.quiz_generator, 'grade_short_answer')):
+                prompt = (
+                    "You are grading a short answer question.\n"
+                    f"Question: {question_text}\n"
+                    f"Correct Answer: {correct_answer}\n"
+                    f"Student's Answer: {user_answer}\n"
+                    "Respond only with 'true' if the student's answer is correct, or 'false' if it is incorrect."
+                )
+                result = self.quiz_generator.grade_short_answer(prompt)
+                return str(result).strip().lower().startswith('t')
+            else:
+                # Best effort: no AI available
+                return False
         except Exception as e:
             st.warning(f"AI short answer check failed: {e}")
             return False
-

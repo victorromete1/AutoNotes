@@ -14,7 +14,7 @@ class NoteGenerator:
             # Use OpenRouter with free DeepSeek model
             self.client = OpenAI(
                 base_url="https://openrouter.ai/api/v1",
-                api_key="sk-or-v1_1d84471c51014db7e3ece0d6b1615fc4d47a936872893a339ebcd5e10d0878ec"
+                api_key="test"
             )
             self.model = "deepseek/deepseek-chat"
             self.provider = "OpenRouter (Free DeepSeek)"

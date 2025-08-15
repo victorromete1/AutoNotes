@@ -503,6 +503,16 @@ elif st.session_state.page == "🧠 Quizzes":
             with col2:
                 num_questions = st.slider("Questions:", 3, 15, 8)
                 difficulty = st.selectbox("Difficulty:", ["Easy", "Medium", "Hard"])
+                question_type = st.selectbox(
+        "Question Type:",
+        options=[
+            "Multiple Choice Only",
+            "True/False Only", 
+            "Short Answer Only",
+            "Mixed Questions"
+        ],
+        index=3  # Default to Mixed Questions
+    )
 
         # Then handle content based on source selection
             if source == "📚 My Notes":

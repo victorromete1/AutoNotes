@@ -433,6 +433,26 @@ elif st.session_state.page == "📚 Flashcards":
                         st.success("✅ Flashcard added!")
                     else:
                         st.warning("Please fill in both sides.")
+        elif method == "📂 Upload File":
+            uploaded_file = st.file_uploader("Choose a file", type=["txt", "pdf", "docx"])
+            if uploaded_file is not None:
+                # Text file
+                if uploaded_file.type == "text/plain":
+                    content = uploaded_file.read().decode("utf-8")
+                    # PDF file
+                elif uploaded_file.type == "application/pdf":
+                    from PyPDF2 import PdfReader
+                    pdf = PdfReader(uploaded_file)
+                    content = ""
+                    for page in pdf.pages:
+                        content += page.extract_text()
+                # Word file
+                elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                    import docx
+                    doc = docx.Document(uploaded_file)
+                    content = "\n".join([p.text for p in doc.paragraphs])
+                st.text_area("Preview:", value=content[:200] + "...", height=100, disabled=True)
+            
 
     with tab3:
         st.subheader("📂 Manage Flashcards")

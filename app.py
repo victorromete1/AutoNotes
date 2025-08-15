@@ -496,25 +496,25 @@ elif st.session_state.page == "🧠 Quizzes":
         # Initialize content variable
             content = ""
 
-        # First create the form elements
+            # First create the form elements
             col1, col2 = st.columns(2)
             with col1:
-                source = st.radio("Quiz source:", ["📚 My Notes", "📝 New Content","📂 Upload file"])
+                source = st.radio("Quiz source:", ["📚 My Notes", "📝 New Content", "📂 Upload file"])
                 question_type = st.selectbox(
-        "Question Type:",
-        options=[
-            "Multiple Choice Only",
-            "True/False Only", 
-            "Short Answer Only",
-            "Mixed Questions"
-        ],
-        index=3  # Default to Mixed Questions
-    )
+                    "Question Type:",
+                    options=[
+                        "Multiple Choice Only",
+                        "True/False Only", 
+                        "Short Answer Only",
+                        "Mixed Questions"
+                    ],
+                    index=3  # Default to Mixed Questions
+                )
             with col2:
                 num_questions = st.slider("Questions:", 3, 15, 8)
                 difficulty = st.selectbox("Difficulty:", ["Easy", "Medium", "Hard"])
 
-        # Then handle content based on source selection
+            # Then handle content based on source selection
             if source == "📚 My Notes":
                 if st.session_state.notes:
                     note_titles = [n['title'] for n in st.session_state.notes]
@@ -525,9 +525,30 @@ elif st.session_state.page == "🧠 Quizzes":
                         st.text_area("Preview:", value=content[:200] + "...", height=100, disabled=True)
                 else:
                     st.info("No notes available. Create some first!")
-            else:  # New Content
-                content = st.text_area("Enter content:", height=200, 
-                                    placeholder="Paste study material...")
+
+            elif source == "📝 New Content":
+                content = st.text_area("Enter content:", height=200, placeholder="Paste study material...")
+
+            elif source == "📂 Upload file":
+                uploaded_file = st.file_uploader("Choose a file", type=["txt", "pdf", "docx"])
+                if uploaded_file is not None:
+                    # Text file
+                    if uploaded_file.type == "text/plain":
+                        content = uploaded_file.read().decode("utf-8")
+                    # PDF file
+                    elif uploaded_file.type == "application/pdf":
+                        from PyPDF2 import PdfReader
+                        pdf = PdfReader(uploaded_file)
+                        content = ""
+                        for page in pdf.pages:
+                            content += page.extract_text()
+                    # Word file
+                    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                        import docx
+                        doc = docx.Document(uploaded_file)
+                        content = "\n".join([p.text for p in doc.paragraphs])
+                    st.text_area("Preview:", value=content[:200] + "...", height=100, disabled=True)
+
 
             if st.button("🚀 Create & Start Quiz", type="primary", use_container_width=True):
                 if content.strip():

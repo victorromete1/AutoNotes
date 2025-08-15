@@ -452,8 +452,6 @@ elif st.session_state.page == "📚 Flashcards":
                     doc = docx.Document(uploaded_file)
                     content = "\n".join([p.text for p in doc.paragraphs])
                 st.text_area("Preview:", value=content[:200] + "...", height=100, disabled=True)
-                            content = st.text_area("Paste content:", placeholder="Enter study material...", height=150)
-
             col1, col2, col3 = st.columns(3)
             with col1:
                 num_cards = st.slider("Number of cards:", 3, 20, 8)

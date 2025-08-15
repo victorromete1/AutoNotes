@@ -11,64 +11,66 @@ class AdvancedQuizSystem:
     def __init__(self, quiz_generator):
         self.quiz_generator = quiz_generator
 
-    def create_quiz_from_content(self, content, num_questions=10, difficulty="Medium", question_type="Mixed Questions"):
-        """Create a quiz from provided content with specified question types"""
-        try:
-            # Remove the question_types parameter since the generator doesn't support it
-            quiz_data = self.quiz_generator.generate_quiz(
-                content=content,
-                num_questions=num_questions,
-                difficulty=difficulty)
-            
-            if not quiz_data or not isinstance(quiz_data, dict):
+        def create_quiz_from_content(self, content, num_questions=10, difficulty="Medium", question_type="Mixed Questions"):
+            """Create a quiz from provided content with specified question types"""
+            try:
+                # Generate quiz from content
+                quiz_data = self.quiz_generator.generate_quiz(
+                    content=content,
+                    num_questions=num_questions,
+                    difficulty=difficulty
+                )
+
+                if not quiz_data or not isinstance(quiz_data, dict):
+                    return None
+
+                questions = quiz_data.get('questions', [])
+
+                # Filter questions based on question_type
+                if question_type != "Mixed Questions":
+                    question_type_map = {
+                        "Multiple Choice Only": "multiple_choice",
+                        "True/False Only": "true_false",
+                        "Short Answer Only": "short_answer"
+                    }
+                    target_type = question_type_map.get(question_type)
+                    if target_type:
+                        questions = [q for q in questions if q.get('type') == target_type]
+
+                # Limit to requested number of questions
+                questions = questions[:num_questions]
+
+                formatted_quiz = {
+                    'title': quiz_data.get('title', 'Study Quiz'),
+                    'description': quiz_data.get('description', 'Test your knowledge'),
+                    'questions': [],
+                    'metadata': {
+                        'created': datetime.now().isoformat(),
+                        'difficulty': difficulty,
+                        'total_questions': len(questions),
+                        'original_content': content,
+                        'question_type': question_type
+                    }
+                }
+
+                for i, q in enumerate(questions):
+                    if isinstance(q, dict):
+                        formatted_quiz['questions'].append({
+                            'id': i + 1,
+                            'question': q.get('question', ''),
+                            'type': q.get('type', 'multiple_choice'),
+                            'options': q.get('options', []),
+                            'correct_answer': q.get('correct_answer', ''),
+                            'explanation': q.get('explanation', ''),
+                            'points': 1
+                        })
+
+                return formatted_quiz
+
+            except Exception as e:
+                st.error(f"Error creating quiz: {str(e)}")
                 return None
 
-            # If we want to filter by question type, we can do it here
-            if question_type != "Mixed Questions":
-                question_type_map = {
-                    "Multiple Choice Only": "multiple_choice",
-                    "True/False Only": "true_false",
-                    "Short Answer Only": "short_answer",
-                    "Fill in Blank Only": "fill_blank"
-                }
-                
-                target_type = question_type_map.get(question_type)
-                if target_type:
-                    quiz_data['questions'] = [q for q in quiz_data.get('questions', []) 
-                                            if q.get('type') == target_type]
-                    # Adjust the number of questions to match what we have left
-                    num_questions = min(num_questions, len(quiz_data['questions']))
-                    quiz_data['questions'] = quiz_data['questions'][:num_questions]
-
-            formatted_quiz = {
-                'title': quiz_data.get('title', 'Study Quiz'),
-                'description': quiz_data.get('description', 'Test your knowledge'),
-                'questions': [],
-                'metadata': {
-                    'created': datetime.now().isoformat(),
-                    'difficulty': difficulty,
-                    'total_questions': num_questions,
-                    'original_content': content,
-                    'question_type': question_type
-                }
-            }
-
-            for i, q in enumerate(quiz_data.get('questions', [])):
-                if isinstance(q, dict):
-                    formatted_quiz['questions'].append({
-                        'id': i + 1,
-                        'question': q.get('question', ''),
-                        'type': q.get('type', 'multiple_choice'),
-                        'options': q.get('options', []),
-                        'correct_answer': q.get('correct_answer', ''),
-                        'explanation': q.get('explanation', ''),
-                        'points': 1
-                    })
-
-            return formatted_quiz
-        except Exception as e:
-            st.error(f"Error creating quiz: {str(e)}")
-            return None
 
     def display_quiz_interface(self, quiz_data):
         """Display the interactive quiz interface"""

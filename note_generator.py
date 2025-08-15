@@ -4,26 +4,22 @@ import streamlit as st
 
 class NoteGenerator:
     def __init__(self):
-        """Initialize the note generator with DeepSeek via OpenRouter (completely free)."""
-        # Try OpenRouter first (completely free)
-        #openrouter_key = os.getenv("OPENROUTER_API_KEY")
-        openrouter_key = st.secrets["OPENROUTER_API_KEY"]
-        openai_key = os.getenv("OPENAI_API_KEY")
+        """Initialize the note generator with DeepSeek via OpenRouter."""
         
+        # Get OpenRouter API key from Streamlit secrets or environment
+        openrouter_key = st.secrets.get("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_API_KEY")
         
-        if openrouter_key:
-            # Use OpenRouter with free DeepSeek model
-            self.client = OpenAI(
-                base_url="https://openrouter.ai/api/v1",
-                api_key="test"
-            )
-            self.model = "deepseek/deepseek-chat"
-            self.provider = "OpenRouter (Free DeepSeek)"
-        elif openai_key:
-            # Fallback to OpenAI
-            self.client = OpenAI(api_key=openai_key)
-            self.model = "gpt-4o"
-            self.provider = "OpenAI"
+        if not openrouter_key:
+            st.error("⚠️ No OpenRouter API key found. Please set OPENROUTER_API_KEY.")
+            st.stop()
+        
+        # Always use OpenRouter — no OpenAI fallback
+        self.client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=openrouter_key
+        )
+        self.model = "deepseek/deepseek-chat"
+        self.provider = "OpenRouter (Free DeepSeek)"
 
     
     def generate_notes(self, user_input, note_type="Summary", detail_level="Intermediate"):

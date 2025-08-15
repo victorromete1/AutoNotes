@@ -11,13 +11,19 @@ class NoteGenerator:
         openai_key = os.getenv("OPENAI_API_KEY")
         
         
-        # Use OpenRouter with free DeepSeek model
-        self.client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key="test"
-        )
-        self.model = "deepseek/deepseek-chat"
-        self.provider = "OpenRouter (Free DeepSeek)"
+        if openrouter_key:
+            # Use OpenRouter with free DeepSeek model
+            self.client = OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key="test"
+            )
+            self.model = "deepseek/deepseek-chat"
+            self.provider = "OpenRouter (Free DeepSeek)"
+        elif openai_key:
+            # Fallback to OpenAI
+            self.client = OpenAI(api_key=openai_key)
+            self.model = "gpt-4o"
+            self.provider = "OpenAI"
 
     
     def generate_notes(self, user_input, note_type="Summary", detail_level="Intermediate"):

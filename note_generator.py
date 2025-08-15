@@ -6,7 +6,8 @@ class NoteGenerator:
     def __init__(self):
         """Initialize the note generator with DeepSeek via OpenRouter (completely free)."""
         # Try OpenRouter first (completely free)
-        openrouter_key = os.getenv("OPENROUTER_API_KEY")
+        #openrouter_key = os.getenv("OPENROUTER_API_KEY")
+        openrouter_key = st.secrets["OPENAI_API_KEY"]
         openai_key = os.getenv("OPENAI_API_KEY")
         
         if openrouter_key:

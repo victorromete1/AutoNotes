@@ -488,7 +488,7 @@ class AdvancedQuizSystem:
 
         elif q_type == 'fill_in_blank':
             expected_answers = question.get('answers', [])
-            user_clean = re.sub(r'[^\w\s]', '', str(user_answer).lower().strip()
+            user_clean = re.sub(r'[^\w\s]', '', str(user_answer).lower().strip())
             return any(
                 re.sub(r'[^\w\s]', '', str(ans).lower().strip()) in user_clean
                 for ans in expected_answers

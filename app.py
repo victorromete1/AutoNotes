@@ -560,7 +560,7 @@ elif st.session_state.page == "🧠 Quizzes":
                                 content, num_questions=num_questions, difficulty=difficulty, question_type=question_type
                             )
 
-                            if quiz_data and quiz_data.get('questions'):
+                            if quiz_data.get('questions'):
                                 st.session_state.current_quiz = quiz_data
                                 st.session_state.quiz_active = True
                                 st.session_state.quiz_question_index = 0

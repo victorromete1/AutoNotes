@@ -251,7 +251,10 @@ class AdvancedQuizSystem:
         for d in results:
             q_label = f"Q{d['question_number']}: {d['question'][:80]}{'...' if len(d['question'])>80 else ''}"
             with st.expander(q_label):
-                st.markdown(f"**Your answer:** {d['user_answer']}")
+                if isinstance(d['user_answer'], dict):
+                    st.markdown(f"**Your answer:** {d['user_answer']['letter']}")
+                else:
+                    st.markdown(f"**Your answer:** {d['user_answer']}")
                 st.markdown(f"**Correct answer:** {d['correct_answer']}")
                 st.markdown(f"**Result:** {'✅ Correct' if d['is_correct'] else '❌ Incorrect'}")
                 if d.get('explanation'):

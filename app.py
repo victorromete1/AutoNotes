@@ -99,8 +99,6 @@ def auto_save():
 with st.sidebar:
     st.title("🎓 Study Platform")
 
-    # Provider info
-    st.info("Using OpenRouter (DeepSeek) - 100% Free!")
 
     # Navigation
     page = st.radio(

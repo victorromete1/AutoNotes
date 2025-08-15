@@ -557,7 +557,7 @@ elif st.session_state.page == "🧠 Quizzes":
                     with st.spinner("Creating quiz..."):
                         try:
                             quiz_data = advanced_quiz.create_quiz_from_content(
-                                content, num_questions=num_questions, difficulty=difficulty
+                                content, num_questions=num_questions, difficulty=difficulty, question_type=question_type
                             )
 
                             if quiz_data and quiz_data.get('questions'):

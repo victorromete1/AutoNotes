@@ -158,3 +158,9 @@ class QuizGenerator:
             st.error(f"❌ JSON parse error: {e}")
             st.text_area("Raw API output:", response, height=300)
             raise
+    def grade_short_answer(self, prompt: str) -> str:
+        """
+        Use the same model to quickly check correctness of a short answer.
+        """
+        response = self.model_api_call(prompt)  # Or however you're calling your model
+        return response

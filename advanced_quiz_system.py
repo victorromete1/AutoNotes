@@ -14,25 +14,31 @@ class AdvancedQuizSystem:
     def create_quiz_from_content(self, content, num_questions=10, difficulty="Medium", question_type="Mixed Questions"):
         """Create a quiz from provided content with specified question types"""
         try:
-            # Map question type to generator parameters
-            question_types_mapping = {
-                "Multiple Choice Only": ["multiple_choice"],
-                "True/False Only": ["true_false"],
-                "Short Answer Only": ["short_answer"],
-                "Fill in Blank Only": ["fill_blank"],
-                "Mixed Questions": ["multiple_choice", "true_false", "short_answer", "fill_blank"]
-            }
-            
-            selected_types = question_types_mapping.get(question_type, ["multiple_choice", "true_false", "short_answer"])
-            
+            # Remove the question_types parameter since the generator doesn't support it
             quiz_data = self.quiz_generator.generate_quiz(
                 content=content,
                 num_questions=num_questions,
-                difficulty=difficulty,
-                question_types=selected_types)
-
+                difficulty=difficulty)
+            
             if not quiz_data or not isinstance(quiz_data, dict):
                 return None
+
+            # If we want to filter by question type, we can do it here
+            if question_type != "Mixed Questions":
+                question_type_map = {
+                    "Multiple Choice Only": "multiple_choice",
+                    "True/False Only": "true_false",
+                    "Short Answer Only": "short_answer",
+                    "Fill in Blank Only": "fill_blank"
+                }
+                
+                target_type = question_type_map.get(question_type)
+                if target_type:
+                    quiz_data['questions'] = [q for q in quiz_data.get('questions', []) 
+                                            if q.get('type') == target_type]
+                    # Adjust the number of questions to match what we have left
+                    num_questions = min(num_questions, len(quiz_data['questions']))
+                    quiz_data['questions'] = quiz_data['questions'][:num_questions]
 
             formatted_quiz = {
                 'title': quiz_data.get('title', 'Study Quiz'),

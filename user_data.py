@@ -2,6 +2,7 @@ import json
 import base64
 import streamlit as st
 from github import Github
+from github.GithubException import UnknownObjectException
 from cryptography.fernet import Fernet
 from datetime import datetime
 
@@ -15,17 +16,18 @@ def get_github_filepath(username: str) -> str:
     """Returns path like 'userdata/victor.json' in your GitHub repo"""
     return f"userdata/{username.lower()}.json"
 
+# --- GitHub Storage ---
 def github_save_user_data(username: str, data: dict) -> bool:
     """Saves encrypted user data to GitHub"""
     try:
         g = Github(GITHUB_TOKEN)
         repo = g.get_repo(GITHUB_REPO)
         file_path = get_github_filepath(username)
-        
+
         # Encrypt and prepare data
         encrypted = fernet.encrypt(json.dumps(data).encode())
         content = base64.b64encode(encrypted).decode()
-        
+
         # Check if file exists
         try:
             file = repo.get_contents(file_path)
@@ -35,7 +37,7 @@ def github_save_user_data(username: str, data: dict) -> bool:
                 content=content,
                 sha=file.sha
             )
-        except Exception as e:
+        except UnknownObjectException:
             # If file doesn't exist, create it
             repo.create_file(
                 path=file_path,
@@ -53,14 +55,14 @@ def github_load_user_data(username: str) -> dict:
         g = Github(GITHUB_TOKEN)
         repo = g.get_repo(GITHUB_REPO)
         file_path = get_github_filepath(username)
-        
+
         file = repo.get_contents(file_path)
         encrypted = base64.b64decode(file.content)
         return json.loads(fernet.decrypt(encrypted).decode())
+    except UnknownObjectException:
+        # File not found (new user)
+        return None
     except Exception as e:
-        # Return None if file doesn't exist (for new users)
-        if "404" in str(e):
-            return None
         st.error(f"GitHub load failed: {str(e)}")
         return None
 
@@ -70,19 +72,19 @@ def register_user(username: str, password: str) -> bool:
     if not username or not password:
         st.error("Username and password cannot be empty")
         return False
-        
+
     if github_load_user_data(username) is not None:
         st.error("Username already exists")
         return False
-    
+
     user_data = {
-        "password": fernet.encrypt(password.encode()).decode(),
+        "password": password,   # store plain password here, encryption happens in github_save
         "notes": [],
         "flashcards": [],
         "study_sessions": [],
         "created_at": datetime.now().isoformat()
     }
-    
+
     if github_save_user_data(username, user_data):
         st.success("Account created successfully!")
         return True
@@ -96,14 +98,13 @@ def login_user(username: str, password: str) -> bool:
     if not user_data:
         st.error("User not found")
         return False
-        
+
     try:
         # Verify password
-        stored_pass = fernet.decrypt(user_data["password"].encode()).decode()
-        if stored_pass != password:
+        if user_data["password"] != password:
             st.error("Incorrect password")
             return False
-            
+
         # Load into session
         st.session_state.update({
             "logged_in": True,
@@ -121,21 +122,20 @@ def save_current_user():
     """Auto-saves session data to GitHub"""
     if not st.session_state.get("logged_in"):
         return
-        
-    # Get current password from GitHub to preserve it
+
     user_data = github_load_user_data(st.session_state["username"])
     if not user_data:
         st.error("Failed to load user data for saving")
         return
-        
+
     updated_data = {
-        "password": user_data["password"],  # Keep original encrypted password
+        "password": user_data["password"],  # Keep original password
         "notes": st.session_state.get("notes", []),
         "flashcards": st.session_state.get("flashcards", []),
         "study_sessions": st.session_state.get("study_sessions", []),
         "updated_at": datetime.now().isoformat()
     }
-    
+
     if not github_save_user_data(st.session_state["username"], updated_data):
         st.error("Failed to save user data")
 

@@ -529,7 +529,12 @@ elif st.session_state.page == "📚 Flashcards":
             
             # --- IMPORT ---
             with col2:
-                uploaded_file = st.file_uploader("📤 Import Flashcards", type="flashcard")
+                uploaded_file = st.file_uploader(
+                    "📤 Import Flashcards",  # label shown on the button
+                    type="flashcard",
+                    label_visibility="collapsed",  # hides the label above uploader
+                    key="import_flashcards_button"
+                )
 
                 if uploaded_file is not None:
                     file_content = uploaded_file.read().decode("utf-8")
@@ -537,10 +542,11 @@ elif st.session_state.page == "📚 Flashcards":
 
                     if imported_flashcards:
                         st.session_state.flashcards.extend(imported_flashcards)
-                        auto_save()  # if you have this function
+                        auto_save()  # saves imported flashcards
                         st.success(f"✅ Imported {len(imported_flashcards)} flashcards!")
                     else:
                         st.warning("No flashcards found in the file.")
+
                         
             with col3:
                 if st.button("🗑️ Clear All"):

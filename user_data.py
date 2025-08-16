@@ -13,22 +13,22 @@ GITHUB_TOKEN = st.secrets["github"]["token"]
 GITHUB_REPO = st.secrets["github"]["repo"]  # Format: "username/repo"
 
 def get_github_filepath(username: str) -> str:
-    """Returns path like 'userdata/victor.json' in your GitHub repo"""
+    """Return path like 'userdata/victor.json'"""
     return f"userdata/{username.lower()}.json"
 
 # --- GitHub Storage ---
 def github_save_user_data(username: str, data: dict) -> bool:
-    """Saves encrypted user data to GitHub"""
+    """Encrypts and saves user data to GitHub"""
     try:
         g = Github(GITHUB_TOKEN)
         repo = g.get_repo(GITHUB_REPO)
         file_path = get_github_filepath(username)
 
-        # Encrypt and prepare data
+        # Encrypt dict
         encrypted = fernet.encrypt(json.dumps(data).encode())
         content = base64.b64encode(encrypted).decode()
 
-        # Check if file exists
+        # Save or update file
         try:
             file = repo.get_contents(file_path)
             repo.update_file(
@@ -38,7 +38,6 @@ def github_save_user_data(username: str, data: dict) -> bool:
                 sha=file.sha
             )
         except UnknownObjectException:
-            # If file doesn't exist, create it
             repo.create_file(
                 path=file_path,
                 message=f"Create user data for {username}",
@@ -60,7 +59,6 @@ def github_load_user_data(username: str) -> dict:
         encrypted = base64.b64decode(file.content)
         return json.loads(fernet.decrypt(encrypted).decode())
     except UnknownObjectException:
-        # File not found (new user)
         return None
     except Exception as e:
         st.error(f"GitHub load failed: {str(e)}")
@@ -68,7 +66,7 @@ def github_load_user_data(username: str) -> dict:
 
 # --- User Management ---
 def register_user(username: str, password: str) -> bool:
-    """Creates new user file in GitHub's userdata/ folder"""
+    """Create new user file in userdata/"""
     if not username or not password:
         st.error("Username and password cannot be empty")
         return False
@@ -78,7 +76,7 @@ def register_user(username: str, password: str) -> bool:
         return False
 
     user_data = {
-        "password": password,   # store plain password here, encryption happens in github_save
+        "password": password,   # plain here, whole file encrypted later
         "notes": [],
         "flashcards": [],
         "study_sessions": [],
@@ -86,40 +84,34 @@ def register_user(username: str, password: str) -> bool:
     }
 
     if github_save_user_data(username, user_data):
-        st.success("Account created successfully!")
+        st.success(f"Account '{username}' created successfully!")
         return True
     else:
         st.error("Failed to create account")
         return False
 
 def login_user(username: str, password: str) -> bool:
-    """Authenticates and loads user data from GitHub"""
+    """Authenticate user"""
     user_data = github_load_user_data(username)
     if not user_data:
         st.error("User not found")
         return False
 
-    try:
-        # Verify password
-        if user_data["password"] != password:
-            st.error("Incorrect password")
-            return False
-
-        # Load into session
-        st.session_state.update({
-            "logged_in": True,
-            "username": username,
-            "notes": user_data.get("notes", []),
-            "flashcards": user_data.get("flashcards", []),
-            "study_sessions": user_data.get("study_sessions", [])
-        })
-        return True
-    except Exception as e:
-        st.error(f"Login error: {str(e)}")
+    if user_data["password"] != password:
+        st.error("Incorrect password")
         return False
 
+    st.session_state.update({
+        "logged_in": True,
+        "username": username,
+        "notes": user_data.get("notes", []),
+        "flashcards": user_data.get("flashcards", []),
+        "study_sessions": user_data.get("study_sessions", [])
+    })
+    return True
+
 def save_current_user():
-    """Auto-saves session data to GitHub"""
+    """Auto-save session to GitHub"""
     if not st.session_state.get("logged_in"):
         return
 
@@ -129,20 +121,19 @@ def save_current_user():
         return
 
     updated_data = {
-        "password": user_data["password"],  # Keep original password
+        "password": user_data["password"],
         "notes": st.session_state.get("notes", []),
         "flashcards": st.session_state.get("flashcards", []),
         "study_sessions": st.session_state.get("study_sessions", []),
         "updated_at": datetime.now().isoformat()
     }
 
-    if not github_save_user_data(st.session_state["username"], updated_data):
-        st.error("Failed to save user data")
+    github_save_user_data(st.session_state["username"], updated_data)
 
 def logout_user():
-    """Clears user session and saves data"""
+    """Save & clear session"""
     if st.session_state.get("logged_in"):
-        save_current_user()  # Ensure data is saved before logout
+        save_current_user()
         st.session_state.update({
             "logged_in": False,
             "username": "",

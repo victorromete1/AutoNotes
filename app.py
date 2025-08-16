@@ -15,13 +15,6 @@ from utils import sanitize_filename
 import base64
 from data_import_export import DataImportExport
 from datetime import datetime
-from user_data import (
-    register_user,
-    login_user,
-    logout_user,
-    save_current_user,
-    github_load_user_data,
-)
 def next_flashcard(study_cards, correct=False):
     """Move to next flashcard in study session"""
     st.session_state.cards_studied += 1
@@ -161,63 +154,6 @@ if st.session_state.page == "🏠 Home":
     Unlock your full learning potential with an intelligent, all-in-one study platform powered by AI.  
     Whether you're preparing for exams, mastering a subject, or building long-term knowledge, this tool adapts to the way **you** learn best.  
     """)
-
-    # --- Login/Register Section ---
-    st.markdown("---")
-    st.subheader("🔐 User Account (Optional)")
-    st.info("You **do not need to log in** to use this app, but logging in allows your notes, flashcards, and quizzes to be saved across devices.")
-
-    if not st.session_state.logged_in:
-        login_tab, register_tab = st.tabs(["Login", "Register"])
-
-        # --- Login Tab ---
-        with login_tab:
-            with st.form("login_form"):
-                st.subheader("Login")
-                username = st.text_input("Username", key="login_user")
-                password = st.text_input("Password", type="password", key="login_pass")
-                if st.form_submit_button("Login"):
-                    success = login_user(username, password)
-                    if success:
-                        st.success(f"Welcome back, {username}!")
-                        st.rerun()
-                    else:
-                        st.error(
-                            "Login failed. Possible causes:\n"
-                            "- Incorrect username or password\n"
-                            "- Fernet key mismatch with saved account\n"
-                            "- User file missing in GitHub repo"
-                        )
-
-        # --- Register Tab ---
-        with register_tab:
-            with st.form("register_form"):
-                st.subheader("Register")
-                new_user = st.text_input("Choose Username", key="reg_user")
-                new_pass = st.text_input("Choose Password", type="password", key="reg_pass")
-                confirm_pass = st.text_input("Confirm Password", type="password", key="reg_pass_confirm")
-
-                if st.form_submit_button("Register"):
-                    if new_pass != confirm_pass:
-                        st.error("Passwords don't match!")
-                    else:
-                        success = register_user(new_user, new_pass)
-                        if success:
-                            st.success("Account created! Please log in.")
-                            st.rerun()
-                        else:
-                            st.error(
-                                "Registration failed. Possible causes:\n"
-                                "- Username already exists\n"
-                                "- GitHub save failed\n"
-                                "- Fernet key issue"
-                            )
-    else:
-        # --- Logged-in view ---
-        st.success(f"Logged in as {st.session_state.username}")
-        if st.button("Logout"):
-            logout_user()  # Saves session to GitHub + clears session
-            st.rerun()
 
     st.markdown("---")
 

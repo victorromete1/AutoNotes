@@ -288,10 +288,10 @@ elif st.session_state.page == "📚 Flashcards":
 
     with tab1:
         st.subheader("📖 Study Session")
-        st.rerun()
 
         if not st.session_state.flashcards:
             st.info("No flashcards available. Create some first!")
+            st.experimental_rerun()
         else:
             # Category filter
             categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))

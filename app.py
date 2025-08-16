@@ -15,8 +15,7 @@ from utils import sanitize_filename
 import base64
 from data_import_export import DataImportExport
 from datetime import datetime
-from user_data import register_user, login_user, save_user_data
-
+from user_data import register_user, login_user, save_current_user, logout_user 
 def next_flashcard(study_cards, correct=False):
     """Move to next flashcard in study session"""
     st.session_state.cards_studied += 1
@@ -136,8 +135,16 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
+if "notes" not in st.session_state:
+    st.session_state.notes = []
+if "flashcards" not in st.session_state:
+    st.session_state.flashcards = []
+if "study_sessions" not in st.session_state:
+    st.session_state.study_sessions = []
+
+# Auto-save for logged-in users
 if st.session_state.get("logged_in"):
-    save_user_data()
+    save_current_user()  # Now pushes to GitHub automatically
 
 # --- Home Page ---
 if st.session_state.page == "🏠 Home":
@@ -154,38 +161,40 @@ if st.session_state.page == "🏠 Home":
     st.info("You **do not need to log in** to use this app, but logging in allows your notes, flashcards, and quizzes to be saved across devices.")
 
     if not st.session_state.logged_in:
-        col1, col2 = st.columns(2)
+        login_tab, register_tab = st.tabs(["Login", "Register"])  # Better than columns
 
-        # --- Login Form ---
-        with col1:
-            st.markdown("### Login")
-            login_username = st.text_input("Username", key="home_login_username")
-            login_password = st.text_input("Password", type="password", key="home_login_password")
-            if st.button("Login", key="home_login_btn"):
-                if login_user(login_username, login_password):
-                    st.session_state.logged_in = True
-                    st.session_state.username = login_username
-                    st.success(f"Logged in as {login_username}")
-                    st.rerun()
-                else:
-                    st.error("Invalid username or password")
+        with login_tab:
+            with st.form("login_form"):
+                st.subheader("Login")
+                username = st.text_input("Username", key="login_user")
+                password = st.text_input("Password", type="password", key="login_pass")
+                if st.form_submit_button("Login"):
+                    if login_user(username, password):  # Uses GitHub now
+                        st.success(f"Welcome back, {username}!")
+                        st.rerun()
+                    else:
+                        st.error("Invalid credentials")
 
-        # --- Register Form ---
-        with col2:
-            st.markdown("### Register")
-            reg_username = st.text_input("New Username", key="home_reg_username")
-            reg_password = st.text_input("New Password", type="password", key="home_reg_password")
-            if st.button("Register", key="home_reg_btn"):
-                if register_user(reg_username, reg_password):
-                    st.success(f"Account created! You can now log in as {reg_username}")
-                else:
-                    st.error("Username already exists")
+        with register_tab:
+            with st.form("register_form"):
+                st.subheader("Register")
+                new_user = st.text_input("Choose Username", key="reg_user")
+                new_pass = st.text_input("Choose Password", type="password", key="reg_pass")
+                confirm_pass = st.text_input("Confirm Password", type="password", key="reg_pass_confirm")
+                
+                if st.form_submit_button("Register"):
+                    if new_pass != confirm_pass:
+                        st.error("Passwords don't match!")
+                    elif register_user(new_user, new_pass):  # Uses GitHub now
+                        st.success("Account created! Please log in.")
+                        st.rerun()
+                    else:
+                        st.error("Username already exists")
     else:
         st.success(f"Logged in as {st.session_state.username}")
         if st.button("Logout"):
-            st.session_state.logged_in = False
-            st.session_state.username = ""
-            st.experimental_rerun()
+            logout_user()  # Handles GitHub cleanup + session clear
+            st.rerun()
 
     st.markdown("---")
 
@@ -224,7 +233,6 @@ if st.session_state.page == "🏠 Home":
             elif activity == 'flashcards_created':
                 count = session.get('flashcards_created', 0)
                 st.write(f"➕ {timestamp} - Created {count} flashcards")
-
 elif st.session_state.page == "📝 Notes":
     st.title("📝 AI Note Generator")
 

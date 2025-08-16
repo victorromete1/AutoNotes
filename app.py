@@ -14,6 +14,9 @@ from advanced_quiz_system import AdvancedQuizSystem
 from utils import sanitize_filename
 import base64
 from data_import_export import DataImportExport
+from datetime import datetime
+from user_data import register_user, login_user, save_user_data
+
 def next_flashcard(study_cards, correct=False):
     """Move to next flashcard in study session"""
     st.session_state.cards_studied += 1
@@ -127,16 +130,67 @@ with st.sidebar:
         st.metric("Sessions", len(st.session_state.study_sessions))
     data_io.render_sidebar_controls()
 
-# Main content area
+
+# Initialize session state
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
+if st.session_state.get("logged_in"):
+    save_user_data()
+
+# --- Home Page ---
 if st.session_state.page == "🏠 Home":
     st.title("🎓 Welcome!")
 
     st.markdown("""
     Unlock your full learning potential with an intelligent, all-in-one study platform powered by AI.  
     Whether you're preparing for exams, mastering a subject, or building long-term knowledge, this tool adapts to the way **you** learn best.  
+    """)
 
-    ---
+    # --- Login/Register Section on Home ---
+    st.markdown("---")
+    st.subheader("🔐 User Account (Optional)")
+    st.info("You **do not need to log in** to use this app, but logging in allows your notes, flashcards, and quizzes to be saved across devices.")
 
+    if not st.session_state.logged_in:
+        col1, col2 = st.columns(2)
+
+        # --- Login Form ---
+        with col1:
+            st.markdown("### Login")
+            login_username = st.text_input("Username", key="home_login_username")
+            login_password = st.text_input("Password", type="password", key="home_login_password")
+            if st.button("Login", key="home_login_btn"):
+                if login_user(login_username, login_password):
+                    st.session_state.logged_in = True
+                    st.session_state.username = login_username
+                    st.success(f"Logged in as {login_username}")
+                    st.experimental_rerun()
+                else:
+                    st.error("Invalid username or password")
+
+        # --- Register Form ---
+        with col2:
+            st.markdown("### Register")
+            reg_username = st.text_input("New Username", key="home_reg_username")
+            reg_password = st.text_input("New Password", type="password", key="home_reg_password")
+            if st.button("Register", key="home_reg_btn"):
+                if register_user(reg_username, reg_password):
+                    st.success(f"Account created! You can now log in as {reg_username}")
+                else:
+                    st.error("Username already exists")
+    else:
+        st.success(f"Logged in as {st.session_state.username}")
+        if st.button("Logout"):
+            st.session_state.logged_in = False
+            st.session_state.username = ""
+            st.experimental_rerun()
+
+    st.markdown("---")
+
+    # --- Features Section ---
+    st.markdown("""
     ### 🚀 Key Features:
     - **📝 Smart Notes**: Instantly generate clear, structured notes from any topic  
     - **🎴 Flashcards**: Create interactive flashcards to reinforce your memory  
@@ -144,22 +198,15 @@ if st.session_state.page == "🏠 Home":
     - **📊 Progress Tracking**: Monitor your growth with detailed insights & analytics  
     - **📑 Reports**: Export beautifully formatted PDF reports of your learning journey  
 
-    ---
-
     ### 💡 Quick Start Guide:
     1. **Create Notes** → Enter a topic you're studying and let AI generate study notes  
     2. **Build Flashcards** → Turn your notes into bite-sized flashcards for revision  
     3. **Test Yourself** → Take adaptive quizzes with instant feedback  
     4. **Track Progress** → Watch your performance improve over time  
-
-    ---
-
-    ✨ Your study journey, reimagined with AI. Ready to begin?
     """)
 
-
-    # Recent activity
-    if st.session_state.study_sessions:
+    # --- Recent Activity ---
+    if st.session_state.get("study_sessions"):
         st.subheader("📅 Recent Activity")
         recent_sessions = sorted(st.session_state.study_sessions, 
                                key=lambda x: x.get('timestamp', ''), reverse=True)[:5]

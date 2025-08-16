@@ -21,7 +21,6 @@ class QuizGenerator:
         )
         self.model = "anthropic/claude-3-haiku"
         self.provider = "OpenRouter (Claude 3 Haiku)"
-        st.write(f"✅ Using {self.provider} — base_url: {self.client.base_url}")
 
     # ---------- public ----------
     def generate_quiz(self, content: str, quiz_type: str, num_questions: int = 5, difficulty: str = "Medium") -> Dict[str, Any]:

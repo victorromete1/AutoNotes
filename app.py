@@ -123,8 +123,6 @@ with st.sidebar:
         quiz_sessions = [s for s in st.session_state.study_sessions if s.get('activity_type') == 'quiz']
         st.metric("Quizzes", len(quiz_sessions))
         st.metric("Sessions", len(st.session_state.study_sessions))
-    st.divider()
-    st.subheader("🔁 Data Transfer")
     data_io.render_sidebar_controls()
 
 # Main content area

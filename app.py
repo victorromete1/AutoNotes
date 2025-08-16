@@ -166,7 +166,7 @@ if st.session_state.page == "🏠 Home":
                     st.session_state.logged_in = True
                     st.session_state.username = login_username
                     st.success(f"Logged in as {login_username}")
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("Invalid username or password")
 

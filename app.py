@@ -284,16 +284,27 @@ elif st.session_state.page == "📝 Notes":
 elif st.session_state.page == "📚 Flashcards":
     st.title("📚 Interactive Flashcards")
 
+    # Track which tab the user was last on
+    if "last_tab" not in st.session_state:
+        st.session_state.last_tab = "📖 Study"
+
     tab1, tab2, tab3 = st.tabs(["📖 Study", "➕ Create", "📂 Manage"])
 
+    # --- 📖 STUDY TAB ---
     with tab1:
+        if st.session_state.last_tab != "📖 Study":
+            # Reset study session when entering Study tab
+            st.session_state.study_index = 0
+            st.session_state.show_answer = False
+            st.session_state.cards_studied = 0
+            st.session_state.cards_correct = 0
+            st.session_state.last_tab = "📖 Study"
+
         st.subheader("📖 Study Session")
 
         if not st.session_state.flashcards:
             st.info("No flashcards available. Create some first!")
-            st.experimental_rerun()
         else:
-            # Category filter
             categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))
             selected_category = st.selectbox("Study category:", ["All"] + categories)
 
@@ -302,7 +313,6 @@ elif st.session_state.page == "📚 Flashcards":
                 study_cards = [card for card in study_cards if card.get('category', 'General') == selected_category]
 
             if study_cards:
-                # Initialize study session
                 if 'study_index' not in st.session_state:
                     st.session_state.study_index = 0
                     st.session_state.show_answer = False
@@ -311,11 +321,9 @@ elif st.session_state.page == "📚 Flashcards":
 
                 current_card = study_cards[st.session_state.study_index]
 
-                # Progress
                 progress = (st.session_state.study_index + 1) / len(study_cards)
                 st.progress(progress, text=f"Card {st.session_state.study_index + 1} of {len(study_cards)}")
 
-                # Card display
                 st.markdown(f"""
                 <div style="border: 2px solid #ddd; border-radius: 10px; padding: 30px; margin: 20px 0; 
                            background-color: #f9f9f9; text-align: center; min-height: 150px;">
@@ -323,7 +331,6 @@ elif st.session_state.page == "📚 Flashcards":
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Answer section
                 if st.session_state.show_answer:
                     st.markdown(f"""
                     <div style="border: 2px solid #4CAF50; border-radius: 10px; padding: 20px; margin: 20px 0; 
@@ -353,12 +360,13 @@ elif st.session_state.page == "📚 Flashcards":
                         st.session_state.show_answer = True
                         st.rerun()
 
-                # Session stats
                 if st.session_state.cards_studied > 0:
                     accuracy = (st.session_state.cards_correct / st.session_state.cards_studied) * 100
                     st.metric("Session Accuracy", f"{accuracy:.1f}%")
 
+    # --- ➕ CREATE TAB ---
     with tab2:
+        st.session_state.last_tab = "➕ Create"
         st.subheader("➕ Create Flashcards")
 
         method = st.radio("Creation method:", 
@@ -390,7 +398,6 @@ elif st.session_state.page == "📚 Flashcards":
                             auto_save()
                             st.success(f"✅ Generated {len(flashcards)} flashcards!")
 
-                            # Log activity
                             session = {
                                 'timestamp': datetime.now().isoformat(),
                                 'activity_type': 'flashcards_created',
@@ -400,7 +407,6 @@ elif st.session_state.page == "📚 Flashcards":
                             st.session_state.study_sessions.append(session)
                             auto_save()
 
-                            # Preview
                             st.markdown("### Preview:")
                             for i, card in enumerate(flashcards[:3], 1):
                                 with st.expander(f"Card {i}"):
@@ -434,25 +440,24 @@ elif st.session_state.page == "📚 Flashcards":
                         st.success("✅ Flashcard added!")
                     else:
                         st.warning("Please fill in both sides.")
+
         elif method == "📂 Upload File":
             uploaded_file = st.file_uploader("Choose a file", type=["txt", "pdf", "docx"])
+            content = ""
             if uploaded_file is not None:
-                # Text file
                 if uploaded_file.type == "text/plain":
                     content = uploaded_file.read().decode("utf-8")
-                    # PDF file
                 elif uploaded_file.type == "application/pdf":
                     from PyPDF2 import PdfReader
                     pdf = PdfReader(uploaded_file)
-                    content = ""
                     for page in pdf.pages:
                         content += page.extract_text()
-                # Word file
                 elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
                     import docx
                     doc = docx.Document(uploaded_file)
                     content = "\n".join([p.text for p in doc.paragraphs])
                 st.text_area("Preview:", value=content[:200] + "...", height=100, disabled=True)
+
             col1, col2, col3 = st.columns(3)
             with col1:
                 num_cards = st.slider("Number of cards:", 3, 20, 8)
@@ -476,7 +481,6 @@ elif st.session_state.page == "📚 Flashcards":
                             auto_save()
                             st.success(f"✅ Generated {len(flashcards)} flashcards!")
 
-                            # Log activity
                             session = {
                                 'timestamp': datetime.now().isoformat(),
                                 'activity_type': 'flashcards_created',
@@ -486,7 +490,6 @@ elif st.session_state.page == "📚 Flashcards":
                             st.session_state.study_sessions.append(session)
                             auto_save()
 
-                            # Preview
                             st.markdown("### Preview:")
                             for i, card in enumerate(flashcards[:3], 1):
                                 with st.expander(f"Card {i}"):
@@ -500,15 +503,15 @@ elif st.session_state.page == "📚 Flashcards":
                             st.error(f"Error: {str(e)}")
                 else:
                     st.warning("Please enter content.")
-            
 
+    # --- 📂 MANAGE TAB ---
     with tab3:
+        st.session_state.last_tab = "📂 Manage"
         st.subheader("📂 Manage Flashcards")
 
         if st.session_state.flashcards:
             st.write(f"**Total flashcards:** {len(st.session_state.flashcards)}")
 
-            # Export/Clear buttons
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("📥 Export All"):
@@ -529,7 +532,6 @@ elif st.session_state.page == "📚 Flashcards":
                         auto_save()
                         st.rerun()
 
-            # Category filter
             categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))
             filter_cat = st.selectbox("Filter:", ["All"] + categories)
 
@@ -537,7 +539,6 @@ elif st.session_state.page == "📚 Flashcards":
             if filter_cat != "All":
                 filtered = [c for c in filtered if c.get('category', 'General') == filter_cat]
 
-            # Display cards
             for i, card in enumerate(filtered):
                 with st.expander(f"🎴 {card['front'][:50]}..."):
                     st.write(f"**Front:** {card['front']}")
@@ -550,6 +551,7 @@ elif st.session_state.page == "📚 Flashcards":
                         st.rerun()
         else:
             st.info("No flashcards yet. Create some first!")
+
 
 elif st.session_state.page == "🧠 Quizzes":
     st.title("🧠 Interactive Quiz System")

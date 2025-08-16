@@ -1,76 +1,112 @@
 import json
+import base64
 import streamlit as st
+from github import Github
 from cryptography.fernet import Fernet
+from datetime import datetime
 
-DATA_FILE = "data.json"
-
-# --- Load Fernet key from Streamlit secrets ---
+# --- Config ---
 KEY = st.secrets["encryption"]["fernet_key"].encode()
 fernet = Fernet(KEY)
+GITHUB_TOKEN = st.secrets["github"]["token"]
+GITHUB_REPO = st.secrets["github"]["repo"]  # Format: "username/repo"
 
-# --- Encryption helpers ---
-def encrypt_data(data: dict) -> bytes:
-    """Encrypt a Python dict and return bytes"""
-    return fernet.encrypt(json.dumps(data).encode())
+def get_github_filepath(username: str) -> str:
+    """Returns path like 'user_data/victor.json' in your GitHub repo"""
+    return f"user_data/{username.lower()}.json"
 
-def decrypt_data(encrypted_data: bytes) -> dict:
-    """Decrypt bytes and return Python dict"""
-    return json.loads(fernet.decrypt(encrypted_data))
-
-# --- User management ---
-def load_all_users() -> dict:
-    """Load all users from encrypted data file"""
+def github_save_user_data(username: str, data: dict):
+    """Saves encrypted user data to GitHub"""
     try:
-        with open(DATA_FILE, "rb") as f:
-            encrypted = f.read()
-        return decrypt_data(encrypted)
-    except FileNotFoundError:
-        return {}
-    except:
-        st.error("Could not decrypt user data. Wrong key or corrupted file.")
-        return {}
-
-def save_all_users(users: dict):
-    """Save all users to encrypted data file"""
-    encrypted = encrypt_data(users)
-    with open(DATA_FILE, "wb") as f:
-        f.write(encrypted)
-
-def register_user(username: str, password: str) -> bool:
-    users = load_all_users()
-    if username in users:
+        g = Github(GITHUB_TOKEN)
+        repo = g.get_repo(GITHUB_REPO)
+        file_path = get_github_filepath(username)
+        
+        # Encrypt and prepare data
+        encrypted = fernet.encrypt(json.dumps(data).encode())
+        content = base64.b64encode(encrypted).decode()
+        
+        # Check if file exists
+        try:
+            file = repo.get_contents(file_path)
+            repo.update_file(
+                path=file_path,
+                message=f"Update user data for {username}",
+                content=content,
+                sha=file.sha
+            )
+        except:
+            repo.create_file(
+                path=file_path,
+                message=f"Create user data for {username}",
+                content=content
+            )
+        return True
+    except Exception as e:
+        st.error(f"GitHub save failed: {str(e)}")
         return False
-    users[username] = {
-        "password": password,
+
+def github_load_user_data(username: str) -> dict:
+    """Loads and decrypts user data from GitHub"""
+    try:
+        g = Github(GITHUB_TOKEN)
+        repo = g.get_repo(GITHUB_REPO)
+        file_path = get_github_filepath(username)
+        
+        file = repo.get_contents(file_path)
+        encrypted = base64.b64decode(file.content)
+        return json.loads(fernet.decrypt(encrypted).decode())
+    except Exception as e:
+        st.error(f"GitHub load failed: {str(e)}")
+        return None
+
+# --- User Management ---
+def register_user(username: str, password: str) -> bool:
+    """Creates new user file in GitHub's user_data/ folder"""
+    if github_load_user_data(username) is not None:
+        return False  # User exists
+    
+    return github_save_user_data(username, {
+        "password": fernet.encrypt(password.encode()).decode(),
         "notes": [],
         "flashcards": [],
-        "study_sessions": []
-    }
-    save_all_users(users)
-    return True
+        "study_sessions": [],
+        "created_at": datetime.now().isoformat()
+    })
 
 def login_user(username: str, password: str) -> bool:
-    users = load_all_users()
-    if username in users and users[username]["password"] == password:
-        st.session_state.username = username
-        st.session_state.logged_in = True
-        # Load user data into session
-        st.session_state.notes = users[username]["notes"]
-        st.session_state.flashcards = users[username]["flashcards"]
-        st.session_state.study_sessions = users[username]["study_sessions"]
+    """Authenticates and loads user data from GitHub"""
+    user_data = github_load_user_data(username)
+    if not user_data:
+        return False
+        
+    try:
+        # Verify password
+        stored_pass = fernet.decrypt(user_data["password"].encode()).decode()
+        if stored_pass != password:
+            return False
+            
+        # Load into session
+        st.session_state.update({
+            "logged_in": True,
+            "username": username,
+            "notes": user_data.get("notes", []),
+            "flashcards": user_data.get("flashcards", []),
+            "study_sessions": user_data.get("study_sessions", [])
+        })
         return True
-    return False
+    except:
+        return False
 
-def save_user_data():
-    """Save current user's session data back to encrypted file"""
-    if not st.session_state.get("logged_in", False):
+def save_current_user():
+    """Auto-saves session data to GitHub"""
+    if not st.session_state.get("logged_in"):
         return
-    users = load_all_users()
-    username = st.session_state.username
-    users[username] = {
-        "password": users[username]["password"],
+        
+    github_save_user_data(st.session_state["username"], {
+        "password": fernet.encrypt("dummy").decode(),  # Password not stored in session
         "notes": st.session_state.get("notes", []),
         "flashcards": st.session_state.get("flashcards", []),
-        "study_sessions": st.session_state.get("study_sessions", [])
-    }
-    save_all_users(users)
+        "study_sessions": st.session_state.get("study_sessions", []),
+        "updated_at": datetime.now().isoformat()
+    })

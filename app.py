@@ -364,9 +364,13 @@ elif st.session_state.page == "📚 Flashcards":
     with tab2:
         st.subheader("➕ Create Flashcards")
 
-        method = st.radio("Creation method:", 
-                         ["📝 From Text", "📂 Upload File", "✋ Manual Entry"], horizontal=True)
+        method = st.radio(
+            "Creation method:",
+            ["📝 From Text", "📂 Upload File", "✋ Manual Entry", "📚 From Notes"],
+            horizontal=True
+        )
 
+        # ---------------- From Text ----------------
         if method == "📝 From Text":
             content = st.text_area("Paste content:", placeholder="Enter study material...", height=150)
 
@@ -418,6 +422,7 @@ elif st.session_state.page == "📚 Flashcards":
                 else:
                     st.warning("Please enter content.")
 
+        # ---------------- Manual Entry ----------------
         elif method == "✋ Manual Entry":
             with st.form("manual_flashcard"):
                 front = st.text_area("Front (Question):", height=100)
@@ -437,13 +442,15 @@ elif st.session_state.page == "📚 Flashcards":
                         st.success("✅ Flashcard added!")
                     else:
                         st.warning("Please fill in both sides.")
+
+        # ---------------- Upload File ----------------
         elif method == "📂 Upload File":
             uploaded_file = st.file_uploader("Choose a file", type=["txt", "pdf", "docx"])
             if uploaded_file is not None:
                 # Text file
                 if uploaded_file.type == "text/plain":
                     content = uploaded_file.read().decode("utf-8")
-                    # PDF file
+                # PDF file
                 elif uploaded_file.type == "application/pdf":
                     from PyPDF2 import PdfReader
                     pdf = PdfReader(uploaded_file)
@@ -456,6 +463,7 @@ elif st.session_state.page == "📚 Flashcards":
                     doc = docx.Document(uploaded_file)
                     content = "\n".join([p.text for p in doc.paragraphs])
                 st.text_area("Preview:", value=content[:200] + "...", height=100, disabled=True)
+
             col1, col2, col3 = st.columns(3)
             with col1:
                 num_cards = st.slider("Number of cards:", 3, 20, 8)
@@ -503,7 +511,67 @@ elif st.session_state.page == "📚 Flashcards":
                             st.error(f"Error: {str(e)}")
                 else:
                     st.warning("Please enter content.")
-            
+
+        # ---------------- From Notes ----------------
+        elif method == "📚 From Notes":
+            if st.session_state.notes:
+                note_titles = [n['title'] for n in st.session_state.notes]
+                selected_note = st.selectbox("Select note:", note_titles)
+                note_obj = next((n for n in st.session_state.notes if n['title'] == selected_note), None)
+                if note_obj:
+                    content = note_obj['content']
+                    st.text_area("Preview:", value=content[:200] + "...", height=100, disabled=True)
+
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        num_cards = st.slider("Number of cards:", 3, 20, 8)
+                    with col2:
+                        difficulty = st.selectbox("Difficulty:", ["Easy", "Medium", "Hard"])
+                    with col3:
+                        category = st.text_input("Category:", value="General")
+
+                    if st.button("🚀 Generate Flashcards from Note", type="primary"):
+                        if content.strip():
+                            with st.spinner("Creating flashcards..."):
+                                try:
+                                    flashcards = generators['flashcards'].generate_flashcards(
+                                        content, num_cards=num_cards, difficulty=difficulty
+                                    )
+
+                                    for card in flashcards:
+                                        card['category'] = category
+
+                                    st.session_state.flashcards.extend(flashcards)
+                                    auto_save()
+                                    st.success(f"✅ Generated {len(flashcards)} flashcards from note!")
+
+                                    # Log activity
+                                    session = {
+                                        'timestamp': datetime.now().isoformat(),
+                                        'activity_type': 'flashcards_created',
+                                        'subject': category,
+                                        'flashcards_created': len(flashcards)
+                                    }
+                                    st.session_state.study_sessions.append(session)
+                                    auto_save()
+
+                                    # Preview
+                                    st.markdown("### Preview:")
+                                    for i, card in enumerate(flashcards[:3], 1):
+                                        with st.expander(f"Card {i}"):
+                                            st.write(f"**Front:** {card['front']}")
+                                            st.write(f"**Back:** {card['back']}")
+
+                                    if len(flashcards) > 3:
+                                        st.info(f"+ {len(flashcards) - 3} more cards created!")
+
+                                except Exception as e:
+                                    st.error(f"Error: {str(e)}")
+                        else:
+                            st.warning("Note is empty.")
+            else:
+                st.info("No notes available. Create some first!")
+
 
     with tab3:
         st.subheader("📂 Manage Flashcards")

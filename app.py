@@ -302,7 +302,7 @@ elif st.session_state.page == "📚 Flashcards":
             st.session_state.last_tab = "📖 Study"
 
         st.subheader("📖 Study Session")
-
+        st.rerun()
         if not st.session_state.flashcards:
             st.info("No flashcards available. Create some first!")
         else:

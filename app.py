@@ -308,8 +308,10 @@ elif st.session_state.page == "📚 Flashcards":
 
     # --- Utility function to auto-save ---
     def auto_save():
-        storage.set("flashcards", st.session_state.flashcards)
-
+        if st.session_state.flashcards:
+            storage.set("flashcards", st.session_state.flashcards)
+        else:
+            storage.delete("flashcards")
     # --- Flashcard navigation ---
     def next_flashcard(cards, correct=True):
         st.session_state.cards_studied += 1

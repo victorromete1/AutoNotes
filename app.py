@@ -291,6 +291,10 @@ elif st.session_state.page == "📚 Flashcards":
 
         if not st.session_state.flashcards:
             st.info("No flashcards available. Create some first!")
+            if not st.session_state.flashcards:
+                st.info("No flashcards available. Create some first!")
+                if st.button("🔄 Refresh"):
+                    st.rerun()
         else:
             # Category filter
             categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))

@@ -109,7 +109,6 @@ with st.sidebar:
     with st.sidebar:
         st.markdown("Navigate:")
         page = st.selectbox(
-            "",
             ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📋 Reports"],
             key="navigation"
         )

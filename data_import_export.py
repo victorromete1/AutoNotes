@@ -79,3 +79,23 @@ class DataImportExport:
                 if st.button("⚠️ Confirm Import (Overwrites Current Data)"):
                     if self.import_all_data(uploaded_file):
                         st.rerun()
+
+            # --- Danger Zone ---
+            st.divider()
+            st.subheader("🛑 Danger Zone")
+
+            if st.button("🗑️ Delete All Data"):
+                st.session_state.confirm_delete_all = True
+
+            if st.session_state.get("confirm_delete_all", False):
+                st.warning("This will permanently delete **all notes, flashcards, and history**!")
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("⚠️ Confirm Delete Everything"):
+                        self.persistence.clear_all_data()
+                        st.session_state.confirm_delete_all = False
+                        st.success("✅ All data deleted!")
+                        st.rerun()
+                with col2:
+                    if st.button("❌ Cancel"):
+                        st.session_state.confirm_delete_all = False

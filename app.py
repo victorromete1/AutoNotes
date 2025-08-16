@@ -106,12 +106,15 @@ with st.sidebar:
 
 
     # Navigation
-    page = st.radio(
-        "Navigate:",
-        ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📋 Reports"],
-        key="navigation"
-    )
+    with st.sidebar:
+        st.markdown("### Navigate")
+        page = st.selectbox(
+            "",
+            ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📋 Reports"],
+            key="navigation"
+        )
     st.session_state.page = page
+
 
     # Quick stats
     st.divider()

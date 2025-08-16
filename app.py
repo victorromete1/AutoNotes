@@ -106,12 +106,11 @@ with st.sidebar:
 
 
     # Navigation
-    with st.sidebar:
-        st.markdown("Navigate:")
-        page = st.selectbox(
-            ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📋 Reports"],
-            key="navigation"
-        )
+    page = st.selectbox(
+        "Navigate:",
+        ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📋 Reports"],
+        key="navigation"
+    )
     st.session_state.page = page
 
 

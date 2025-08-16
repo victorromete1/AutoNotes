@@ -81,32 +81,17 @@ class DataImportExport:
                         st.rerun()
 
             # --- Danger Zone ---
-            st.markdown(
-                """
-                <div style="
-                    padding: 1rem; 
-                    border-radius: 0.5rem; 
-                    border: 2px solid #ff4d4f; 
-                    background-color: #ffe6e6;
-                    margin-top: 2rem;
-                ">
-                    <h3 style="color:#b30000; margin-bottom:0.5rem;">🛑 Danger Zone</h3>
-                    <p style="color:#800000; font-size:0.9rem; margin-top:0;">
-                        This action is <b>permanent</b>. Proceed with caution.
-                    </p>
-                </div>
-                """, unsafe_allow_html=True
-            )
+            st.divider()
+            st.subheader("🛑 Danger Zone")
 
-            # Delete All Data button
-            if st.button("🗑️ Delete All Data", type="primary"):
+            if st.button("🗑️ Delete All Data"):
                 st.session_state.confirm_delete_all = True
 
             if st.session_state.get("confirm_delete_all", False):
-                st.warning("⚠️ This will permanently delete **all notes, flashcards, and history**!")
+                st.warning("This will permanently delete **all notes, flashcards, and history**!")
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button("🔥 Confirm Delete Everything"):
+                    if st.button("⚠️ Confirm Delete Everything"):
                         self.persistence.clear_all_data()
                         st.session_state.confirm_delete_all = False
                         st.success("✅ All data deleted!")
@@ -114,3 +99,4 @@ class DataImportExport:
                 with col2:
                     if st.button("❌ Cancel"):
                         st.session_state.confirm_delete_all = False
+

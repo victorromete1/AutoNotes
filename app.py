@@ -302,9 +302,10 @@ elif st.session_state.page == "📚 Flashcards":
             st.session_state.last_tab = "📖 Study"
 
         st.subheader("📖 Study Session")
-        st.rerun()
         if not st.session_state.flashcards:
             st.info("No flashcards available. Create some first!")
+            if st.button("🔄 Refresh"):
+                st.rerun()  # Forces the app to rerun from the top
         else:
             categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))
             selected_category = st.selectbox("Study category:", ["All"] + categories)

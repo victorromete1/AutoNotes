@@ -283,18 +283,48 @@ elif st.session_state.page == "📝 Notes":
                         st.rerun()
 
 elif st.session_state.page == "📚 Flashcards":
+    import streamlit as st
+    from datetime import datetime
+    from streamlit_browser_storage import storage
+
     st.title("📚 Interactive Flashcards")
 
-    # Track which tab the user was last on
+    # Initialize flashcards in browser storage if not already
+    if "flashcards" not in st.session_state:
+        st.session_state.flashcards = storage.get("flashcards") or []
+
+    if "study_sessions" not in st.session_state:
+        st.session_state.study_sessions = []
+
     if "last_tab" not in st.session_state:
         st.session_state.last_tab = "📖 Study"
 
+    if "study_index" not in st.session_state:
+        st.session_state.study_index = 0
+        st.session_state.show_answer = False
+        st.session_state.cards_studied = 0
+        st.session_state.cards_correct = 0
+
+    # --- Utility function to auto-save ---
+    def auto_save():
+        storage.set("flashcards", st.session_state.flashcards)
+
+    # --- Flashcard navigation ---
+    def next_flashcard(cards, correct=True):
+        st.session_state.cards_studied += 1
+        if correct:
+            st.session_state.cards_correct += 1
+        st.session_state.study_index += 1
+        st.session_state.show_answer = False
+        if st.session_state.study_index >= len(cards):
+            st.session_state.study_index = 0
+
+    # Tabs
     tab1, tab2, tab3 = st.tabs(["📖 Study", "➕ Create", "📂 Manage"])
 
     # --- 📖 STUDY TAB ---
     with tab1:
         if st.session_state.last_tab != "📖 Study":
-            # Reset study session when entering Study tab
             st.session_state.study_index = 0
             st.session_state.show_answer = False
             st.session_state.cards_studied = 0
@@ -305,7 +335,7 @@ elif st.session_state.page == "📚 Flashcards":
         if not st.session_state.flashcards:
             st.info("No flashcards available. Create some first!")
             if st.button("🔄 Refresh"):
-                st.rerun()  # Forces the app to rerun from the top
+                st.rerun()
         else:
             categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))
             selected_category = st.selectbox("Study category:", ["All"] + categories)
@@ -315,28 +345,21 @@ elif st.session_state.page == "📚 Flashcards":
                 study_cards = [card for card in study_cards if card.get('category', 'General') == selected_category]
 
             if study_cards:
-                if 'study_index' not in st.session_state:
-                    st.session_state.study_index = 0
-                    st.session_state.show_answer = False
-                    st.session_state.cards_studied = 0
-                    st.session_state.cards_correct = 0
-
                 current_card = study_cards[st.session_state.study_index]
-
                 progress = (st.session_state.study_index + 1) / len(study_cards)
                 st.progress(progress, text=f"Card {st.session_state.study_index + 1} of {len(study_cards)}")
 
                 st.markdown(f"""
-                <div style="border: 2px solid #ddd; border-radius: 10px; padding: 30px; margin: 20px 0; 
-                           background-color: #f9f9f9; text-align: center; min-height: 150px;">
+                <div style="border:2px solid #ddd; border-radius:10px; padding:30px; margin:20px 0;
+                            background-color:#f9f9f9; text-align:center; min-height:150px;">
                     <h3>{current_card['front']}</h3>
                 </div>
                 """, unsafe_allow_html=True)
 
                 if st.session_state.show_answer:
                     st.markdown(f"""
-                    <div style="border: 2px solid #4CAF50; border-radius: 10px; padding: 20px; margin: 20px 0; 
-                               background-color: #e8f5e8; text-align: center;">
+                    <div style="border:2px solid #4CAF50; border-radius:10px; padding:20px; margin:20px 0;
+                                background-color:#e8f5e8; text-align:center;">
                         <h4>Answer:</h4>
                         <p>{current_card['back']}</p>
                     </div>
@@ -344,19 +367,15 @@ elif st.session_state.page == "📚 Flashcards":
 
                     st.markdown("### How well did you know this?")
                     col1, col2, col3 = st.columns(3)
-
                     with col1:
                         if st.button("❌ Incorrect", use_container_width=True):
                             next_flashcard(study_cards, correct=False)
-
                     with col2:
                         if st.button("🤔 Partial", use_container_width=True):
                             next_flashcard(study_cards, correct=True)
-
                     with col3:
                         if st.button("✅ Correct", use_container_width=True):
                             next_flashcard(study_cards, correct=True)
-
                 else:
                     if st.button("🔍 Show Answer", use_container_width=True):
                         st.session_state.show_answer = True
@@ -371,12 +390,10 @@ elif st.session_state.page == "📚 Flashcards":
         st.session_state.last_tab = "➕ Create"
         st.subheader("➕ Create Flashcards")
 
-        method = st.radio("Creation method:", 
-                         ["📝 From Text", "📂 Upload File", "✋ Manual Entry"], horizontal=True)
+        method = st.radio("Creation method:", ["📝 From Text", "📂 Upload File", "✋ Manual Entry"], horizontal=True)
 
         if method == "📝 From Text":
             content = st.text_area("Paste content:", placeholder="Enter study material...", height=150)
-
             col1, col2, col3 = st.columns(3)
             with col1:
                 num_cards = st.slider("Number of cards:", 3, 20, 8)
@@ -387,39 +404,17 @@ elif st.session_state.page == "📚 Flashcards":
 
             if st.button("🚀 Generate Flashcards", type="primary"):
                 if content.strip():
-                    with st.spinner("Creating flashcards..."):
-                        try:
-                            flashcards = generators['flashcards'].generate_flashcards(
-                                content, num_cards=num_cards, difficulty=difficulty
-                            )
-
-                            for card in flashcards:
-                                card['category'] = category
-
-                            st.session_state.flashcards.extend(flashcards)
-                            auto_save()
-                            st.success(f"✅ Generated {len(flashcards)} flashcards!")
-
-                            session = {
-                                'timestamp': datetime.now().isoformat(),
-                                'activity_type': 'flashcards_created',
-                                'subject': category,
-                                'flashcards_created': len(flashcards)
-                            }
-                            st.session_state.study_sessions.append(session)
-                            auto_save()
-
-                            st.markdown("### Preview:")
-                            for i, card in enumerate(flashcards[:3], 1):
-                                with st.expander(f"Card {i}"):
-                                    st.write(f"**Front:** {card['front']}")
-                                    st.write(f"**Back:** {card['back']}")
-
-                            if len(flashcards) > 3:
-                                st.info(f"+ {len(flashcards) - 3} more cards created!")
-
-                        except Exception as e:
-                            st.error(f"Error: {str(e)}")
+                    try:
+                        flashcards = generators['flashcards'].generate_flashcards(
+                            content, num_cards=num_cards, difficulty=difficulty
+                        )
+                        for card in flashcards:
+                            card['category'] = category
+                        st.session_state.flashcards.extend(flashcards)
+                        auto_save()
+                        st.success(f"✅ Generated {len(flashcards)} flashcards!")
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
                 else:
                     st.warning("Please enter content.")
 
@@ -428,16 +423,14 @@ elif st.session_state.page == "📚 Flashcards":
                 front = st.text_area("Front (Question):", height=100)
                 back = st.text_area("Back (Answer):", height=100)
                 category = st.text_input("Category:", value="General")
-
                 if st.form_submit_button("➕ Add Flashcard"):
                     if front.strip() and back.strip():
-                        new_card = {
+                        st.session_state.flashcards.append({
                             'front': front,
                             'back': back,
                             'category': category,
                             'created': datetime.now().isoformat()
-                        }
-                        st.session_state.flashcards.append(new_card)
+                        })
                         auto_save()
                         st.success("✅ Flashcard added!")
                     else:
@@ -458,7 +451,7 @@ elif st.session_state.page == "📚 Flashcards":
                     import docx
                     doc = docx.Document(uploaded_file)
                     content = "\n".join([p.text for p in doc.paragraphs])
-                st.text_area("Preview:", value=content[:200] + "...", height=100, disabled=True)
+                st.text_area("Preview:", value=content[:200]+"...", height=100, disabled=True)
 
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -468,127 +461,41 @@ elif st.session_state.page == "📚 Flashcards":
             with col3:
                 category = st.text_input("Category:", value="General")
 
-            if st.button("🚀 Generate Flashcards", type="primary"):
+            if st.button("🚀 Generate Flashcards (File)", type="primary"):
                 if content.strip():
-                    with st.spinner("Creating flashcards..."):
-                        try:
-                            flashcards = generators['flashcards'].generate_flashcards(
-                                content, num_cards=num_cards, difficulty=difficulty
-                            )
-
-                            for card in flashcards:
-                                card['category'] = category
-
-                            st.session_state.flashcards.extend(flashcards)
-                            auto_save()
-                            st.success(f"✅ Generated {len(flashcards)} flashcards!")
-
-                            session = {
-                                'timestamp': datetime.now().isoformat(),
-                                'activity_type': 'flashcards_created',
-                                'subject': category,
-                                'flashcards_created': len(flashcards)
-                            }
-                            st.session_state.study_sessions.append(session)
-                            auto_save()
-
-                            st.markdown("### Preview:")
-                            for i, card in enumerate(flashcards[:3], 1):
-                                with st.expander(f"Card {i}"):
-                                    st.write(f"**Front:** {card['front']}")
-                                    st.write(f"**Back:** {card['back']}")
-
-                            if len(flashcards) > 3:
-                                st.info(f"+ {len(flashcards) - 3} more cards created!")
-
-                        except Exception as e:
-                            st.error(f"Error: {str(e)}")
+                    try:
+                        flashcards = generators['flashcards'].generate_flashcards(
+                            content, num_cards=num_cards, difficulty=difficulty
+                        )
+                        for card in flashcards:
+                            card['category'] = category
+                        st.session_state.flashcards.extend(flashcards)
+                        auto_save()
+                        st.success(f"✅ Generated {len(flashcards)} flashcards!")
+                    except Exception as e:
+                        st.error(f"Error: {str(e)}")
                 else:
-                    st.warning("Please enter content.")
+                    st.warning("Please upload content.")
 
     # --- 📂 MANAGE TAB ---
     with tab3:
         st.session_state.last_tab = "📂 Manage"
         st.subheader("📂 Manage Flashcards")
 
-        # --- Three Columns: Export, Import, Clear ---
-        col1, col2, col3 = st.columns(3)
+        # --- Clear All Button ---
+        if st.session_state.flashcards:
+            if st.button("🗑️ Clear All"):
+                if st.button("⚠️ Confirm Delete"):
+                    st.session_state.flashcards = []
+                    auto_save()
+                    st.rerun()
+        else:
+            st.button("🗑️ Clear All", disabled=True)
 
-        # --- EXPORT ---
-            # --- EXPORT ---
-            # --- EXPORT ---
-        with col1:
-            if st.button("📥 Export"):
-                st.session_state.show_export_input = True  # flag to show text input
-
-            # Show text input and download only if export was clicked
-            if st.session_state.get("show_export_input", False):
-                st.write("Enter a name for export:")
-                export_name = st.text_input("", placeholder="Enter file name", key="export_name")
-
-                if st.session_state.flashcards:
-                    if export_name.strip():
-                        data = generators['flashcards'].save_flashcards_file(
-                            st.session_state.flashcards, "export"
-                        )
-                        st.download_button(
-                            "📥 Download",
-                            data=data,
-                            file_name=f"{export_name.strip()}.flashcard",
-                            mime="application/json"
-                        )
-                    else:
-                        st.warning("Please enter a name to export")
-                        st.button("📥 Download", disabled=True)
-                else:
-                    st.button("📥 Download", disabled=True)
-
-
-
-        # --- IMPORT ---
-        # --- IMPORT ---
-        # --- IMPORT ---
-        with col2:
-            st.info("Drag & drop a flashcards file here or click to browse")
-            uploaded_file = st.file_uploader(
-                "📤 Import Flashcards",
-                type="flashcard",
-                key="import_flashcards",
-                help="Upload a .flashcard file"
-            )
-
-            if uploaded_file is not None:
-                try:
-                    file_content = uploaded_file.read().decode("utf-8")
-                    imported_flashcards = generators['flashcards'].load_flashcards_file(file_content)
-
-                    if imported_flashcards:
-                        st.session_state.flashcards.extend(imported_flashcards)
-                        auto_save()
-                        st.success(f"✅ Imported {len(imported_flashcards)} flashcards!")
-                    else:
-                        st.warning("No flashcards found in the file.")
-                except Exception as e:
-                    st.error(f"Failed to import: {e}")
-
-
-
-        # --- CLEAR ---
-        with col3:
-            if st.session_state.flashcards:
-                if st.button("🗑️ Clear All"):
-                    if st.button("⚠️ Confirm Delete"):
-                        st.session_state.flashcards = []
-                        auto_save()
-                        st.rerun()
-            else:
-                st.button("🗑️ Clear All", disabled=True)
-
-        # --- CATEGORY FILTER & DISPLAY ---
+        # --- Category Filter & Display ---
         if st.session_state.flashcards:
             categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))
             filter_cat = st.selectbox("Filter by category:", ["All"] + categories)
-
             filtered = st.session_state.flashcards
             if filter_cat != "All":
                 filtered = [c for c in filtered if c.get('category', 'General') == filter_cat]
@@ -598,7 +505,6 @@ elif st.session_state.page == "📚 Flashcards":
                     st.markdown(f"**Front:** {card['front']}")
                     st.markdown(f"**Back:** {card['back']}")
                     st.markdown(f"**Category:** {card.get('category', 'General')}")
-
                     if st.button("🗑️ Delete", key=f"del_{i}"):
                         st.session_state.flashcards.remove(card)
                         auto_save()

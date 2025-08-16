@@ -49,20 +49,22 @@ def github_save_user_data(username: str, data: dict) -> bool:
         return False
 
 def github_load_user_data(username: str) -> dict:
-    """Loads and decrypts user data from GitHub"""
     try:
         g = Github(GITHUB_TOKEN)
         repo = g.get_repo(GITHUB_REPO)
         file_path = get_github_filepath(username)
+        st.write(f"Looking for file in repo: {GITHUB_REPO}/{file_path}")  # DEBUG
 
         file = repo.get_contents(file_path)
         encrypted = base64.b64decode(file.content)
         return json.loads(fernet.decrypt(encrypted).decode())
     except UnknownObjectException:
+        st.error("User account not found. Please register first.")
         return None
     except Exception as e:
         st.error(f"GitHub load failed: {str(e)}")
         return None
+
 
 # --- User Management ---
 def register_user(username: str, password: str) -> bool:

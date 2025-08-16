@@ -524,7 +524,7 @@ elif st.session_state.page == "📚 Flashcards":
                     st.download_button(
                         "Download",
                         data=data,
-                        file_name=f"Study.flashcards",
+                        file_name=f"Study.flashcard",
                         mime="application/json"
                     )
             else:

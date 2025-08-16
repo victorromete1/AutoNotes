@@ -511,14 +511,12 @@ elif st.session_state.page == "📚 Flashcards":
         st.session_state.last_tab = "📂 Manage"
         st.subheader("📂 Manage Flashcards")
 
-        if st.session_state.flashcards:
-            st.write(f"**Total flashcards:** {len(st.session_state.flashcards)}")
+        # --- Three Columns: Export, Import, Clear ---
+        col1, col2, col3 = st.columns(3)
 
-            # --- Three Columns: Export, Import, Clear ---
-            col1, col2, col3 = st.columns(3)
-
-            # --- EXPORT ---
-            with col1:
+        # --- EXPORT ---
+        with col1:
+            if st.session_state.flashcards:
                 if st.button("📥 Export All"):
                     data = generators['flashcards'].save_flashcards_file(
                         st.session_state.flashcards, "export"
@@ -529,40 +527,46 @@ elif st.session_state.page == "📚 Flashcards":
                         file_name=f"Study.flashcards",
                         mime="application/json"
                     )
+            else:
+                st.button("📥 Export All", disabled=True)  # disabled if no flashcards
 
-            # --- IMPORT ---
-            with col2:
-                st.info("Drag & drop a flashcards file here or click to browse")  # visually appealing
-                uploaded_file = st.file_uploader(
-                    "📤 Import Flashcards",
-                    type="flashcard",
-                    key="import_flashcards",
-                    help="Upload a .flashcard file"
-                )
+        # --- IMPORT ---
+        with col2:
+            st.info("Drag & drop a flashcards file here or click to browse")
+            uploaded_file = st.file_uploader(
+                "📤 Import Flashcards",
+                type="flashcard",
+                key="import_flashcards",
+                help="Upload a .flashcard file"
+            )
 
-                if uploaded_file is not None:
-                    try:
-                        file_content = uploaded_file.read().decode("utf-8")
-                        imported_flashcards = generators['flashcards'].load_flashcards_file(file_content)
+            if uploaded_file is not None:
+                try:
+                    file_content = uploaded_file.read().decode("utf-8")
+                    imported_flashcards = generators['flashcards'].load_flashcards_file(file_content)
 
-                        if imported_flashcards:
-                            st.session_state.flashcards.extend(imported_flashcards)
-                            auto_save()
-                            st.success(f"✅ Imported {len(imported_flashcards)} flashcards!")
-                        else:
-                            st.warning("No flashcards found in the file.")
-                    except Exception as e:
-                        st.error(f"Failed to import: {e}")
+                    if imported_flashcards:
+                        st.session_state.flashcards.extend(imported_flashcards)
+                        auto_save()
+                        st.success(f"✅ Imported {len(imported_flashcards)} flashcards!")
+                    else:
+                        st.warning("No flashcards found in the file.")
+                except Exception as e:
+                    st.error(f"Failed to import: {e}")
 
-            # --- CLEAR ---
-            with col3:
+        # --- CLEAR ---
+        with col3:
+            if st.session_state.flashcards:
                 if st.button("🗑️ Clear All"):
                     if st.button("⚠️ Confirm Delete"):
                         st.session_state.flashcards = []
                         auto_save()
                         st.rerun()
+            else:
+                st.button("🗑️ Clear All", disabled=True)
 
-            # --- CATEGORY FILTER ---
+        # --- CATEGORY FILTER & DISPLAY ---
+        if st.session_state.flashcards:
             categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))
             filter_cat = st.selectbox("Filter by category:", ["All"] + categories)
 
@@ -570,7 +574,6 @@ elif st.session_state.page == "📚 Flashcards":
             if filter_cat != "All":
                 filtered = [c for c in filtered if c.get('category', 'General') == filter_cat]
 
-            # --- DISPLAY FLASHCARDS ---
             for i, card in enumerate(filtered):
                 with st.expander(f"🎴 {card['front'][:50]}..."):
                     st.markdown(f"**Front:** {card['front']}")
@@ -583,6 +586,7 @@ elif st.session_state.page == "📚 Flashcards":
                         st.rerun()
         else:
             st.info("No flashcards yet. Create some first!")
+
 
 
 

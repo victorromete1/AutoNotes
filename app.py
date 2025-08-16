@@ -516,26 +516,33 @@ elif st.session_state.page == "📚 Flashcards":
 
         # --- EXPORT ---
             # --- EXPORT ---
+            # --- EXPORT ---
         with col1:
-            st.write("Enter a name for export:")
-            export_name = st.text_input("", placeholder="Enter file name", key="export_name")
+            if st.button("📥 Export"):
+                st.session_state.show_export_input = True  # flag to show text input
 
-            if st.session_state.flashcards:
-                if export_name.strip():
-                    data = generators['flashcards'].save_flashcards_file(
-                        st.session_state.flashcards, "export"
-                    )
-                    st.download_button(
-                        "📥 Download",
-                        data=data,
-                        file_name=f"{export_name.strip()}.flashcard",
-                        mime="application/json"
-                    )
+            # Show text input and download only if export was clicked
+            if st.session_state.get("show_export_input", False):
+                st.write("Enter a name for export:")
+                export_name = st.text_input("", placeholder="Enter file name", key="export_name")
+
+                if st.session_state.flashcards:
+                    if export_name.strip():
+                        data = generators['flashcards'].save_flashcards_file(
+                            st.session_state.flashcards, "export"
+                        )
+                        st.download_button(
+                            "📥 Download",
+                            data=data,
+                            file_name=f"{export_name.strip()}.flashcard",
+                            mime="application/json"
+                        )
+                    else:
+                        st.warning("Please enter a name to export")
+                        st.button("📥 Download", disabled=True)
                 else:
-                    st.warning("Please enter a name to export")
                     st.button("📥 Download", disabled=True)
-            else:
-                st.button("📥 Download", disabled=True)
+
 
 
         # --- IMPORT ---

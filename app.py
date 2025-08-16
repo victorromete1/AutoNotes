@@ -514,7 +514,7 @@ elif st.session_state.page == "📚 Flashcards":
         if st.session_state.flashcards:
             st.write(f"**Total flashcards:** {len(st.session_state.flashcards)}")
 
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
                 if st.button("📥 Export All"):
                     data = generators['flashcards'].save_flashcards_file(

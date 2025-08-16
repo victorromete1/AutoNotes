@@ -523,11 +523,26 @@ elif st.session_state.page == "📚 Flashcards":
                     st.download_button(
                         "Download",
                         data=data,
-                        file_name=f"flashcards_{datetime.now().strftime('%Y%m%d')}.json",
+                        file_name=f"Study.flashcards",
                         mime="application/json"
                     )
-
+            
+            # --- IMPORT ---
             with col2:
+                uploaded_file = st.file_uploader("📤 Import Flashcards", type="flashcard")
+
+                if uploaded_file is not None:
+                    file_content = uploaded_file.read().decode("utf-8")
+                    imported_flashcards = generators['flashcards'].load_flashcards_file(file_content)
+
+                    if imported_flashcards:
+                        st.session_state.flashcards.extend(imported_flashcards)
+                        auto_save()  # if you have this function
+                        st.success(f"✅ Imported {len(imported_flashcards)} flashcards!")
+                    else:
+                        st.warning("No flashcards found in the file.")
+                        
+            with col3:
                 if st.button("🗑️ Clear All"):
                     if st.button("⚠️ Confirm Delete"):
                         st.session_state.flashcards = []

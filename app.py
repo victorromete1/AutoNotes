@@ -595,10 +595,10 @@ elif st.session_state.page == "📚 Flashcards":
 
             with col2:
                 if st.button("🗑️ Clear All"):
-                    if st.button("⚠️ Confirm Delete"):
-                        st.session_state.flashcards = []
-                        auto_save()
-                        st.rerun()
+                    st.session_state.flashcards = []
+                    auto_save()
+                    st.success("✅ All flashcards deleted!")
+                    st.rerun()
 
             # Category filter
             categories = list(set([card.get('category', 'General') for card in st.session_state.flashcards]))

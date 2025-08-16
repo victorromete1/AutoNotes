@@ -91,24 +91,45 @@ def register_user(username: str, password: str) -> bool:
         return False
 
 def login_user(username: str, password: str) -> bool:
-    """Authenticate user"""
-    user_data = github_load_user_data(username)
-    if not user_data:
-        st.error("User not found")
+    """Improved login with detailed error messages"""
+    if not username or not password:
+        st.error("Please enter both username and password")
         return False
 
-    if user_data["password"] != password:
-        st.error("Incorrect password")
+    try:
+        # Debug: Show what we're looking for
+        st.write(f"Looking for: userdata/{username.lower()}.json")
+        
+        user_data = github_load_user_data(username)
+        
+        if user_data is None:
+            st.error("User account not found. Please register first.")
+            return False
+            
+        # Verify password
+        try:
+            stored_pass = fernet.decrypt(user_data["password"].encode()).decode()
+            if stored_pass != password:
+                st.error("Incorrect password")
+                return False
+                
+            # Load user data
+            st.session_state.update({
+                "logged_in": True,
+                "username": username,
+                "notes": user_data.get("notes", []),
+                "flashcards": user_data.get("flashcards", []),
+                "study_sessions": user_data.get("study_sessions", [])
+            })
+            return True
+            
+        except Exception as e:
+            st.error(f"Password decryption failed: {str(e)}")
+            return False
+            
+    except Exception as e:
+        st.error(f"Login error: {str(e)}")
         return False
-
-    st.session_state.update({
-        "logged_in": True,
-        "username": username,
-        "notes": user_data.get("notes", []),
-        "flashcards": user_data.get("flashcards", []),
-        "study_sessions": user_data.get("study_sessions", [])
-    })
-    return True
 
 def save_current_user():
     """Auto-save session to GitHub"""

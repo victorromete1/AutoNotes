@@ -12,6 +12,7 @@ from data_persistence import DataPersistence
 from advanced_quiz_system import AdvancedQuizSystem
 from utils import sanitize_filename
 import base64
+from data_import_export import DataImportExport
 def next_flashcard(study_cards, correct=False):
     """Move to next flashcard in study session"""
     st.session_state.cards_studied += 1
@@ -67,6 +68,7 @@ def get_generators():
 
 generators = get_generators()
 persistence = DataPersistence()
+data_io = DataImportExport(persistence) 
 advanced_quiz = AdvancedQuizSystem(generators['quiz'])
 
 # Initialize session state
@@ -121,6 +123,9 @@ with st.sidebar:
         quiz_sessions = [s for s in st.session_state.study_sessions if s.get('activity_type') == 'quiz']
         st.metric("Quizzes", len(quiz_sessions))
         st.metric("Sessions", len(st.session_state.study_sessions))
+    st.divider()
+    st.subheader("🔁 Data Transfer")
+    data_io.render_sidebar_controls()
 
 # Main content area
 if st.session_state.page == "🏠 Home":

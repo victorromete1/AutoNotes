@@ -15,6 +15,7 @@ from utils import sanitize_filename
 import base64
 from datetime import datetime
 from streamlit_browser_storage import Storage
+storage = Storage()
 def next_flashcard(study_cards, correct=False):
     """Move to next flashcard in study session"""
     st.session_state.cards_studied += 1

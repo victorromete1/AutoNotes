@@ -532,6 +532,7 @@ elif st.session_state.page == "📚 Flashcards":
 
         # --- IMPORT ---
         # --- IMPORT ---
+        # --- IMPORT ---
         with col2:
             st.info("Drag & drop a flashcards file here or click to browse")
             uploaded_file = st.file_uploader(
@@ -542,7 +543,6 @@ elif st.session_state.page == "📚 Flashcards":
             )
 
             if uploaded_file is not None:
-                message_placeholder = st.empty()  # placeholder for message
                 try:
                     file_content = uploaded_file.read().decode("utf-8")
                     imported_flashcards = generators['flashcards'].load_flashcards_file(file_content)
@@ -550,23 +550,12 @@ elif st.session_state.page == "📚 Flashcards":
                     if imported_flashcards:
                         st.session_state.flashcards.extend(imported_flashcards)
                         auto_save()
-                        message_placeholder.success(f"✅ Imported {len(imported_flashcards)} flashcards!")
-
-                        import time
-                        time.sleep(1)  # wait 1 second
-                        message_placeholder.empty()  # remove the success message
-
-                        # Clear the uploader so it looks normal again
-                        st.experimental_rerun()
-
+                        st.success(f"✅ Imported {len(imported_flashcards)} flashcards!")
                     else:
-                        message_placeholder.warning("No flashcards found in the file.")
-                        time.sleep(1)
-                        message_placeholder.empty()
+                        st.warning("No flashcards found in the file.")
                 except Exception as e:
-                    message_placeholder.error(f"Failed to import: {e}")
-                    time.sleep(1)
-                    message_placeholder.empty()
+                    st.error(f"Failed to import: {e}")
+
 
 
         # --- CLEAR ---

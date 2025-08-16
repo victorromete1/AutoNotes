@@ -107,7 +107,7 @@ with st.sidebar:
 
     # Navigation
     with st.sidebar:
-        st.markdown("### Navigate")
+        st.markdown("Navigate:")
         page = st.selectbox(
             "",
             ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📋 Reports"],

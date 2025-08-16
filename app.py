@@ -530,11 +530,15 @@ elif st.session_state.page == "📚 Flashcards":
             # --- IMPORT ---
             with col2:
                 uploaded_file = st.file_uploader(
-                    "📤 Import Flashcards",  # label shown on the button
+                    "",  # empty label so only the button text shows
                     type="flashcard",
-                    label_visibility="collapsed",  # hides the label above uploader
+                    label_visibility="collapsed",
                     key="import_flashcards_button"
                 )
+
+                if st.button("📤 Import Flashcards"):  # button text shown to user
+                    # Simulate click by opening file explorer (Streamlit opens automatically when uploader clicked)
+                    pass
 
                 if uploaded_file is not None:
                     file_content = uploaded_file.read().decode("utf-8")
@@ -542,10 +546,11 @@ elif st.session_state.page == "📚 Flashcards":
 
                     if imported_flashcards:
                         st.session_state.flashcards.extend(imported_flashcards)
-                        auto_save()  # saves imported flashcards
+                        auto_save()
                         st.success(f"✅ Imported {len(imported_flashcards)} flashcards!")
                     else:
                         st.warning("No flashcards found in the file.")
+
 
                         
             with col3:

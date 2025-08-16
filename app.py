@@ -515,20 +515,28 @@ elif st.session_state.page == "📚 Flashcards":
         col1, col2, col3 = st.columns(3)
 
         # --- EXPORT ---
+            # --- EXPORT ---
         with col1:
+            st.write("Enter a name for export:")
+            export_name = st.text_input("", placeholder="Enter file name", key="export_name")
+
             if st.session_state.flashcards:
-                if st.button("📥 Export All"):
+                if export_name.strip():
                     data = generators['flashcards'].save_flashcards_file(
                         st.session_state.flashcards, "export"
                     )
                     st.download_button(
-                        "Download",
+                        "📥 Download",
                         data=data,
-                        file_name=f"Study.flashcard",
+                        file_name=f"{export_name.strip()}.flashcard",
                         mime="application/json"
                     )
+                else:
+                    st.warning("Please enter a name to export")
+                    st.button("📥 Download", disabled=True)
             else:
-                st.button("📥 Export All", disabled=True)  # disabled if no flashcards
+                st.button("📥 Download", disabled=True)
+
 
         # --- IMPORT ---
         # --- IMPORT ---

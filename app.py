@@ -176,8 +176,7 @@ elif st.session_state.page == "📝 Notes":
         topic = st.text_input("📖 Topic or subject:", placeholder="e.g., Photosynthesis, World War II, Calculus...")
 
     with col2:
-        category = st.selectbox("📂 Category:", 
-                              ["General", "Science", "History", "Math", "Literature", "Languages", "Technology"])
+        category = st.text_input("Category:", value="General")
 
     # File upload option
     st.subheader("📂 Or Upload Text File")

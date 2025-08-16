@@ -13,6 +13,8 @@ from data_persistence import DataPersistence
 from advanced_quiz_system import AdvancedQuizSystem
 from utils import sanitize_filename
 import base64
+from datetime import datetime
+from streamlit_browser_storage import storage
 def next_flashcard(study_cards, correct=False):
     """Move to next flashcard in study session"""
     st.session_state.cards_studied += 1
@@ -283,10 +285,6 @@ elif st.session_state.page == "📝 Notes":
                         st.rerun()
 
 elif st.session_state.page == "📚 Flashcards":
-    import streamlit as st
-    from datetime import datetime
-    from streamlit_browser_storage import storage
-
     st.title("📚 Interactive Flashcards")
 
     # Initialize flashcards in browser storage if not already

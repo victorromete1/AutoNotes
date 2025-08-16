@@ -110,3 +110,14 @@ def save_current_user():
         "study_sessions": st.session_state.get("study_sessions", []),
         "updated_at": datetime.now().isoformat()
     })
+def logout_user():
+    """Clears user session and saves data"""
+    if st.session_state.get("logged_in"):
+        save_current_user()  # Ensure data is saved before logout
+        st.session_state.update({
+            "logged_in": False,
+            "username": "",
+            "notes": [],
+            "flashcards": [],
+            "study_sessions": []
+        })

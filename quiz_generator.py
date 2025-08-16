@@ -20,7 +20,6 @@ class QuizGenerator:
             api_key=openrouter_key
         )
         self.model = "anthropic/claude-3-haiku"
-        self.provider = "OpenRouter (Claude 3 Haiku)"
 
     # ---------- public ----------
     def generate_quiz(self, content: str, quiz_type: str, num_questions: int = 5, difficulty: str = "Medium") -> Dict[str, Any]:

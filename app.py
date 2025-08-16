@@ -15,7 +15,7 @@ from utils import sanitize_filename
 import base64
 from data_import_export import DataImportExport
 from datetime import datetime
-from user_data import register_user, login_user, save_current_user, logout_user 
+from user_data import register_user, login_user, logout_user 
 def next_flashcard(study_cards, correct=False):
     """Move to next flashcard in study session"""
     st.session_state.cards_studied += 1

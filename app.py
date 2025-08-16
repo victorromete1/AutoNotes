@@ -128,23 +128,34 @@ with st.sidebar:
 
 # Main content area
 if st.session_state.page == "🏠 Home":
-    st.title("🎓 Welcome to Your AI Study Platform")
+    st.title("🎓 Welcome!")
+
     st.markdown("""
-    This comprehensive study platform helps you learn more effectively with AI-powered tools.
+    Unlock your full learning potential with an intelligent, all-in-one study platform powered by AI.  
+    Whether you're preparing for exams, mastering a subject, or building long-term knowledge, this tool adapts to the way **you** learn best.  
 
-    ### 🚀 Features:
-    - **Notes**: Generate AI-powered study notes from any topic
-    - **Flashcards**: Create and study interactive flashcards
-    - **Quizzes**: Take adaptive quizzes with detailed feedback
-    - **Progress**: Track your learning with detailed analytics
-    - **Reports**: Generate PDF reports of your progress
+    ---
 
-    ### 💡 Quick Start:
-    1. Create some notes on topics you're studying
-    2. Generate flashcards from your notes
-    3. Take quizzes to test your knowledge
-    4. Track your progress over time
+    ### 🚀 Key Features:
+    - **📝 Smart Notes**: Instantly generate clear, structured notes from any topic  
+    - **🎴 Flashcards**: Create interactive flashcards to reinforce your memory  
+    - **❓ Adaptive Quizzes**: Test your knowledge with personalized, AI-driven quizzes  
+    - **📊 Progress Tracking**: Monitor your growth with detailed insights & analytics  
+    - **📑 Reports**: Export beautifully formatted PDF reports of your learning journey  
+
+    ---
+
+    ### 💡 Quick Start Guide:
+    1. **Create Notes** → Enter a topic you're studying and let AI generate study notes  
+    2. **Build Flashcards** → Turn your notes into bite-sized flashcards for revision  
+    3. **Test Yourself** → Take adaptive quizzes with instant feedback  
+    4. **Track Progress** → Watch your performance improve over time  
+
+    ---
+
+    ✨ Your study journey, reimagined with AI. Ready to begin?
     """)
+
 
     # Recent activity
     if st.session_state.study_sessions:

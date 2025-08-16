@@ -292,7 +292,12 @@ elif st.session_state.page == "📚 Flashcards":
 
     # Initialize flashcards in browser storage if not already
     if "flashcards" not in st.session_state:
-        st.session_state.flashcards = storage.get("flashcards") or []
+        saved = storage.get("flashcards")
+        if saved:
+            st.session_state.flashcards = json.loads(saved)
+        else:
+            st.session_state.flashcards = []
+
 
     if "study_sessions" not in st.session_state:
         st.session_state.study_sessions = []
@@ -309,7 +314,7 @@ elif st.session_state.page == "📚 Flashcards":
     # --- Utility function to auto-save ---
     def auto_save():
         if st.session_state.flashcards:
-            storage.set("flashcards", st.session_state.flashcards)
+            storage.set("flashcards", json.dumps(st.session_state.flashcards))
         else:
             storage.delete("flashcards")
     # --- Flashcard navigation ---

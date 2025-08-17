@@ -902,10 +902,10 @@ elif st.session_state.page == "📅 Calendar":
 
     st.divider()
 
-    # --- Navigation (Month Switching) ---
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # --- Month Navigation ---
+    col1, col2, col3 = st.columns([1, 3, 1])
     with col1:
-        if st.button("⬅️"):
+        if st.button("⬅️", key="prev_month"):
             if st.session_state.calendar_month == 1:
                 st.session_state.calendar_month = 12
                 st.session_state.calendar_year -= 1
@@ -913,11 +913,11 @@ elif st.session_state.page == "📅 Calendar":
                 st.session_state.calendar_month -= 1
 
     with col2:
-        month_name = datetime(st.session_state.calendar_year, st.session_state.calendar_month, 1).strftime("%B %Y")
-        st.markdown(f"<h2 style='text-align:center'>{month_name}</h2>", unsafe_allow_html=True)
+        month_name = datetime(st.session_state.calendar_year, st.session_state.calendar_month, 1).strftime("%b %Y")
+        st.markdown(f"<h3 style='text-align:center'>{month_name}</h3>", unsafe_allow_html=True)
 
     with col3:
-        if st.button("➡️"):
+        if st.button("➡️", key="next_month"):
             if st.session_state.calendar_month == 12:
                 st.session_state.calendar_month = 1
                 st.session_state.calendar_year += 1
@@ -926,46 +926,56 @@ elif st.session_state.page == "📅 Calendar":
 
     st.divider()
 
-    # --- Build Calendar Grid ---
+    # --- Calendar Grid ---
     cal = calendar.Calendar(firstweekday=0)
     month_days = list(cal.itermonthdates(st.session_state.calendar_year, st.session_state.calendar_month))
 
-    html = "<div style='display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; font-family:sans-serif; text-align:center; width:100%;'>"
+    # Grid headers
+    cols = st.columns(7)
+    for i, wd in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
+        cols[i].markdown(f"**{wd}**")
 
-    # Weekday headers
-    for wd in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
-        html += f"<div style='font-weight:bold; padding:10px;'>{wd}</div>"
-
-    today = datetime.now().date()
-
+    # Fill weeks
+    week = []
     for day in month_days:
-        if day.month == st.session_state.calendar_month:
-            events_today = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() == day]
+        week.append(day)
+        if len(week) == 7:
+            cols = st.columns(7)
+            for i, d in enumerate(week):
+                if d.month == st.session_state.calendar_month:
+                    events_today = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() == d]
+                    today_style = "border:2px solid #2196F3; border-radius:6px;" if d == datetime.now().date() else ""
 
-            # Today highlight
-            today_style = "border:2px solid #2196F3;" if day == today else ""
+                    if st.button(f"{d.day}", key=f"day_{d}", help="Click to view events"):
+                        st.session_state.selected_date = d.isoformat()
 
-            # Event list (max 3 inline, then +more)
-            event_html = ""
-            if events_today:
-                for e in events_today[:3]:
-                    event_html += f"<div style='background:{e['color']}; color:white; margin:2px; border-radius:4px; font-size:12px; padding:2px;'>{e['name']}</div>"
-                if len(events_today) > 3:
-                    event_html += f"<div style='font-size:12px; color:#555;'>+{len(events_today)-3} more</div>"
+                    if events_today:
+                        for e in events_today[:2]:  # show max 2
+                            cols[i].markdown(f"<div style='background:{e['color']}; color:white; border-radius:4px; font-size:12px; padding:1px;'>{e['name']}</div>", unsafe_allow_html=True)
+                        if len(events_today) > 2:
+                            cols[i].markdown(f"<div style='font-size:12px; color:#555;'>+{len(events_today)-2} more</div>", unsafe_allow_html=True)
+                else:
+                    cols[i].markdown(" ")
 
-            # Make date clickable
-            button_key = f"day_{day}"
-            html += f"<button onclick=\"window.parent.postMessage({{'day':'{day.isoformat()}'}}, '*')\" style='padding:10px; {today_style} background:#f9f9f9; border-radius:8px; border:1px solid #ddd; cursor:pointer; min-height:80px;'>{day.day}{event_html}</button>"
-        else:
-            html += "<div style='padding:10px; color:#ccc; min-height:80px;'></div>"
+            week = []
 
-    html += "</div>"
+    # --- Upcoming Reminders ---
+    st.divider()
+    st.subheader("⏰ Upcoming")
+    today = datetime.now().date()
+    upcoming = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() >= today]
+    upcoming = sorted(upcoming, key=lambda x: x["date"])[:5]
 
-    # Display Calendar
-    st.markdown(html, unsafe_allow_html=True)
+    if upcoming:
+        for e in upcoming:
+            date_obj = datetime.fromisoformat(e["date"]).strftime("%Y-%m-%d")
+            st.markdown(f"<span style='color:{e['color']}'>●</span> **{date_obj}** - {e['name']}", unsafe_allow_html=True)
+    else:
+        st.info("No upcoming events!")
 
-    # --- Show Events for Selected Date ---
+    # --- Selected Date Details ---
     if st.session_state.selected_date:
+        st.divider()
         st.subheader(f"📌 Events on {st.session_state.selected_date}")
         events_today = [e for e in st.session_state.events if e["date"] == st.session_state.selected_date]
         if events_today:
@@ -975,6 +985,7 @@ elif st.session_state.page == "📅 Calendar":
                     st.write(e['notes'])
         else:
             st.info("No events for this day.")
+
 
 
 

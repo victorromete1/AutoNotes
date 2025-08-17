@@ -868,6 +868,7 @@ elif st.session_state.page == "📋 Reports":
 elif st.session_state.page == "📅 Calendar":
     st.title("📅 Calendar & Events")
 
+    # Initialize session state variables
     if "events" not in st.session_state:
         st.session_state.events = []
     if "calendar_year" not in st.session_state:
@@ -876,6 +877,18 @@ elif st.session_state.page == "📅 Calendar":
         st.session_state.calendar_month = datetime.now().month
     if "selected_date" not in st.session_state:
         st.session_state.selected_date = None
+
+    # --- Month Navigation ---
+    def change_month(delta):
+        new_month = st.session_state.calendar_month + delta
+        if new_month > 12:
+            st.session_state.calendar_month = 1
+            st.session_state.calendar_year += 1
+        elif new_month < 1:
+            st.session_state.calendar_month = 12
+            st.session_state.calendar_year -= 1
+        else:
+            st.session_state.calendar_month = new_month
 
     # --- Add New Event ---
     st.subheader("➕ Add Event")
@@ -903,31 +916,20 @@ elif st.session_state.page == "📅 Calendar":
 
     st.divider()
 
-    # --- Navigation (Month Switching) ---
+    # --- Month Navigation Controls ---
     col1, col2, col3 = st.columns([1, 3, 1])
     with col1:
-        if st.button("‹", key="prev_month"):
-            if st.session_state.calendar_month == 1:
-                st.session_state.calendar_month = 12
-                st.session_state.calendar_year -= 1
-            else:
-                st.session_state.calendar_month -= 1
-
+        st.button("‹", key="prev_month", on_click=change_month, args=(-1,))
     with col2:
+        # Force update by using the current session state values
         month_name = datetime(
             st.session_state.calendar_year,
             st.session_state.calendar_month,
             1
-        ).strftime("%b %Y")  # e.g., "Sep 2025"
+        ).strftime("%B %Y")  # Full month name for better clarity
         st.markdown(f"<h2 style='text-align:center;margin:0'>{month_name}</h2>", unsafe_allow_html=True)
-
     with col3:
-        if st.button("›", key="next_month"):
-            if st.session_state.calendar_month == 12:
-                st.session_state.calendar_month = 1
-                st.session_state.calendar_year += 1
-            else:
-                st.session_state.calendar_month += 1
+        st.button("›", key="next_month", on_click=change_month, args=(1,))
 
     st.divider()
 

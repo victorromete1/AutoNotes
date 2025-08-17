@@ -935,32 +935,92 @@ elif st.session_state.page == "📅 Calendar":
     cal = calendar.Calendar(firstweekday=0)  # Monday start
     month_days = list(cal.itermonthdates(st.session_state.calendar_year, st.session_state.calendar_month))
 
-    html = "<div style='display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; font-family:sans-serif; text-align:center; width:100%;'>"
+    html = """
+    <style>
+        .calendar-day {
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            min-height: 80px;
+            text-align: left;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .calendar-day:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .day-number {
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+        }
+        .today-highlight {
+            border: 2px solid #2196F3 !important;
+            background: #e3f2fd !important;
+        }
+        .event-item {
+            margin: 3px 0;
+            border-radius: 4px;
+            font-size: 11px;
+            padding: 3px 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .event-notes {
+            font-size: 10px;
+            color: #555;
+            margin-top: 2px;
+            white-space: normal;
+        }
+        .more-events {
+            font-size: 10px;
+            color: #666;
+            margin-top: 3px;
+            font-style: italic;
+        }
+    </style>
+    <div style='display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; font-family:sans-serif; text-align:center; width:100%;'>
+    """
 
     # Weekday headers
     for wd in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
-        html += f"<div style='font-weight:bold; padding:10px;'>{wd}</div>"
+        html += f"<div style='font-weight:bold; padding:10px; background:#f0f0f0; border-radius:4px;'>{wd}</div>"
 
     today = datetime.now().date()
 
     for day in month_days:
         if day.month == st.session_state.calendar_month:
             events_today = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() == day]
-
-            # Today highlight
-            today_style = "border:2px solid #2196F3;" if day == today else ""
-
-            # Event list (max 3 inline, then +more)
-            event_html = ""
+            
+            # Today highlight class
+            today_class = "today-highlight" if day == today else ""
+            
+            html += f"<div class='calendar-day {today_class}'>"
+            html += f"<div class='day-number'>{day.day}</div>"
+            
             if events_today:
-                for e in events_today[:3]:
-                    event_html += f"<div style='background:{e['color']}; color:white; margin:2px; border-radius:4px; font-size:12px; padding:2px;'>{e['name']}</div>"
-                if len(events_today) > 3:
-                    event_html += f"<div style='font-size:12px; color:#555;'>+{len(events_today)-3} more</div>"
-
-            html += f"<div style='padding:10px; {today_style} background:#f9f9f9; border-radius:8px; border:1px solid #ddd; min-height:80px; text-align:left; position:relative;'>"
-            html += f"<div style='position:absolute; top:8px; right:10px; font-weight:600;'>{day.day}</div>"
-            html += f"{event_html}</div>"
+                # Events container with scroll if too many
+                html += "<div style='margin-top:20px; max-height:60px; overflow-y:auto; padding-right:3px;'>"
+                for e in events_today[:4]:  # Show up to 4 events fully
+                    html += f"<div class='event-item' style='background:{e['color']}; color:white;' title='{e['name']}'>"
+                    html += f"{e['name']}"
+                    if e.get('notes'):
+                        html += f"<div class='event-notes'>{e['notes']}</div>"
+                    html += "</div>"
+                
+                if len(events_today) > 4:
+                    html += f"<div class='more-events'>+{len(events_today)-4} more</div>"
+                html += "</div>"
+            
+            html += "</div>"
         else:
             html += "<div style='padding:10px; color:#ccc; min-height:80px;'></div>"
 
@@ -971,13 +1031,14 @@ elif st.session_state.page == "📅 Calendar":
 
     # --- Daily Reminders (Today) ---
     st.divider()
-    st.subheader("📅 Today’s Reminders")
+    st.subheader("📅 Today's Reminders")
     today_events = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() == today]
     if today_events:
         for e in today_events:
-            st.markdown(f"<span style='color:{e['color']}'>●</span> **{e['name']}**", unsafe_allow_html=True)
-            if e.get('notes'):
-                st.write(f"📝 {e['notes']}")
+            with st.container(border=True):
+                st.markdown(f"<span style='color:{e['color']};font-size:20px'>●</span> **{e['name']}**", unsafe_allow_html=True)
+                if e.get('notes'):
+                    st.caption(f"📝 {e['notes']}")
     else:
         st.info("No events today.")
 
@@ -988,20 +1049,13 @@ elif st.session_state.page == "📅 Calendar":
     upcoming = sorted(upcoming, key=lambda x: x["date"])[:5]
     if upcoming:
         for e in upcoming:
-            date_obj = datetime.fromisoformat(e["date"]).strftime("%Y-%m-%d")
-            st.markdown(f"<span style='color:{e['color']}'>●</span> **{date_obj}** — {e['name']}", unsafe_allow_html=True)
-            if e.get('notes'):
-                st.write(f"📝 {e['notes']}")
+            with st.container(border=True):
+                date_obj = datetime.fromisoformat(e["date"]).strftime("%a, %b %d")
+                st.markdown(f"<span style='color:{e['color']};font-size:20px'>●</span> **{date_obj}** — {e['name']}", unsafe_allow_html=True)
+                if e.get('notes'):
+                    st.caption(f"📝 {e['notes']}")
     else:
         st.info("No upcoming events!")
-
-
-
-
-
-
-
-
 # Helper function for flashcard study session
 
 

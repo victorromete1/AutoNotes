@@ -868,41 +868,44 @@ elif st.session_state.page == "📋 Reports":
 elif st.session_state.page == "📅 Calendar":
     st.title("📅 Calendar & Events")
 
-    # ---- State ----
     if "events" not in st.session_state:
         st.session_state.events = []
     if "calendar_year" not in st.session_state:
         st.session_state.calendar_year = datetime.now().year
     if "calendar_month" not in st.session_state:
         st.session_state.calendar_month = datetime.now().month
+    if "selected_date" not in st.session_state:
+        st.session_state.selected_date = None
 
-    # ---- Add Event ----
+    # --- Add New Event ---
     st.subheader("➕ Add Event")
     with st.form("add_event_form"):
         name = st.text_input("Event Title:", placeholder="e.g., Math Test, History Project, Concert")
         date = st.date_input("Date:")
-        notes = st.text_area("Details (optional):", placeholder="Extra info…")
-        color = st.color_picker("Pick a color:", "#4CAF50")
+        notes = st.text_area("Details (optional):", placeholder="Extra info...")
+        color = st.color_picker("Pick a color:", "#4CAF50")  # default green
 
-        if st.form_submit_button("➕ Add"):
+        submitted = st.form_submit_button("➕ Add")
+        if submitted:
             if name.strip():
-                st.session_state.events.append({
-                    "name": name.strip(),
+                new_event = {
+                    "name": name,
                     "date": date.isoformat(),
-                    "notes": notes.strip(),
+                    "notes": notes,
                     "color": color,
                     "created": datetime.now().isoformat()
-                })
+                }
+                st.session_state.events.append(new_event)
                 auto_save()
-                st.success(f"✅ Added event — {name.strip()}")
+                st.success(f"✅ Added event - {name}")
             else:
                 st.warning("Please enter a title.")
 
     st.divider()
 
-    # ---- Month navigation ----
-    nav_l, nav_c, nav_r = st.columns([1, 3, 1])
-    with nav_l:
+    # --- Navigation (Month Switching) ---
+    col1, col2, col3 = st.columns([1, 3, 1])
+    with col1:
         if st.button("‹", key="prev_month"):
             if st.session_state.calendar_month == 1:
                 st.session_state.calendar_month = 12
@@ -910,11 +913,15 @@ elif st.session_state.page == "📅 Calendar":
             else:
                 st.session_state.calendar_month -= 1
 
-    with nav_c:
-        month_label = datetime(st.session_state.calendar_year, st.session_state.calendar_month, 1).strftime("%b %Y")
-        st.markdown(f"<h3 style='text-align:center;margin:0'>{month_label}</h3>", unsafe_allow_html=True)
+    with col2:
+        month_name = datetime(
+            st.session_state.calendar_year,
+            st.session_state.calendar_month,
+            1
+        ).strftime("%b %Y")  # e.g., "Sep 2025"
+        st.markdown(f"<h2 style='text-align:center;margin:0'>{month_name}</h2>", unsafe_allow_html=True)
 
-    with nav_r:
+    with col3:
         if st.button("›", key="next_month"):
             if st.session_state.calendar_month == 12:
                 st.session_state.calendar_month = 1
@@ -922,99 +929,72 @@ elif st.session_state.page == "📅 Calendar":
             else:
                 st.session_state.calendar_month += 1
 
-    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+    st.divider()
 
-    # ---- Build HTML calendar ----
-    cal = calendar.Calendar(firstweekday=0)
-    y, m = st.session_state.calendar_year, st.session_state.calendar_month
-    month_days = list(cal.itermonthdates(y, m))
+    # --- Build Calendar Grid ---
+    cal = calendar.Calendar(firstweekday=0)  # Monday start
+    month_days = list(cal.itermonthdates(st.session_state.calendar_year, st.session_state.calendar_month))
 
-    # Pre-index events by date
-    events_by_date = {}
-    for e in st.session_state.events:
-        d = datetime.fromisoformat(e["date"]).date()
-        events_by_date.setdefault(d, []).append(e)
+    html = "<div style='display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; font-family:sans-serif; text-align:center; width:100%;'>"
+
+    # Weekday headers
+    for wd in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
+        html += f"<div style='font-weight:bold; padding:10px;'>{wd}</div>"
 
     today = datetime.now().date()
 
-    # Weekday headers + grid
-    grid_html = """
-    <style>
-      .cal-wrap { display:grid; grid-template-columns: repeat(7, 1fr); gap:10px; }
-      .cal-head   { font-weight:600; text-align:center; padding:8px 0; }
-      .cal-cell {
-        background:#f9f9f9; border:1px solid #ddd; border-radius:10px;
-        min-height:110px; padding:10px; box-sizing:border-box; position:relative;
-      }
-      .cal-cell.muted { background:#fafafa; color:#bbb; }
-      .cal-daynum { position:absolute; top:8px; right:10px; font-weight:600; }
-      .cal-today  { box-shadow: 0 0 0 2px #2196F3 inset; }
-      .chip {
-        display:block; margin-top:4px; border-radius:6px; padding:4px 6px;
-        color:white; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-      }
-    </style>
-    <div class="cal-wrap">
-      <div class="cal-head">Mon</div>
-      <div class="cal-head">Tue</div>
-      <div class="cal-head">Wed</div>
-      <div class="cal-head">Thu</div>
-      <div class="cal-head">Fri</div>
-      <div class="cal-head">Sat</div>
-      <div class="cal-head">Sun</div>
-    """
+    for day in month_days:
+        if day.month == st.session_state.calendar_month:
+            events_today = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() == day]
 
-    for d in month_days:
-        in_month = (d.month == m)
-        day_events = events_by_date.get(d, [])
-        cls = "cal-cell" + ("" if in_month else " muted")
-        if d == today: cls += " cal-today"
+            # Today highlight
+            today_style = "border:2px solid #2196F3;" if day == today else ""
 
-        chips_html = ""
-        if in_month and day_events:
-            for e in day_events[:3]:
-                chips_html += f"<div class='chip' style='background:{e['color']}'>{escape(e['name'])}</div>"
-            if len(day_events) > 3:
-                chips_html += f"<div style='font-size:12px;color:#555'>+{len(day_events)-3} more</div>"
+            # Event list (max 3 inline, then +more)
+            event_html = ""
+            if events_today:
+                for e in events_today[:3]:
+                    event_html += f"<div style='background:{e['color']}; color:white; margin:2px; border-radius:4px; font-size:12px; padding:2px;'>{e['name']}</div>"
+                if len(events_today) > 3:
+                    event_html += f"<div style='font-size:12px; color:#555;'>+{len(events_today)-3} more</div>"
 
-        grid_html += f"""
-        <div class="{cls}">
-            <div class="cal-daynum">{d.day}</div>
-            {chips_html}
-        </div>
-        """
+            html += f"<div style='padding:10px; {today_style} background:#f9f9f9; border-radius:8px; border:1px solid #ddd; min-height:80px; text-align:left; position:relative;'>"
+            html += f"<div style='position:absolute; top:8px; right:10px; font-weight:600;'>{day.day}</div>"
+            html += f"{event_html}</div>"
+        else:
+            html += "<div style='padding:10px; color:#ccc; min-height:80px;'></div>"
 
-    grid_html += "</div>"
-    st.markdown(grid_html, unsafe_allow_html=True)
+    html += "</div>"
 
-    # ---- Daily Reminders (today only) ----
+    # Display Calendar
+    st.markdown(html, unsafe_allow_html=True)
+
+    # --- Daily Reminders (Today) ---
     st.divider()
     st.subheader("📅 Today’s Reminders")
-    today_events = events_by_date.get(today, [])
+    today_events = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() == today]
     if today_events:
         for e in today_events:
-            st.markdown(f"<span style='color:{e['color']}'>●</span> **{escape(e['name'])}**", unsafe_allow_html=True)
-            if e['notes']:
+            st.markdown(f"<span style='color:{e['color']}'>●</span> **{e['name']}**", unsafe_allow_html=True)
+            if e.get('notes'):
                 st.write(f"📝 {e['notes']}")
     else:
         st.info("No events today.")
 
-    # ---- Upcoming Reminders ----
+    # --- Upcoming Reminders ---
     st.divider()
     st.subheader("⏰ Upcoming")
-    upcoming = [
-        e for e in st.session_state.events
-        if datetime.fromisoformat(e["date"]).date() > today
-    ]
-    upcoming.sort(key=lambda x: x["date"])
+    upcoming = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() > today]
+    upcoming = sorted(upcoming, key=lambda x: x["date"])[:5]
     if upcoming:
-        for e in upcoming[:5]:
-            date_str = datetime.fromisoformat(e["date"]).strftime("%Y-%m-%d")
-            st.markdown(f"<span style='color:{e['color']}'>●</span> **{date_str}** — {escape(e['name'])}", unsafe_allow_html=True)
-            if e['notes']:
+        for e in upcoming:
+            date_obj = datetime.fromisoformat(e["date"]).strftime("%Y-%m-%d")
+            st.markdown(f"<span style='color:{e['color']}'>●</span> **{date_obj}** — {e['name']}", unsafe_allow_html=True)
+            if e.get('notes'):
                 st.write(f"📝 {e['notes']}")
     else:
-        st.info("No upcoming events.")
+        st.info("No upcoming events!")
+
 
 
 

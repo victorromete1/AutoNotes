@@ -869,6 +869,12 @@ elif st.session_state.page == "📅 Calendar":
 
     if "events" not in st.session_state:
         st.session_state.events = []
+    if "calendar_year" not in st.session_state:
+        st.session_state.calendar_year = datetime.now().year
+    if "calendar_month" not in st.session_state:
+        st.session_state.calendar_month = datetime.now().month
+    if "selected_date" not in st.session_state:
+        st.session_state.selected_date = None
 
     # --- Add New Event ---
     st.subheader("➕ Add Event")
@@ -896,55 +902,80 @@ elif st.session_state.page == "📅 Calendar":
 
     st.divider()
 
-    # --- Upcoming Reminders ---
-    st.subheader("⏰ Upcoming")
-    today = datetime.now().date()
-    upcoming = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() >= today]
-    upcoming = sorted(upcoming, key=lambda x: x["date"])[:5]
+    # --- Navigation (Month Switching) ---
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col1:
+        if st.button("⬅️"):
+            if st.session_state.calendar_month == 1:
+                st.session_state.calendar_month = 12
+                st.session_state.calendar_year -= 1
+            else:
+                st.session_state.calendar_month -= 1
 
-    if upcoming:
-        for e in upcoming:
-            date_obj = datetime.fromisoformat(e["date"]).strftime("%Y-%m-%d")
-            st.markdown(f"<span style='color:{e['color']}'>●</span> **{date_obj}** - {e['name']}", unsafe_allow_html=True)
-    else:
-        st.info("No upcoming events!")
+    with col2:
+        month_name = datetime(st.session_state.calendar_year, st.session_state.calendar_month, 1).strftime("%B %Y")
+        st.markdown(f"<h2 style='text-align:center'>{month_name}</h2>", unsafe_allow_html=True)
+
+    with col3:
+        if st.button("➡️"):
+            if st.session_state.calendar_month == 12:
+                st.session_state.calendar_month = 1
+                st.session_state.calendar_year += 1
+            else:
+                st.session_state.calendar_month += 1
 
     st.divider()
 
-    # --- View Calendar ---
-    st.subheader("📖 Calendar View")
-    year = st.number_input("Year:", min_value=2000, max_value=2100, value=today.year)
-    month = st.number_input("Month:", min_value=1, max_value=12, value=today.month)
-
-    # Generate calendar
+    # --- Build Calendar Grid ---
     cal = calendar.Calendar(firstweekday=0)
-    month_days = list(cal.itermonthdates(year, month))
+    month_days = list(cal.itermonthdates(st.session_state.calendar_year, st.session_state.calendar_month))
 
-    # Build grid (7 columns = Mon-Sun)
-    import streamlit.components.v1 as components
-    import textwrap
-
-    html = "<div style='display:grid; grid-template-columns: repeat(7, 1fr); gap:5px; font-family:sans-serif; text-align:center;'>"
+    html = "<div style='display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; font-family:sans-serif; text-align:center; width:100%;'>"
 
     # Weekday headers
     for wd in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
         html += f"<div style='font-weight:bold; padding:10px;'>{wd}</div>"
 
-    # Days with event highlighting
+    today = datetime.now().date()
+
     for day in month_days:
-        if day.month == month:
-            event = next((e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() == day), None)
-            if event:
-                html += f"<div style='background:{event['color']}; color:white; padding:15px; border-radius:8px;'>{day.day}<br><small>{event['name']}</small></div>"
-            else:
-                today_style = "border:2px solid #2196F3;" if day == today else ""
-                html += f"<div style='padding:15px; {today_style}'>{day.day}</div>"
+        if day.month == st.session_state.calendar_month:
+            events_today = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() == day]
+
+            # Today highlight
+            today_style = "border:2px solid #2196F3;" if day == today else ""
+
+            # Event list (max 3 inline, then +more)
+            event_html = ""
+            if events_today:
+                for e in events_today[:3]:
+                    event_html += f"<div style='background:{e['color']}; color:white; margin:2px; border-radius:4px; font-size:12px; padding:2px;'>{e['name']}</div>"
+                if len(events_today) > 3:
+                    event_html += f"<div style='font-size:12px; color:#555;'>+{len(events_today)-3} more</div>"
+
+            # Make date clickable
+            button_key = f"day_{day}"
+            html += f"<button onclick=\"window.parent.postMessage({{'day':'{day.isoformat()}'}}, '*')\" style='padding:10px; {today_style} background:#f9f9f9; border-radius:8px; border:1px solid #ddd; cursor:pointer; min-height:80px;'>{day.day}{event_html}</button>"
         else:
-            html += "<div style='padding:15px; color:#ccc;'> </div>"
+            html += "<div style='padding:10px; color:#ccc; min-height:80px;'></div>"
 
     html += "</div>"
 
+    # Display Calendar
     st.markdown(html, unsafe_allow_html=True)
+
+    # --- Show Events for Selected Date ---
+    if st.session_state.selected_date:
+        st.subheader(f"📌 Events on {st.session_state.selected_date}")
+        events_today = [e for e in st.session_state.events if e["date"] == st.session_state.selected_date]
+        if events_today:
+            for e in events_today:
+                st.markdown(f"<span style='color:{e['color']}'>●</span> **{e['name']}**", unsafe_allow_html=True)
+                if e['notes']:
+                    st.write(e['notes'])
+        else:
+            st.info("No events for this day.")
+
 
 
 

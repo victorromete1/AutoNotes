@@ -871,28 +871,27 @@ elif st.session_state.page == "📅 Calendar":
     if "events" not in st.session_state:
         st.session_state.events = []
 
-    # --- Add New Item ---
-    st.subheader("➕ Add to Calendar")
-    event_type = st.radio("Type:", ["📝 Test", "📚 Homework", "📌 Event"], horizontal=True)
-
+    # --- Add New Event ---
+    st.subheader("➕ Add Event")
     with st.form("add_event_form"):
-        name = st.text_input("Title:", placeholder="e.g., Math Test, History Homework, School Concert")
+        name = st.text_input("Event Title:", placeholder="e.g., Math Test, History Project, Concert")
         date = st.date_input("Date:")
         notes = st.text_area("Details (optional):", placeholder="Extra info...")
+        color = st.color_picker("Pick a color:", "#4CAF50")  # default green
 
         submitted = st.form_submit_button("➕ Add")
         if submitted:
             if name.strip():
                 new_event = {
-                    "type": event_type,
                     "name": name,
                     "date": date.isoformat(),
                     "notes": notes,
+                    "color": color,
                     "created": datetime.now().isoformat()
                 }
                 st.session_state.events.append(new_event)
                 auto_save()
-                st.success(f"✅ Added {event_type} - {name}")
+                st.success(f"✅ Added event - {name}")
             else:
                 st.warning("Please enter a title.")
 
@@ -907,32 +906,47 @@ elif st.session_state.page == "📅 Calendar":
     if upcoming:
         for e in upcoming:
             date_obj = datetime.fromisoformat(e["date"]).strftime("%Y-%m-%d")
-            st.write(f"**{date_obj}** - {e['type']} - {e['name']}")
+            st.markdown(f"<span style='color:{e['color']}'>●</span> **{date_obj}** - {e['name']}", unsafe_allow_html=True)
     else:
         st.info("No upcoming events!")
 
     st.divider()
 
     # --- View Calendar ---
-    st.subheader("📖 View Calendar")
+    st.subheader("📖 Calendar View")
     year = st.number_input("Year:", min_value=2000, max_value=2100, value=today.year)
     month = st.number_input("Month:", min_value=1, max_value=12, value=today.month)
 
-    cal = calendar.TextCalendar(calendar.MONDAY)
-    st.text(cal.formatmonth(year, month))
+    # Generate calendar
+    cal = calendar.Calendar(firstweekday=0)
+    month_days = list(cal.itermonthdates(year, month))
 
-    # Filter events by month
-    filtered_events = [e for e in st.session_state.events 
-                       if datetime.fromisoformat(e["date"]).year == year and 
-                          datetime.fromisoformat(e["date"]).month == month]
+    # Build grid (7 columns = Mon-Sun)
+    import streamlit.components.v1 as components
+    import textwrap
 
-    if filtered_events:
-        st.markdown("### Events this Month:")
-        for e in sorted(filtered_events, key=lambda x: x["date"]):
-            date_obj = datetime.fromisoformat(e["date"]).strftime("%Y-%m-%d")
-            st.write(f"**{date_obj}** - {e['type']} - {e['name']}")
-    else:
-        st.info("No events this month.")
+    html = "<div style='display:grid; grid-template-columns: repeat(7, 1fr); gap:5px; font-family:sans-serif; text-align:center;'>"
+
+    # Weekday headers
+    for wd in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
+        html += f"<div style='font-weight:bold; padding:10px;'>{wd}</div>"
+
+    # Days with event highlighting
+    for day in month_days:
+        if day.month == month:
+            event = next((e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() == day), None)
+            if event:
+                html += f"<div style='background:{event['color']}; color:white; padding:15px; border-radius:8px;'>{day.day}<br><small>{event['name']}</small></div>"
+            else:
+                today_style = "border:2px solid #2196F3;" if day == today else ""
+                html += f"<div style='padding:15px; {today_style}'>{day.day}</div>"
+        else:
+            html += "<div style='padding:15px; color:#ccc;'> </div>"
+
+    html += "</div>"
+
+    st.markdown(html, unsafe_allow_html=True)
+
 
 
 # Helper function for flashcard study session

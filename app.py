@@ -83,6 +83,7 @@ def init_session_state():
         'note_title': "",
         'note_category': "General",
         'page': 'Home'
+        'events': []
     }
 
     for key, default_value in defaults.items():

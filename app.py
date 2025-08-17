@@ -1,4 +1,5 @@
 import calendar
+from html import escape
 import streamlit as st
 import json
 from PyPDF2 import PdfReader
@@ -867,6 +868,7 @@ elif st.session_state.page == "📋 Reports":
 elif st.session_state.page == "📅 Calendar":
     st.title("📅 Calendar & Events")
 
+    # ---- State ----
     if "events" not in st.session_state:
         st.session_state.events = []
     if "calendar_year" not in st.session_state:
@@ -876,115 +878,186 @@ elif st.session_state.page == "📅 Calendar":
     if "selected_date" not in st.session_state:
         st.session_state.selected_date = None
 
-    # --- Add New Event ---
+    # Read selected_date from URL (so clicking event chips works)
+    try:
+        qp = st.query_params  # Streamlit >= 1.32
+        if "selected_date" in qp and qp["selected_date"]:
+            st.session_state.selected_date = qp["selected_date"]
+    except Exception:
+        qp = st.experimental_get_query_params()
+        if "selected_date" in qp and qp["selected_date"]:
+            st.session_state.selected_date = qp["selected_date"][0]
+
+    # ---- Add Event ----
     st.subheader("➕ Add Event")
     with st.form("add_event_form"):
         name = st.text_input("Event Title:", placeholder="e.g., Math Test, History Project, Concert")
         date = st.date_input("Date:")
-        notes = st.text_area("Details (optional):", placeholder="Extra info...")
-        color = st.color_picker("Pick a color:", "#4CAF50")  # default green
+        notes = st.text_area("Details (optional):", placeholder="Extra info…")
+        color = st.color_picker("Pick a color:", "#4CAF50")
 
-        submitted = st.form_submit_button("➕ Add")
-        if submitted:
+        if st.form_submit_button("➕ Add"):
             if name.strip():
-                new_event = {
-                    "name": name,
+                st.session_state.events.append({
+                    "name": name.strip(),
                     "date": date.isoformat(),
-                    "notes": notes,
+                    "notes": notes.strip(),
                     "color": color,
                     "created": datetime.now().isoformat()
-                }
-                st.session_state.events.append(new_event)
+                })
                 auto_save()
-                st.success(f"✅ Added event - {name}")
+                st.success(f"✅ Added event — {name.strip()}")
             else:
                 st.warning("Please enter a title.")
 
     st.divider()
 
-    # --- Month Navigation ---
-    col1, col2, col3 = st.columns([1, 3, 1])
-    with col1:
-        if st.button("⬅️", key="prev_month"):
+    # ---- Month navigation (centered) ----
+    nav_l, nav_c, nav_r = st.columns([1, 3, 1])
+    with nav_l:
+        if st.button("‹", key="prev_month"):
             if st.session_state.calendar_month == 1:
                 st.session_state.calendar_month = 12
                 st.session_state.calendar_year -= 1
             else:
                 st.session_state.calendar_month -= 1
+            st.session_state.selected_date = None  # clear selection on month change
+            try:
+                st.query_params.clear()
+            except Exception:
+                st.experimental_set_query_params()
 
-    with col2:
-        month_name = datetime(st.session_state.calendar_year, st.session_state.calendar_month, 1).strftime("%b %Y")
-        st.markdown(f"<h3 style='text-align:center'>{month_name}</h3>", unsafe_allow_html=True)
+    with nav_c:
+        month_label = datetime(st.session_state.calendar_year, st.session_state.calendar_month, 1).strftime("%b %Y")
+        st.markdown(f"<h3 style='text-align:center;margin:0'>{month_label}</h3>", unsafe_allow_html=True)
 
-    with col3:
-        if st.button("➡️", key="next_month"):
+    with nav_r:
+        if st.button("›", key="next_month"):
             if st.session_state.calendar_month == 12:
                 st.session_state.calendar_month = 1
                 st.session_state.calendar_year += 1
             else:
                 st.session_state.calendar_month += 1
+            st.session_state.selected_date = None
+            try:
+                st.query_params.clear()
+            except Exception:
+                st.experimental_set_query_params()
 
-    st.divider()
+    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
-    # --- Calendar Grid ---
-    cal = calendar.Calendar(firstweekday=0)
-    month_days = list(cal.itermonthdates(st.session_state.calendar_year, st.session_state.calendar_month))
+    # ---- Build HTML calendar (big, uniform cells) ----
+    cal = calendar.Calendar(firstweekday=0)  # Monday-start
+    y, m = st.session_state.calendar_year, st.session_state.calendar_month
+    month_days = list(cal.itermonthdates(y, m))
 
-    # Grid headers
-    cols = st.columns(7)
-    for i, wd in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
-        cols[i].markdown(f"**{wd}**")
+    # Pre-index events by date for speed
+    events_by_date = {}
+    for e in st.session_state.events:
+        d = datetime.fromisoformat(e["date"]).date()
+        events_by_date.setdefault(d, []).append(e)
 
-    # Fill weeks
+    today = datetime.now().date()
+
+    # Weekday headers + grid
+    grid_html = """
+    <style>
+      .cal-wrap { display:grid; grid-template-columns: repeat(7, 1fr); gap:10px; }
+      .cal-head   { font-weight:600; text-align:center; padding:8px 0; }
+      .cal-cell {
+        background:#f9f9f9; border:1px solid #ddd; border-radius:10px;
+        min-height:110px; padding:10px; box-sizing:border-box; position:relative;
+      }
+      .cal-cell.muted { background:#fafafa; color:#bbb; }
+      .cal-daynum { position:absolute; top:8px; right:10px; font-weight:600; }
+      .cal-today  { box-shadow: 0 0 0 2px #2196F3 inset; }
+      .chip {
+        display:block; margin-top:4px; border-radius:6px; padding:4px 6px;
+        color:white; text-decoration:none; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      }
+      .chip:focus, .chip:hover { filter:brightness(0.95); }
+    </style>
+    <div class="cal-wrap">
+      <div class="cal-head">Mon</div>
+      <div class="cal-head">Tue</div>
+      <div class="cal-head">Wed</div>
+      <div class="cal-head">Thu</div>
+      <div class="cal-head">Fri</div>
+      <div class="cal-head">Sat</div>
+      <div class="cal-head">Sun</div>
+    """
+
     week = []
-    for day in month_days:
-        week.append(day)
-        if len(week) == 7:
-            cols = st.columns(7)
-            for i, d in enumerate(week):
-                if d.month == st.session_state.calendar_month:
-                    events_today = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() == d]
-                    today_style = "border:2px solid #2196F3; border-radius:6px;" if d == datetime.now().date() else ""
+    for d in month_days:
+        in_month = (d.month == m)
+        day_events = events_by_date.get(d, [])
+        cls = "cal-cell" + ("" if in_month else " muted")
+        if d == today: cls += " cal-today"
 
-                    if st.button(f"{d.day}", key=f"day_{d}", help="Click to view events"):
-                        st.session_state.selected_date = d.isoformat()
+        # Build chips (EVENTS ARE CLICKABLE via query param)
+        chips_html = ""
+        if in_month and day_events:
+            # show all (scroll is not needed; chips wrap vertically)
+            for e in day_events:
+                label = escape(e["name"]) if e["name"] else "Event"
+                chips_html += f"<a class='chip' style='background:{e['color']}' href='?selected_date={d.isoformat()}' title='{label}'>{label}</a>"
 
-                    if events_today:
-                        for e in events_today[:2]:  # show max 2
-                            cols[i].markdown(f"<div style='background:{e['color']}; color:white; border-radius:4px; font-size:12px; padding:1px;'>{e['name']}</div>", unsafe_allow_html=True)
-                        if len(events_today) > 2:
-                            cols[i].markdown(f"<div style='font-size:12px; color:#555;'>+{len(events_today)-2} more</div>", unsafe_allow_html=True)
-                else:
-                    cols[i].markdown(" ")
+        grid_html += f"""
+        <div class="{cls}">
+            <div class="cal-daynum">{d.day}</div>
+            {chips_html}
+        </div>
+        """
 
-            week = []
+    grid_html += "</div>"
+    st.markdown(grid_html, unsafe_allow_html=True)
 
-    # --- Upcoming Reminders ---
+    # ---- Upcoming Reminders ----
     st.divider()
     st.subheader("⏰ Upcoming")
-    today = datetime.now().date()
-    upcoming = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() >= today]
-    upcoming = sorted(upcoming, key=lambda x: x["date"])[:5]
-
+    upcoming = [
+        e for e in st.session_state.events
+        if datetime.fromisoformat(e["date"]).date() >= today
+    ]
+    upcoming.sort(key=lambda x: x["date"])
     if upcoming:
-        for e in upcoming:
-            date_obj = datetime.fromisoformat(e["date"]).strftime("%Y-%m-%d")
-            st.markdown(f"<span style='color:{e['color']}'>●</span> **{date_obj}** - {e['name']}", unsafe_allow_html=True)
+        for e in upcoming[:5]:
+            date_str = datetime.fromisoformat(e["date"]).strftime("%Y-%m-%d")
+            st.markdown(
+                f"<span style='color:{e['color']}'>●</span> "
+                f"**{date_str}** — {escape(e['name'])}",
+                unsafe_allow_html=True
+            )
     else:
-        st.info("No upcoming events!")
+        st.info("No upcoming events.")
 
-    # --- Selected Date Details ---
+    # ---- Selected Date Details ----
     if st.session_state.selected_date:
         st.divider()
         st.subheader(f"📌 Events on {st.session_state.selected_date}")
-        events_today = [e for e in st.session_state.events if e["date"] == st.session_state.selected_date]
-        if events_today:
-            for e in events_today:
-                st.markdown(f"<span style='color:{e['color']}'>●</span> **{e['name']}**", unsafe_allow_html=True)
-                if e['notes']:
-                    st.write(e['notes'])
+        sd = datetime.fromisoformat(st.session_state.selected_date).date()
+        day_events = events_by_date.get(sd, [])
+        if day_events:
+            for e in day_events:
+                st.markdown(
+                    f"<span style='color:{e['color']}'>●</span> **{escape(e['name'])}**",
+                    unsafe_allow_html=True
+                )
+                if e.get("notes"):
+                    st.write(e["notes"])
         else:
             st.info("No events for this day.")
+
+        cols_clear = st.columns([1,3,1])
+        with cols_clear[1]:
+            if st.button("Clear selection"):
+                st.session_state.selected_date = None
+                # Clear query params gracefully
+                try:
+                    st.query_params.clear()
+                except Exception:
+                    st.experimental_set_query_params()
+
 
 
 

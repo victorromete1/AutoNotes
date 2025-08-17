@@ -1,4 +1,4 @@
-
+import calendar
 import streamlit as st
 import json
 from PyPDF2 import PdfReader
@@ -109,7 +109,7 @@ with st.sidebar:
     # Navigation
     page = st.selectbox(
         "Navigate:",
-        ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📋 Reports"],
+        ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📋 Reports","📅 Calendar"],
         key="navigation"
     )
     st.session_state.page = page
@@ -864,6 +864,75 @@ elif st.session_state.page == "📋 Reports":
                     st.error(f"Error generating report: {str(e)}")
     else:
         st.info("No data available for reports. Start studying to generate reports!")
+elif st.session_state.page == "📅 Calendar":
+    st.title("📅 Calendar & Events")
+
+    if "events" not in st.session_state:
+        st.session_state.events = []
+
+    # --- Add New Item ---
+    st.subheader("➕ Add to Calendar")
+    event_type = st.radio("Type:", ["📝 Test", "📚 Homework", "📌 Event"], horizontal=True)
+
+    with st.form("add_event_form"):
+        name = st.text_input("Title:", placeholder="e.g., Math Test, History Homework, School Concert")
+        date = st.date_input("Date:")
+        notes = st.text_area("Details (optional):", placeholder="Extra info...")
+
+        submitted = st.form_submit_button("➕ Add")
+        if submitted:
+            if name.strip():
+                new_event = {
+                    "type": event_type,
+                    "name": name,
+                    "date": date.isoformat(),
+                    "notes": notes,
+                    "created": datetime.now().isoformat()
+                }
+                st.session_state.events.append(new_event)
+                auto_save()
+                st.success(f"✅ Added {event_type} - {name}")
+            else:
+                st.warning("Please enter a title.")
+
+    st.divider()
+
+    # --- Upcoming Reminders ---
+    st.subheader("⏰ Upcoming")
+    today = datetime.now().date()
+    upcoming = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() >= today]
+    upcoming = sorted(upcoming, key=lambda x: x["date"])[:5]
+
+    if upcoming:
+        for e in upcoming:
+            date_obj = datetime.fromisoformat(e["date"]).strftime("%Y-%m-%d")
+            st.write(f"**{date_obj}** - {e['type']} - {e['name']}")
+    else:
+        st.info("No upcoming events!")
+
+    st.divider()
+
+    # --- View Calendar ---
+    st.subheader("📖 View Calendar")
+    year = st.number_input("Year:", min_value=2000, max_value=2100, value=today.year)
+    month = st.number_input("Month:", min_value=1, max_value=12, value=today.month)
+
+    cal = calendar.TextCalendar(calendar.MONDAY)
+    st.text(cal.formatmonth(year, month))
+
+    # Filter events by month
+    filtered_events = [e for e in st.session_state.events 
+                       if datetime.fromisoformat(e["date"]).year == year and 
+                          datetime.fromisoformat(e["date"]).month == month]
+
+    if filtered_events:
+        st.markdown("### Events this Month:")
+        for e in sorted(filtered_events, key=lambda x: x["date"]):
+            date_obj = datetime.fromisoformat(e["date"]).strftime("%Y-%m-%d")
+            st.write(f"**{date_obj}** - {e['type']} - {e['name']}")
+    else:
+        st.info("No events this month.")
+
 
 # Helper function for flashcard study session
 

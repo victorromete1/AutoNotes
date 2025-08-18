@@ -117,12 +117,12 @@ with st.sidebar:
     )
     st.session_state.page = page
     st.divider()
-                if st.button("Save now"):
-                ok, msg = user_data.save_current_user(st.session_state)
-                if ok:
-                    st.success("Saved.")
-                else:
-                    st.error(msg)
+    if st.button("Save now"):
+        ok, msg = user_data.save_current_user(st.session_state)
+        if ok:
+            st.success("Saved.")
+        else:
+            st.error(msg)
 
     # Quick stats
     st.divider()
@@ -216,14 +216,12 @@ if st.session_state.get("page") == "🏠 Home":
     else:
         # logged in view
         st.write(f"Logged in as **{st.session_state['username']}**")
-        col1 = st.columns(1)
-        with col1:
-            if st.button("Logout"):
-                st.session_state["logged_in"] = False
-                st.session_state["username"] = ""
-                st.success("Logged out.")
-                st.session_state.clear() 
-                st.rerun()
+        if st.button("Logout"):
+            st.session_state["logged_in"] = False
+            st.session_state["username"] = ""
+            st.success("Logged out.")
+            st.session_state.clear() 
+            st.rerun()
 
         st.markdown("---")
         st.subheader("Account settings")

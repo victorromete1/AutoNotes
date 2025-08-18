@@ -368,7 +368,7 @@ elif st.session_state.page == "📝 Notes":
 
     # Note title
     note_title = st.text_input(
-        "Note Name (leave blank for default):",
+        "Note Name:",
         placeholder="Enter a title for your note...",
         key="free_note_title"
     )

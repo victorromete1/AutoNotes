@@ -421,6 +421,7 @@ elif st.session_state.page == "📝 Notes":
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
             st.session_state.notes.append(new_note)
+            user_data.save_current_user(st.session_state)
             auto_save()
 
             st.success(f"✅ Note '{final_title}' saved!")

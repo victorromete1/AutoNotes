@@ -74,3 +74,4 @@ python-docx
 streamlit-browser-storage>=0.0.6
 cryptography
 typing
+supabase

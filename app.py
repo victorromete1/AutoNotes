@@ -360,8 +360,6 @@ elif st.session_state.page == "📝 Notes":
                 st.session_state[key] = "General"
             elif "summarize_option" in key:
                 st.session_state[key] = True
-            elif "file_upload" in key:
-                st.session_state[key] = None
 
     # -----------------------------
     # Freeform Notes Mode

@@ -346,6 +346,8 @@ if st.session_state.get("page") == "🏠 Home":
             st.success("Exited admin mode.")
 
 elif st.session_state.page == "📝 Notes":
+    if "free_note_text" not in st.session_state:
+        st.session_state.free_note_text = ""
     st.title("📝 AI Note Generator & Class Notes")
 
     st.subheader("✨ Take Notes or Generate AI Notes")

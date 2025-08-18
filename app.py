@@ -1,4 +1,5 @@
 import user_data
+import supabase
 import calendar
 from html import escape
 import streamlit as st

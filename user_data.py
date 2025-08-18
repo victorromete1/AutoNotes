@@ -90,7 +90,6 @@ def save_current_user(session_state: dict) -> (bool, str):
 
     try:
         # ensure user row exists (upsert)
-        supabase.table("users").upsert({"username": username}).execute()
 
         # Notes: remove existing for user, insert current (simple strategy)
         supabase.table("notes").delete().eq("username", username).execute()

@@ -530,7 +530,7 @@ elif st.session_state.page == "📝 Notes":
                     st.download_button(
                         "📥 Download",
                         data=note['content'],
-                        file_name=f"{sanitize_filename(note['title'])}.txt",
+                        file_name=f"{sanitize_filename(note['title'])}.md",
                         mime="text/plain",
                         key=f"download_{i}"
                     )

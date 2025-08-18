@@ -210,15 +210,8 @@ if st.session_state.get("page") == "🏠 Home":
     else:
         # logged in view
         st.write(f"Logged in as **{st.session_state['username']}**")
-        col1, col2 = st.columns(2)
+        col1 = st.columns(1)
         with col1:
-            if st.button("Save now"):
-                ok, msg = user_data.save_current_user(st.session_state)
-                if ok:
-                    st.success("Saved.")
-                else:
-                    st.error(msg)
-        with col2:
             if st.button("Logout"):
                 st.session_state["logged_in"] = False
                 st.session_state["username"] = ""

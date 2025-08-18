@@ -346,55 +346,73 @@ if st.session_state.get("page") == "🏠 Home":
             st.success("Exited admin mode.")
 
 elif st.session_state.page == "📝 Notes":
-    if "free_note_text" not in st.session_state:
-        st.session_state.free_note_text = ""
     st.title("📝 AI Note Generator & Class Notes")
 
-    st.subheader("✨ Take Notes or Generate AI Notes")
+    # -----------------------------
+    # Initialize session state keys safely
+    # -----------------------------
+    for key in ["free_note_text", "free_note_title", "summarize_option", "free_note_cat"]:
+        if key not in st.session_state:
+            st.session_state[key] = "" if "text" in key or "title" in key else True if "summarize_option" in key else "General"
 
     # -----------------------------
-    # Freeform notes for class
+    # Freeform Notes Mode
     # -----------------------------
-    st.markdown("💡 **Class Notes Mode:** You can freely type your notes here and decide to summarize them with AI or save as-is.")
+    st.subheader("💡 Freeform Notes Mode")
 
+    note_title = st.text_input(
+        "Note Name (leave blank for default):",
+        placeholder="Enter a title for your note...",
+        key="free_note_title"
+    )
     free_note = st.text_area(
         "Type your notes here:",
         placeholder="Write your class notes here...",
         height=200,
         key="free_note_text"
     )
-    free_category = st.text_input("Category for these notes:", value="General", key="free_note_cat")
-    summarize_option = st.checkbox("🧠 Summarize with AI", value=True, key="summarize_option")
+    free_category = st.text_input(
+        "Category for these notes:",
+        value=st.session_state.free_note_cat,
+        key="free_note_cat"
+    )
+    summarize_option = st.checkbox(
+        "🧠 Summarize with AI",
+        value=st.session_state.summarize_option,
+        key="summarize_option"
+    )
 
     if st.button("💾 Save Notes", key="save_free_note"):
-        if not free_note.strip():
+        if not st.session_state.free_note_text.strip():
             st.warning("Please enter some text to save.")
         else:
-            notes_content = free_note
+            notes_content = st.session_state.free_note_text
             if summarize_option:
                 with st.spinner("Summarizing notes with AI..."):
                     try:
-                        notes_content = generators['notes'].generate_notes(free_note)
+                        notes_content = generators['notes'].generate_notes(notes_content)
                     except Exception as e:
                         st.error(f"AI summarization failed: {e}")
 
-            # Save note
+            title = st.session_state.free_note_title.strip() or f"Note {datetime.now().strftime('%Y-%m-%d %H:%M')}"
             new_note = {
-                'title': f"Class Note {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                'content': notes_content,
-                'category': free_category,
-                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                "title": title,
+                "content": notes_content,
+                "category": free_category,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
             st.session_state.notes.append(new_note)
             auto_save()
-            st.success(f"✅ Note saved under '{free_category}'!")
-            st.session_state.free_note_text = ""  # clear text area
+            st.success(f"✅ Note '{title}' saved under '{free_category}'!")
+            # Clear inputs safely
+            st.session_state.free_note_text = ""
+            st.session_state.free_note_title = ""
             st.rerun()
 
     st.markdown("---")
 
     # -----------------------------
-    # Topic or file-based AI notes
+    # Topic/File-based AI Note Generation
     # -----------------------------
     st.subheader("🚀 Generate AI Notes from Topic or File")
 
@@ -420,15 +438,14 @@ elif st.session_state.page == "📝 Notes":
                     notes_content = generators['notes'].generate_notes(content_to_process)
                     if notes_content:
                         new_note = {
-                            'title': topic,
-                            'content': notes_content,
-                            'category': category,
-                            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                            "title": topic,
+                            "content": notes_content,
+                            "category": category,
+                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         }
                         st.session_state.notes.append(new_note)
                         auto_save()
                         st.success(f"✅ Notes generated successfully for '{topic}'!")
-
                         with st.expander("📖 Preview Generated Notes", expanded=True):
                             st.markdown(notes_content)
                     else:
@@ -439,7 +456,7 @@ elif st.session_state.page == "📝 Notes":
             st.warning("Please enter a topic or upload a file.")
 
     # -----------------------------
-    # Display existing notes
+    # Display Existing Notes
     # -----------------------------
     if st.session_state.notes:
         st.divider()
@@ -457,7 +474,7 @@ elif st.session_state.page == "📝 Notes":
                 st.write(f"**Created:** {note['timestamp']}")
                 st.markdown(note['content'])
 
-                col1, col2, col3 = st.columns(3)
+                col1, col2, col3, col4 = st.columns([1,1,1,1])
                 with col1:
                     if st.button("📚 Create Flashcards", key=f"flash_{i}"):
                         with st.spinner("Creating flashcards..."):
@@ -473,11 +490,11 @@ elif st.session_state.page == "📝 Notes":
 
                                 # Log activity
                                 session = {
-                                    'timestamp': datetime.now().isoformat(),
-                                    'activity_type': 'flashcards_created',
-                                    'subject': note.get('category', 'General'),
-                                    'flashcards_created': len(flashcards),
-                                    'duration_minutes': 2
+                                    "timestamp": datetime.now().isoformat(),
+                                    "activity_type": "flashcards_created",
+                                    "subject": note.get('category', 'General'),
+                                    "flashcards_created": len(flashcards),
+                                    "duration_minutes": 2
                                 }
                                 st.session_state.study_sessions.append(session)
                                 auto_save()
@@ -498,6 +515,22 @@ elif st.session_state.page == "📝 Notes":
                         st.session_state.notes.remove(note)
                         auto_save()
                         st.rerun()
+
+                with col4:
+                    new_name = st.text_input(
+                        "Rename Note",
+                        value=note['title'],
+                        key=f"rename_{i}"
+                    )
+                    if st.button("✏️ Rename", key=f"rename_btn_{i}"):
+                        if new_name.strip():
+                            note['title'] = new_name.strip()
+                            auto_save()
+                            st.success("✅ Note renamed!")
+                            st.rerun()
+                        else:
+                            st.warning("Enter a valid name.")
+
 
 elif st.session_state.page == "📚 Flashcards":
     st.title("📚 Interactive Flashcards")

@@ -25,7 +25,7 @@ def admin_reset_password(target_username: str, new_password: str):
     """Reset any user's password (Admin only)"""
     try:
         hashed = hash_password(new_password)
-        supabase.table("users").update({"password": hashed}).eq("username", target_username).execute()
+        supabase.from_("users").update({"password": hashed}).eq("username", target_username).execute()
         st.success(f"✅ Password for '{target_username}' has been reset!")
     except Exception as e:
         st.error(f"Error: {e}")

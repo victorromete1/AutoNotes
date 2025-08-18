@@ -153,72 +153,21 @@ if "study_sessions" not in st.session_state:
 
 
 
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-ADMIN_KEY = st.secrets["ADMIN_KEY"]
+import streamlit as st
+from datetime import datetime
 
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-# -----------------------------
-# HELPER FUNCTIONS
-# -----------------------------
-def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def register_user(username: str, password: str) -> bool:
-    try:
-        hashed = hash_password(password)
-        existing = supabase.table("users").select("*").eq("username", username).execute()
-        if existing.data:
-            return False
-        supabase.table("users").insert({"username": username, "password": hashed}).execute()
-        return True
-    except Exception as e:
-        st.error(f"Error: {e}")
-        return False
-
-def authenticate(username: str, password: str) -> bool:
-    try:
-        hashed = hash_password(password)
-        response = supabase.table("users").select("*").eq("username", username).eq("password", hashed).execute()
-        return len(response.data) > 0
-    except Exception as e:
-        st.error(f"Error: {e}")
-        return False
-
-def admin_reset_password(target_username: str, new_password: str):
-    try:
-        hashed = hash_password(new_password)
-        supabase.table("users").update({"password": hashed}).eq("username", target_username).execute()
-        st.success(f"✅ Password for '{target_username}' has been reset!")
-    except Exception as e:
-        st.error(f"Error: {e}")
-
-def delete_account(username: str):
-    try:
-        supabase.table("users").delete().eq("username", username).execute()
-        st.session_state["logged_in"] = False
-        st.session_state["username"] = ""
-        st.success("✅ Account deleted!")
-    except Exception as e:
-        st.error(f"Error: {e}")
-
-# -----------------------------
-# HOME PAGE
-# -----------------------------
 if st.session_state.get("page") == "🏠 Home":
     st.title("🎓 Welcome to SmartStudy!")
 
-    # -----------------------------
-    # LOGGED-OUT VIEW
-    # -----------------------------
     if not st.session_state.get("logged_in", False):
+        # --- Logged-out view ---
         st.subheader("Account Access")
         st.markdown(
             "Access your personalized learning dashboard. "
             "Sign up to save your progress or log in to continue where you left off."
         )
 
+        # Login / Signup toggle
         mode = st.radio("Choose mode", ["Login", "Sign Up"], horizontal=True, key="auth_mode")
 
         if mode == "Sign Up":
@@ -231,58 +180,70 @@ if st.session_state.get("page") == "🏠 Home":
                 elif sp != confirm:
                     st.error("Passwords do not match.")
                 else:
-                    if register_user(su, sp):
+                    ok, msg = user_data.register_user(su, sp)
+                    if ok:
                         st.session_state["logged_in"] = True
                         st.session_state["username"] = su
-                        st.success("✅ Account created!")
+                        success, smsg = user_data.save_current_user(st.session_state)
+                        st.success("Account created. " + smsg)
                         st.rerun()
                     else:
-                        st.error("Username already exists.")
-
+                        st.error(msg)
         else:
             lu = st.text_input("Username", key="li_user")
             lp = st.text_input("Password", type="password", key="li_pass")
             if st.button("Login"):
-                if lu.strip() == "" and lp == ADMIN_KEY:
+                if lu.strip() == "" and lp == st.secrets.get("ADMIN_KEY", ""):
                     st.session_state["admin_mode"] = True
-                    st.success("✅ Admin mode activated!")
-                elif authenticate(lu, lp):
-                    st.session_state["logged_in"] = True
-                    st.session_state["username"] = lu
-                    st.success(f"✅ Welcome, {lu}!")
-                    st.rerun()
+                    st.success("Admin mode enabled")
                 else:
-                    st.error("❌ Invalid username or password")
+                    ok, msg = user_data.authenticate(lu, lp)
+                    if ok:
+                        st.session_state["logged_in"] = True
+                        st.session_state["username"] = lu
+                        loaded_ok, data = user_data.load_user_data(
+                            lu, merge_local=True, local_state=st.session_state
+                        )
+                        if loaded_ok:
+                            st.session_state.update(data)
+                            user_data.save_current_user(st.session_state)
+                        st.success(f"Welcome back, {lu}")
+                        st.rerun()
+                    else:
+                        st.error(msg)
 
         st.markdown("---")
+
+        # Features and quick start for logged-out users
         st.subheader("🚀 Why SmartStudy?")
         st.markdown("""
         Unlock your full learning potential with an intelligent, all-in-one study platform powered by AI.  
         Whether you're preparing for exams, mastering a subject, or building long-term knowledge, this tool adapts to the way **you** learn best.
         """)
+
         st.markdown("""
         ### Key Features:
-        - **📝 Smart Notes**  
-        - **🎴 Flashcards**  
-        - **❓ Adaptive Quizzes**  
-        - **📊 Progress Tracking**  
-        - **📑 Reports  
-        """)
-        st.markdown("""
-        ### Quick Start Guide:
-        1. **Create Notes** → Enter a topic you're studying  
-        2. **Build Flashcards** → Turn notes into revision cards  
-        3. **Test Yourself** → Take adaptive quizzes  
-        4. **Track Progress** → Watch your performance improve  
+        - **📝 Smart Notes**: Instantly generate clear, structured notes from any topic  
+        - **🎴 Flashcards**: Create interactive flashcards to reinforce your memory  
+        - **❓ Adaptive Quizzes**: Test your knowledge with personalized, AI-driven quizzes  
+        - **📊 Progress Tracking**: Monitor your growth with detailed insights & analytics  
+        - **📑 Reports**: Export beautifully formatted PDF reports of your learning journey  
         """)
 
-    # -----------------------------
-    # LOGGED-IN VIEW
-    # -----------------------------
+        st.markdown("""
+        ### Quick Start Guide:
+        1. **Create Notes** → Enter a topic you're studying and let AI generate study notes  
+        2. **Build Flashcards** → Turn your notes into bite-sized flashcards for revision  
+        3. **Test Yourself** → Take adaptive quizzes with instant feedback  
+        4. **Track Progress** → Watch your performance improve over time  
+        """)
+
     else:
+        # --- Logged-in view ---
         st.subheader(f"Hello, {st.session_state['username']}!")
         st.write("Your personalized learning dashboard is ready.")
 
+        # Logout button
         col1, col2 = st.columns([3, 1])
         with col2:
             if st.button("Logout"):
@@ -291,22 +252,32 @@ if st.session_state.get("page") == "🏠 Home":
                 st.rerun()
 
         st.markdown("---")
+        # Account settings
         st.subheader("Account Settings")
         new_pass = st.text_input("New password (leave blank to keep)", type="password", key="acc_new_pass")
         if st.button("Change Password"):
             if new_pass.strip():
-                admin_reset_password(st.session_state["username"], new_pass)
-
-        if st.button("Delete Account"):
-            delete_account(st.session_state["username"])
+                ok, msg = user_data.admin_reset_password(st.session_state["username"], new_pass)
+                if ok:
+                    st.success("Password updated.")
+                else:
+                    st.error(msg)
 
         st.markdown("---")
-        st.subheader("🚀 Quick Overview")
+
+        # Features / overview for logged-in users (optional, can remove)
+        st.subheader("🚀 Quick Overview of SmartStudy")
         st.markdown("""
-        - **📝 Smart Notes**  
-        - **🎴 Flashcards**  
-        - **❓ Adaptive Quizzes**  
-        - **📊 Progress Tracking**  
+        Unlock your full learning potential with an intelligent, all-in-one study platform powered by AI.  
+        This section gives a quick reminder of the features you can use while logged in.
+        """)
+
+        st.markdown("""
+        ### Key Features:
+        - **📝 Smart Notes**: Generate structured notes  
+        - **🎴 Flashcards**: Create interactive flashcards  
+        - **❓ Adaptive Quizzes**: Test your knowledge  
+        - **📊 Progress Tracking**: Monitor your growth  
         """)
 
         # Recent Activity
@@ -320,6 +291,7 @@ if st.session_state.get("page") == "🏠 Home":
             for session in recent_sessions:
                 timestamp = datetime.fromisoformat(session['timestamp']).strftime("%Y-%m-%d %H:%M")
                 activity = session.get('activity_type', 'Unknown')
+
                 if activity == 'quiz':
                     score = session.get('score', 0)
                     st.write(f"🧠 {timestamp} - Quiz completed: {score:.1f}%")
@@ -330,25 +302,6 @@ if st.session_state.get("page") == "🏠 Home":
                     count = session.get('flashcards_created', 0)
                     st.write(f"➕ {timestamp} - Created {count} flashcards")
 
-        # -----------------------------
-        # ADMIN MODE CONTROLS
-        # -----------------------------
-        if st.session_state.get("admin_mode"):
-            st.subheader("🛠 Admin Controls (Hidden Mode)")
-            st.markdown("Reset any user's password below:")
-
-            target_user = st.text_input("Target Username to Reset Password", key="admin_target_user")
-            new_pass = st.text_input("New Password", type="password", key="admin_new_pass")
-
-            if st.button("Reset User Password"):
-                if target_user and new_pass:
-                    admin_reset_password(target_user, new_pass)
-                else:
-                    st.warning("Enter both username and new password.")
-
-            if st.button("Exit Admin Mode"):
-                st.session_state["admin_mode"] = False
-                st.success("Exited admin mode.")
 elif st.session_state.page == "📝 Notes":
     st.title("📝 AI Note Generator")
 

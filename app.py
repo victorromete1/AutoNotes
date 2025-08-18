@@ -921,12 +921,11 @@ elif st.session_state.page == "📅 Calendar":
     with col1:
         st.button("‹", key="prev_month", on_click=change_month, args=(-1,))
     with col2:
-        # Force update by using the current session state values
         month_name = datetime(
             st.session_state.calendar_year,
             st.session_state.calendar_month,
             1
-        ).strftime("%B %Y")  # Full month name for better clarity
+        ).strftime("%B %Y")
         st.markdown(f"<h2 style='text-align:center;margin:0'>{month_name}</h2>", unsafe_allow_html=True)
     with col3:
         st.button("›", key="next_month", on_click=change_month, args=(1,))
@@ -1002,21 +1001,25 @@ elif st.session_state.page == "📅 Calendar":
         if day.month == st.session_state.calendar_month:
             events_today = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() == day]
             
-            # Today highlight class
             today_class = "today-highlight" if day == today else ""
             
             html += f"<div class='calendar-day {today_class}'>"
             html += f"<div class='day-number'>{day.day}</div>"
             
             if events_today:
-                # Events container with scroll if too many
                 html += "<div style='margin-top:20px; max-height:60px; overflow-y:auto; padding-right:3px;'>"
-                for e in events_today[:4]:  # Show up to 4 events fully
+                for idx, e in enumerate(events_today[:4]):  # Show up to 4 events fully
+                    event_key = f"delete_{day}_{idx}"
                     html += f"<div class='event-item' style='background:{e['color']}; color:white;' title='{e['name']}'>"
                     html += f"{e['name']}"
                     if e.get('notes'):
                         html += f"<div class='event-notes'>{e['notes']}</div>"
                     html += "</div>"
+                    # Add delete button
+                    if st.button(f"❌", key=event_key):
+                        st.session_state.events.remove(e)
+                        auto_save()
+                        st.rerun()
                 
                 if len(events_today) > 4:
                     html += f"<div class='more-events'>+{len(events_today)-4} more</div>"
@@ -1028,7 +1031,6 @@ elif st.session_state.page == "📅 Calendar":
 
     html += "</div>"
 
-    # Display Calendar
     st.markdown(html, unsafe_allow_html=True)
 
     # --- Daily Reminders (Today) ---
@@ -1036,11 +1038,15 @@ elif st.session_state.page == "📅 Calendar":
     st.subheader("📅 Today's Reminders")
     today_events = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() == today]
     if today_events:
-        for e in today_events:
+        for idx, e in enumerate(today_events):
             with st.container(border=True):
                 st.markdown(f"<span style='color:{e['color']};font-size:20px'>●</span> **{e['name']}**", unsafe_allow_html=True)
                 if e.get('notes'):
                     st.caption(f"📝 {e['notes']}")
+                if st.button("❌ Remove", key=f"remove_today_{idx}"):
+                    st.session_state.events.remove(e)
+                    auto_save()
+                    st.rerun()
     else:
         st.info("No events today.")
 
@@ -1050,14 +1056,19 @@ elif st.session_state.page == "📅 Calendar":
     upcoming = [e for e in st.session_state.events if datetime.fromisoformat(e["date"]).date() > today]
     upcoming = sorted(upcoming, key=lambda x: x["date"])[:5]
     if upcoming:
-        for e in upcoming:
+        for idx, e in enumerate(upcoming):
             with st.container(border=True):
                 date_obj = datetime.fromisoformat(e["date"]).strftime("%a, %b %d")
                 st.markdown(f"<span style='color:{e['color']};font-size:20px'>●</span> **{date_obj}** — {e['name']}", unsafe_allow_html=True)
                 if e.get('notes'):
                     st.caption(f"📝 {e['notes']}")
+                if st.button("❌ Remove", key=f"remove_upcoming_{idx}"):
+                    st.session_state.events.remove(e)
+                    auto_save()
+                    st.rerun()
     else:
         st.info("No upcoming events!")
+
 # Helper function for flashcard study session
 
 

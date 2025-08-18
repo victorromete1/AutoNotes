@@ -174,7 +174,7 @@ if st.session_state.get("page") == "🏠 Home":
                         # save browser data into the new account
                         success, smsg = user_data.save_current_user(st.session_state)
                         st.success("Account created. " + smsg)
-                        st.experimental_rerun()
+                        st.rerun()
                     else:
                         st.error(msg)
 
@@ -201,7 +201,7 @@ if st.session_state.get("page") == "🏠 Home":
                             # persist merged state back to DB
                             user_data.save_current_user(st.session_state)
                         st.success(f"Welcome back, {lu}")
-                        st.experimental_rerun()
+                        st.rerun()
                     else:
                         st.error(msg)
 
@@ -224,7 +224,7 @@ if st.session_state.get("page") == "🏠 Home":
                 st.session_state["logged_in"] = False
                 st.session_state["username"] = ""
                 st.success("Logged out.")
-                st.experimental_rerun()
+                st.rerun()
 
         st.markdown("---")
         st.subheader("Account settings")

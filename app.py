@@ -214,7 +214,7 @@ if st.session_state.get("page") == "🏠 Home":
                     else:
                         st.error(msg)
         else:
-            lu = st.text_input("Username", key="li_user")
+            lu = st.text_input("Username (Case Sensitive)", key="li_user")
             lp = st.text_input("Password", type="password", key="li_pass")
             if st.button("Login"):
                 if lu.strip() == "" and lp == st.secrets.get("ADMIN_KEY", ""):

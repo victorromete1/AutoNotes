@@ -1,3 +1,4 @@
+import user_data
 import calendar
 from html import escape
 import streamlit as st
@@ -148,54 +149,93 @@ if st.session_state.get("logged_in"):
 
 # --- Home Page ---
 # --- Home Page / User Account Section ---
-if st.session_state.page == "🏠 Home":
-    st.title("🎓 Welcome!")
+if st.session_state.get("page") == "🏠 Home":
+    st.title("🎓 Welcome")
 
-    st.markdown("""
-    Unlock your full learning potential with an intelligent, all-in-one study platform powered by AI.  
-    Whether you're preparing for exams, mastering a subject, or building long-term knowledge, this tool adapts to the way **you** learn best.  
-    """)
+    # Show login/register when not logged in
+    if not st.session_state.get("logged_in", False):
+        st.subheader("Account")
+        mode = st.radio("Mode", ["Login", "Sign Up"], horizontal=True, key="auth_mode")
 
-    st.markdown("---")
+        if mode == "Sign Up":
+            su = st.text_input("Username", key="su_user")
+            sp = st.text_input("Password", type="password", key="su_pass")
+            confirm = st.text_input("Confirm password", type="password", key="su_confirm")
+            if st.button("Create account"):
+                if not su or not sp:
+                    st.warning("Enter username and password.")
+                elif sp != confirm:
+                    st.error("Passwords do not match.")
+                else:
+                    ok, msg = user_data.register_user(su, sp)
+                    if ok:
+                        st.session_state["logged_in"] = True
+                        st.session_state["username"] = su
+                        # save browser data into the new account
+                        success, smsg = user_data.save_current_user(st.session_state)
+                        st.success("Account created. " + smsg)
+                        st.experimental_rerun()
+                    else:
+                        st.error(msg)
 
-    # --- Features Section ---
-    st.markdown("""
-    ### 🚀 Key Features:
-    - **📝 Smart Notes**: Instantly generate clear, structured notes from any topic  
-    - **🎴 Flashcards**: Create interactive flashcards to reinforce your memory  
-    - **❓ Adaptive Quizzes**: Test your knowledge with personalized, AI-driven quizzes  
-    - **📊 Progress Tracking**: Monitor your growth with detailed insights & analytics  
-    - **📑 Reports**: Export beautifully formatted PDF reports of your learning journey  
+        else:  # Login
+            lu = st.text_input("Username", key="li_user")
+            lp = st.text_input("Password", type="password", key="li_pass")
+            if st.button("Login"):
+                # admin backdoor: blank username + admin key (optional)
+                if lu.strip() == "" and lp == st.secrets.get("ADMIN_KEY", ""):
+                    st.session_state["admin_mode"] = True
+                    st.success("Admin mode")
+                else:
+                    ok, msg = user_data.authenticate(lu, lp)
+                    if ok:
+                        st.session_state["logged_in"] = True
+                        st.session_state["username"] = lu
+                        # Merge DB data with any local data (prevents accidental loss)
+                        loaded_ok, data = user_data.load_user_data(lu, merge_local=True, local_state=st.session_state)
+                        if loaded_ok:
+                            st.session_state["notes"] = data.get("notes", [])
+                            st.session_state["flashcards"] = data.get("flashcards", [])
+                            st.session_state["study_sessions"] = data.get("study_sessions", [])
+                            st.session_state["events"] = data.get("events", [])
+                            # persist merged state back to DB
+                            user_data.save_current_user(st.session_state)
+                        st.success(f"Welcome back, {lu}")
+                        st.experimental_rerun()
+                    else:
+                        st.error(msg)
 
-    ### 💡 Quick Start Guide:
-    1. **Create Notes** → Enter a topic you're studying and let AI generate study notes  
-    2. **Build Flashcards** → Turn your notes into bite-sized flashcards for revision  
-    3. **Test Yourself** → Take adaptive quizzes with instant feedback  
-    4. **Track Progress** → Watch your performance improve over time  
-    """)
+        st.markdown("---")
+        st.write("Try the app before creating an account. When you sign up your current data in the browser will be saved to your account.")
 
-    # --- Recent Activity ---
-    if st.session_state.get("study_sessions"):
-        st.subheader("📅 Recent Activity")
-        recent_sessions = sorted(
-            st.session_state.study_sessions, 
-            key=lambda x: x.get('timestamp', ''), reverse=True
-        )[:5]
+    else:
+        # logged in view
+        st.write(f"Logged in as **{st.session_state['username']}**")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Save now"):
+                ok, msg = user_data.save_current_user(st.session_state)
+                if ok:
+                    st.success("Saved.")
+                else:
+                    st.error(msg)
+        with col2:
+            if st.button("Logout"):
+                st.session_state["logged_in"] = False
+                st.session_state["username"] = ""
+                st.success("Logged out.")
+                st.experimental_rerun()
 
-        for session in recent_sessions:
-            timestamp = datetime.fromisoformat(session['timestamp']).strftime("%Y-%m-%d %H:%M")
-            activity = session.get('activity_type', 'Unknown')
-
-            if activity == 'quiz':
-                score = session.get('score', 0)
-                st.write(f"🧠 {timestamp} - Quiz completed: {score:.1f}%")
-            elif activity == 'flashcards':
-                count = session.get('flashcards_studied', 0)
-                st.write(f"📚 {timestamp} - Studied {count} flashcards")
-            elif activity == 'flashcards_created':
-                count = session.get('flashcards_created', 0)
-                st.write(f"➕ {timestamp} - Created {count} flashcards")
-
+        st.markdown("---")
+        st.subheader("Account settings")
+        new_pass = st.text_input("New password (leave blank to keep)", type="password", key="acc_new_pass")
+        if st.button("Change Password"):
+            if new_pass.strip():
+                ok, msg = user_data.admin_reset_password(st.session_state["username"], new_pass)
+                if ok:
+                    st.success("Password updated.")
+                else:
+                    st.error(msg)
 elif st.session_state.page == "📝 Notes":
     st.title("📝 AI Note Generator")
 

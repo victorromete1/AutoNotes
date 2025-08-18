@@ -116,7 +116,6 @@ with st.sidebar:
         key="navigation"
     )
     st.session_state.page = page
-    st.divider()
     col1, col2, col3 = st.sidebar.columns([1, 2, 1])
 
     with col2:  # middle column

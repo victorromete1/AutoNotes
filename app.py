@@ -254,6 +254,7 @@ elif st.session_state.page == "📝 Notes":
     uploaded_file = st.file_uploader("Upload a text file to generate notes from:", type=['txt', 'md'])
 
     if st.button("🚀 Generate Notes", type="primary", use_container_width=True):
+        user_data.save_current_user(st.session_state)
         content_to_process = ""
 
         if uploaded_file:
@@ -312,6 +313,7 @@ elif st.session_state.page == "📝 Notes":
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     if st.button("📚 Create Flashcards", key=f"flash_{i}"):
+                        user_data.save_current_user(st.session_state)
                         with st.spinner("Creating flashcards..."):
                             try:
                                 flashcards = generators['flashcards'].generate_flashcards(
@@ -350,6 +352,7 @@ elif st.session_state.page == "📝 Notes":
 
                 with col3:
                     if st.button("🗑️ Delete", key=f"delete_{i}"):
+                        user_data.save_current_user(st.session_state)
                         st.session_state.notes.remove(note)
                         auto_save()
                         st.rerun()
@@ -365,6 +368,7 @@ elif st.session_state.page == "📚 Flashcards":
         if not st.session_state.flashcards:
             st.info("No flashcards available. Create some first!")
             if st.button("🔄 Refresh"):
+                user_data.save_current_user(st.session_state)
                 st.rerun()
         else:
             # Category filter
@@ -412,14 +416,17 @@ elif st.session_state.page == "📚 Flashcards":
 
                     with col1:
                         if st.button("❌ Incorrect", use_container_width=True):
+                            user_data.save_current_user(st.session_state)
                             next_flashcard(study_cards, correct=False)
 
                     with col2:
                         if st.button("🤔 Partial", use_container_width=True):
+                            user_data.save_current_user(st.session_state)
                             next_flashcard(study_cards, correct=True)
 
                     with col3:
                         if st.button("✅ Correct", use_container_width=True):
+                            user_data.save_current_user(st.session_state)
                             next_flashcard(study_cards, correct=True)
 
                 else:
@@ -454,6 +461,7 @@ elif st.session_state.page == "📚 Flashcards":
                 category = st.text_input("Category:", value="General")
 
             if st.button("🚀 Generate Flashcards", type="primary"):
+                user_data.save_current_user(st.session_state)
                 if content.strip():
                     with st.spinner("Creating flashcards..."):
                         try:
@@ -501,6 +509,7 @@ elif st.session_state.page == "📚 Flashcards":
                 category = st.text_input("Category:", value="General")
 
                 if st.form_submit_button("➕ Add Flashcard"):
+                    user_data.save_current_user(st.session_state)
                     if front.strip() and back.strip():
                         new_card = {
                             'front': front,
@@ -544,6 +553,7 @@ elif st.session_state.page == "📚 Flashcards":
                 category = st.text_input("Category:", value="General")
 
             if st.button("🚀 Generate Flashcards", type="primary"):
+                user_data.save_current_user(st.session_state)
                 if content.strip():
                     with st.spinner("Creating flashcards..."):
                         try:
@@ -602,6 +612,7 @@ elif st.session_state.page == "📚 Flashcards":
                         category = st.text_input("Category:", value="General")
 
                     if st.button("🚀 Generate Flashcards from Note", type="primary"):
+                        user_data.save_current_user(st.session_state)
                         if content.strip():
                             with st.spinner("Creating flashcards..."):
                                 try:
@@ -666,6 +677,7 @@ elif st.session_state.page == "📚 Flashcards":
 
             with col2:
                 if st.button("🗑️ Clear All"):
+                    user_data.save_current_user(st.session_state)
                     st.session_state.flashcards = []
                     auto_save()
                     st.success("✅ All flashcards deleted!")
@@ -687,6 +699,7 @@ elif st.session_state.page == "📚 Flashcards":
                     st.write(f"**Category:** {card.get('category', 'General')}")
 
                     if st.button("🗑️ Delete", key=f"del_{i}"):
+                        user_data.save_current_user(st.session_state)
                         st.session_state.flashcards.remove(card)
                         auto_save()
                         st.rerun()
@@ -763,6 +776,7 @@ elif st.session_state.page == "🧠 Quizzes":
 
 
             if st.button("🚀 Create & Start Quiz", type="primary", use_container_width=True):
+                user_data.save_current_user(st.session_state)
                 if content.strip():
                     with st.spinner("Creating quiz..."):
                         try:
@@ -817,6 +831,7 @@ elif st.session_state.page == "🧠 Quizzes":
 
                     # Add Retake button
                     if st.button("🔄 Retake This Quiz", key=f"retake_{i}"):
+                        user_data.save_current_user(st.session_state)
                         # Store the original quiz content to recreate it
                         st.session_state.retake_quiz_content = session.get('original_content', '')
                         st.session_state.retake_quiz_config = {
@@ -884,6 +899,7 @@ elif st.session_state.page == "📋 Reports":
         report_type = st.selectbox("Report type:", ["Study Summary", "Quiz Analysis", "Flashcard Report"])
 
         if st.button("📄 Generate PDF Report", type="primary"):
+            user_data.save_current_user(st.session_state)
             with st.spinner("Generating report..."):
                 try:
                     valid_sessions = [s for s in st.session_state.study_sessions if isinstance(s, dict)]
@@ -933,6 +949,7 @@ elif st.session_state.page == "📅 Calendar":
     # --- Add New Event ---
     st.subheader("➕ Add Event")
     with st.form("add_event_form"):
+        user_data.save_current_user(st.session_state)
         name = st.text_input("Event Title:", placeholder="e.g., Math Test, History Project, Concert")
         date = st.date_input("Date:")
         notes = st.text_area("Details (optional):", placeholder="Extra info...")
@@ -949,6 +966,7 @@ elif st.session_state.page == "📅 Calendar":
                     "created": datetime.now().isoformat()
                 }
                 st.session_state.events.append(new_event)
+                user_data.save_current_user(st.session_state)
                 auto_save()
                 st.success(f"✅ Added event - {name}")
             else:
@@ -1109,6 +1127,7 @@ elif st.session_state.page == "📅 Calendar":
         event_to_delete = st.selectbox("Select an event to delete:", options=event_options)
 
         if st.button("❌ Delete Selected Event"):
+            user_data.save_current_user(st.session_state)
             for e in st.session_state.events:
                 label = f"{datetime.fromisoformat(e['date']).strftime('%Y/%m/%d')} — {e['name']}"
                 if label == event_to_delete:
@@ -1116,6 +1135,7 @@ elif st.session_state.page == "📅 Calendar":
                     auto_save()
                     st.success(f"Deleted event: {label}")
                     st.rerun()
+                    user_data.save_current_user(st.session_state)
     else:
         st.info("No events to delete.")
 
@@ -1126,9 +1146,4 @@ elif st.session_state.page == "📅 Calendar":
 # Auto-save every few minutes
 if len(st.session_state.study_sessions) % 5 == 0:
     auto_save()
-import time
-
-if st.session_state.get("logged_in"):
-    # save every run if logged in
-    user_data.save_current_user(st.session_state)
 

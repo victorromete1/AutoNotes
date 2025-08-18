@@ -222,6 +222,7 @@ if st.session_state.get("page") == "🏠 Home":
                 st.session_state["logged_in"] = False
                 st.session_state["username"] = ""
                 st.success("Logged out.")
+                st.session_state.clear() 
                 st.rerun()
 
         st.markdown("---")

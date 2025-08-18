@@ -346,26 +346,66 @@ if st.session_state.get("page") == "🏠 Home":
             st.success("Exited admin mode.")
 
 elif st.session_state.page == "📝 Notes":
-    st.title("📝 AI Note Generator")
+    st.title("📝 AI Note Generator & Class Notes")
 
-    # Note creation
-    st.subheader("✨ Generate New Note")
+    st.subheader("✨ Take Notes or Generate AI Notes")
+
+    # -----------------------------
+    # Freeform notes for class
+    # -----------------------------
+    st.markdown("💡 **Class Notes Mode:** You can freely type your notes here and decide to summarize them with AI or save as-is.")
+
+    free_note = st.text_area(
+        "Type your notes here:",
+        placeholder="Write your class notes here...",
+        height=200,
+        key="free_note_text"
+    )
+    free_category = st.text_input("Category for these notes:", value="General", key="free_note_cat")
+    summarize_option = st.checkbox("🧠 Summarize with AI", value=True, key="summarize_option")
+
+    if st.button("💾 Save Notes", key="save_free_note"):
+        if not free_note.strip():
+            st.warning("Please enter some text to save.")
+        else:
+            notes_content = free_note
+            if summarize_option:
+                with st.spinner("Summarizing notes with AI..."):
+                    try:
+                        notes_content = generators['notes'].generate_notes(free_note)
+                    except Exception as e:
+                        st.error(f"AI summarization failed: {e}")
+
+            # Save note
+            new_note = {
+                'title': f"Class Note {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                'content': notes_content,
+                'category': free_category,
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            st.session_state.notes.append(new_note)
+            auto_save()
+            st.success(f"✅ Note saved under '{free_category}'!")
+            st.session_state.free_note_text = ""  # clear text area
+            st.rerun()
+
+    st.markdown("---")
+
+    # -----------------------------
+    # Topic or file-based AI notes
+    # -----------------------------
+    st.subheader("🚀 Generate AI Notes from Topic or File")
 
     col1, col2 = st.columns([2, 1])
     with col1:
-        topic = st.text_input("📖 Topic or subject:", placeholder="e.g., Photosynthesis, World War II, Calculus...")
-
+        topic = st.text_input("📖 Topic or subject:", placeholder="e.g., Photosynthesis, WWII, Calculus...", key="topic_input")
     with col2:
-        category = st.text_input("Category:", value="General")
+        category = st.text_input("Category:", value="General", key="topic_cat_input")
 
-    # File upload option
-    st.subheader("📂 Or Upload Text File")
-    uploaded_file = st.file_uploader("Upload a text file to generate notes from:", type=['txt', 'md'])
+    uploaded_file = st.file_uploader("📂 Or upload a text file:", type=['txt', 'md'], key="file_upload")
 
-    if st.button("🚀 Generate Notes", type="primary", use_container_width=True):
-        user_data.save_current_user(st.session_state)
+    if st.button("🚀 Generate Notes", key="generate_ai_notes"):
         content_to_process = ""
-
         if uploaded_file:
             content_to_process = str(uploaded_file.read(), "utf-8")
             topic = uploaded_file.name.replace('.txt', '').replace('.md', '')
@@ -376,9 +416,7 @@ elif st.session_state.page == "📝 Notes":
             with st.spinner("Generating comprehensive notes..."):
                 try:
                     notes_content = generators['notes'].generate_notes(content_to_process)
-
                     if notes_content:
-                        # Save note
                         new_note = {
                             'title': topic,
                             'content': notes_content,
@@ -387,26 +425,24 @@ elif st.session_state.page == "📝 Notes":
                         }
                         st.session_state.notes.append(new_note)
                         auto_save()
-
                         st.success(f"✅ Notes generated successfully for '{topic}'!")
 
-                        # Preview
                         with st.expander("📖 Preview Generated Notes", expanded=True):
                             st.markdown(notes_content)
                     else:
                         st.error("Failed to generate notes. Please try again.")
-
                 except Exception as e:
-                    st.error(f"Error: {str(e)}")
+                    st.error(f"Error: {e}")
         else:
             st.warning("Please enter a topic or upload a file.")
 
+    # -----------------------------
     # Display existing notes
+    # -----------------------------
     if st.session_state.notes:
         st.divider()
         st.subheader("📚 Your Notes")
 
-        # Filter options
         categories = list(set([note.get('category', 'General') for note in st.session_state.notes]))
         filter_category = st.selectbox("Filter by category:", ["All"] + categories)
 
@@ -422,16 +458,13 @@ elif st.session_state.page == "📝 Notes":
                 col1, col2, col3 = st.columns(3)
                 with col1:
                     if st.button("📚 Create Flashcards", key=f"flash_{i}"):
-                        user_data.save_current_user(st.session_state)
                         with st.spinner("Creating flashcards..."):
                             try:
                                 flashcards = generators['flashcards'].generate_flashcards(
                                     note['content'], num_cards=6, difficulty="Medium"
                                 )
-
                                 for card in flashcards:
                                     card['category'] = note.get('category', 'General')
-
                                 st.session_state.flashcards.extend(flashcards)
                                 auto_save()
                                 st.success(f"✅ Created {len(flashcards)} flashcards!")
@@ -446,9 +479,8 @@ elif st.session_state.page == "📝 Notes":
                                 }
                                 st.session_state.study_sessions.append(session)
                                 auto_save()
-
                             except Exception as e:
-                                st.error(f"Error: {str(e)}")
+                                st.error(f"Error: {e}")
 
                 with col2:
                     st.download_button(
@@ -461,7 +493,6 @@ elif st.session_state.page == "📝 Notes":
 
                 with col3:
                     if st.button("🗑️ Delete", key=f"delete_{i}"):
-                        user_data.save_current_user(st.session_state)
                         st.session_state.notes.remove(note)
                         auto_save()
                         st.rerun()

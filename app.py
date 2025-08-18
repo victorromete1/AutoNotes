@@ -1,3 +1,4 @@
+import io
 import user_data
 import supabase
 import calendar
@@ -351,15 +352,21 @@ elif st.session_state.page == "📝 Notes":
     # -----------------------------
     # Initialize session state keys safely
     # -----------------------------
-    for key in ["free_note_text", "free_note_title", "summarize_option", "free_note_cat"]:
+    for key in ["free_note_text", "free_note_title", "summarize_option", "free_note_cat", "topic_input", "topic_cat_input", "file_upload"]:
         if key not in st.session_state:
-            st.session_state[key] = "" if "text" in key or "title" in key else True if "summarize_option" in key else "General"
+            if "text" in key or "title" in key or "input" in key:
+                st.session_state[key] = ""
+            elif "cat" in key:
+                st.session_state[key] = "General"
+            elif "summarize_option" in key:
+                st.session_state[key] = True
+            elif "file_upload" in key:
+                st.session_state[key] = None
 
     # -----------------------------
     # Freeform Notes Mode
     # -----------------------------
     st.subheader("💡 Freeform Notes Mode")
-
     note_title = st.text_input(
         "Note Name (leave blank for default):",
         placeholder="Enter a title for your note...",
@@ -404,7 +411,6 @@ elif st.session_state.page == "📝 Notes":
             st.session_state.notes.append(new_note)
             auto_save()
             st.success(f"✅ Note '{title}' saved under '{free_category}'!")
-            # Clear inputs safely
             st.session_state.free_note_text = ""
             st.session_state.free_note_title = ""
             st.rerun()
@@ -412,25 +418,44 @@ elif st.session_state.page == "📝 Notes":
     st.markdown("---")
 
     # -----------------------------
-    # Topic/File-based AI Note Generation
+    # AI Note Generation from Topic or File
     # -----------------------------
     st.subheader("🚀 Generate AI Notes from Topic or File")
-
     col1, col2 = st.columns([2, 1])
     with col1:
         topic = st.text_input("📖 Topic or subject:", placeholder="e.g., Photosynthesis, WWII, Calculus...", key="topic_input")
     with col2:
-        category = st.text_input("Category:", value="General", key="topic_cat_input")
+        category = st.text_input("Category:", value=st.session_state.topic_cat_input, key="topic_cat_input")
 
-    uploaded_file = st.file_uploader("📂 Or upload a text file:", type=['txt', 'md'], key="file_upload")
+    uploaded_file = st.file_uploader(
+        "📂 Upload a file (.txt, .md, .pdf, .docx) to generate notes:",
+        type=['txt', 'md', 'pdf', 'docx'],
+        key="file_upload"
+    )
 
     if st.button("🚀 Generate Notes", key="generate_ai_notes"):
         content_to_process = ""
+        note_name = ""
+
         if uploaded_file:
-            content_to_process = str(uploaded_file.read(), "utf-8")
-            topic = uploaded_file.name.replace('.txt', '').replace('.md', '')
+            file_ext = uploaded_file.name.split('.')[-1].lower()
+            note_name = uploaded_file.name.rsplit('.', 1)[0]
+            try:
+                if file_ext in ['txt', 'md']:
+                    content_to_process = str(uploaded_file.read(), "utf-8")
+                elif file_ext == 'pdf':
+                    pdf = PdfReader(io.BytesIO(uploaded_file.read()))
+                    content_to_process = "\n".join([page.extract_text() or "" for page in pdf.pages])
+                elif file_ext == 'docx':
+                    doc = docx.Document(io.BytesIO(uploaded_file.read()))
+                    content_to_process = "\n".join([para.text for para in doc.paragraphs])
+                else:
+                    st.error("Unsupported file type.")
+            except Exception as e:
+                st.error(f"Failed to read file: {e}")
         elif topic.strip():
             content_to_process = topic
+            note_name = topic
 
         if content_to_process:
             with st.spinner("Generating comprehensive notes..."):
@@ -438,14 +463,14 @@ elif st.session_state.page == "📝 Notes":
                     notes_content = generators['notes'].generate_notes(content_to_process)
                     if notes_content:
                         new_note = {
-                            "title": topic,
+                            "title": note_name or f"Note {datetime.now().strftime('%Y-%m-%d %H:%M')}",
                             "content": notes_content,
-                            "category": category,
+                            "category": category or "General",
                             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         }
                         st.session_state.notes.append(new_note)
                         auto_save()
-                        st.success(f"✅ Notes generated successfully for '{topic}'!")
+                        st.success(f"✅ Notes generated successfully for '{note_name}'!")
                         with st.expander("📖 Preview Generated Notes", expanded=True):
                             st.markdown(notes_content)
                     else:
@@ -474,7 +499,7 @@ elif st.session_state.page == "📝 Notes":
                 st.write(f"**Created:** {note['timestamp']}")
                 st.markdown(note['content'])
 
-                col1, col2, col3, col4 = st.columns([1,1,1,1])
+                col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
                 with col1:
                     if st.button("📚 Create Flashcards", key=f"flash_{i}"):
                         with st.spinner("Creating flashcards..."):
@@ -530,7 +555,6 @@ elif st.session_state.page == "📝 Notes":
                             st.rerun()
                         else:
                             st.warning("Enter a valid name.")
-
 
 elif st.session_state.page == "📚 Flashcards":
     st.title("📚 Interactive Flashcards")

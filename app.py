@@ -116,7 +116,13 @@ with st.sidebar:
         key="navigation"
     )
     st.session_state.page = page
-
+    st.divider()
+                if st.button("Save now"):
+                ok, msg = user_data.save_current_user(st.session_state)
+                if ok:
+                    st.success("Saved.")
+                else:
+                    st.error(msg)
 
     # Quick stats
     st.divider()

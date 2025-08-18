@@ -151,20 +151,23 @@ if "study_sessions" not in st.session_state:
 
 
 
-# --- Home Page ---
-# --- Home Page / User Account Section ---
 if st.session_state.get("page") == "🏠 Home":
-    st.title("🎓 Welcome")
+    st.title("🎓 Welcome to SmartStudy!")
 
-    # Show login/register when not logged in
+    # --- Login/Register Section ---
     if not st.session_state.get("logged_in", False):
-        st.subheader("Account")
-        mode = st.radio("Mode", ["Login", "Sign Up"], horizontal=True, key="auth_mode")
+        st.subheader("Account Access")
+        st.markdown(
+            "Access your personalized learning dashboard. "
+            "Sign up to save your progress or log in to continue where you left off."
+        )
+
+        mode = st.radio("Choose mode", ["Login", "Sign Up"], horizontal=True, key="auth_mode")
 
         if mode == "Sign Up":
             su = st.text_input("Username", key="su_user")
             sp = st.text_input("Password", type="password", key="su_pass")
-            confirm = st.text_input("Confirm password", type="password", key="su_confirm")
+            confirm = st.text_input("Confirm Password", type="password", key="su_confirm")
             if st.button("Create account"):
                 if not su or not sp:
                     st.warning("Enter username and password.")
@@ -175,55 +178,60 @@ if st.session_state.get("page") == "🏠 Home":
                     if ok:
                         st.session_state["logged_in"] = True
                         st.session_state["username"] = su
-                        # save browser data into the new account
+                        # Save local data to new account
                         success, smsg = user_data.save_current_user(st.session_state)
                         st.success("Account created. " + smsg)
-                        st.rerun()
+                        st.experimental_rerun()
                     else:
                         st.error(msg)
-
         else:  # Login
             lu = st.text_input("Username", key="li_user")
             lp = st.text_input("Password", type="password", key="li_pass")
             if st.button("Login"):
-                # admin backdoor: blank username + admin key (optional)
+                # Admin backdoor
                 if lu.strip() == "" and lp == st.secrets.get("ADMIN_KEY", ""):
                     st.session_state["admin_mode"] = True
-                    st.success("Admin mode")
+                    st.success("Admin mode enabled")
                 else:
                     ok, msg = user_data.authenticate(lu, lp)
                     if ok:
                         st.session_state["logged_in"] = True
                         st.session_state["username"] = lu
-                        # Merge DB data with any local data (prevents accidental loss)
-                        loaded_ok, data = user_data.load_user_data(lu, merge_local=True, local_state=st.session_state)
+                        # Merge DB data with any local data
+                        loaded_ok, data = user_data.load_user_data(
+                            lu, merge_local=True, local_state=st.session_state
+                        )
                         if loaded_ok:
                             st.session_state["notes"] = data.get("notes", [])
                             st.session_state["flashcards"] = data.get("flashcards", [])
                             st.session_state["study_sessions"] = data.get("study_sessions", [])
                             st.session_state["events"] = data.get("events", [])
-                            # persist merged state back to DB
                             user_data.save_current_user(st.session_state)
                         st.success(f"Welcome back, {lu}")
-                        st.rerun()
+                        st.experimental_rerun()
                     else:
                         st.error(msg)
 
         st.markdown("---")
-        st.write("Try the app before creating an account. When you sign up your current data in the browser will be saved to your account.")
+        st.info(
+            "Try the app before creating an account. "
+            "When you sign up, your current browser data will be saved to your account."
+        )
 
     else:
-        # logged in view
-        st.write(f"Logged in as **{st.session_state['username']}**")
-        if st.button("Logout"):
-            st.session_state["logged_in"] = False
-            st.session_state["username"] = ""
-            st.success("Logged out.")
-            st.session_state.clear() 
-            st.rerun()
+        # --- Logged-in View ---
+        st.subheader(f"Hello, {st.session_state['username']}!")
+        st.write("Your personalized learning dashboard is ready.")
+
+        col1, col2 = st.columns([3, 1])
+        with col2:
+            if st.button("Logout"):
+                st.session_state.clear()
+                st.success("Logged out.")
+                st.experimental_rerun()
 
         st.markdown("---")
-        st.subheader("Account settings")
+        st.subheader("Account Settings")
         new_pass = st.text_input("New password (leave blank to keep)", type="password", key="acc_new_pass")
         if st.button("Change Password"):
             if new_pass.strip():
@@ -232,6 +240,53 @@ if st.session_state.get("page") == "🏠 Home":
                     st.success("Password updated.")
                 else:
                     st.error(msg)
+
+        st.markdown("---")
+
+        # --- App Overview / Features ---
+        st.subheader("🚀 Quick Overview of SmartStudy")
+        st.markdown("""
+        Unlock your full learning potential with an intelligent, all-in-one study platform powered by AI.  
+        Whether you're preparing for exams, mastering a subject, or building long-term knowledge, this tool adapts to the way **you** learn best.
+        """)
+        st.markdown("""
+        ### Key Features:
+        - **📝 Smart Notes**: Instantly generate clear, structured notes from any topic  
+        - **🎴 Flashcards**: Create interactive flashcards to reinforce your memory  
+        - **❓ Adaptive Quizzes**: Test your knowledge with personalized, AI-driven quizzes  
+        - **📊 Progress Tracking**: Monitor your growth with detailed insights & analytics  
+        - **📑 Reports**: Export beautifully formatted PDF reports of your learning journey  
+        """)
+
+        st.markdown("""
+        ### Quick Start Guide:
+        1. **Create Notes** → Enter a topic you're studying and let AI generate study notes  
+        2. **Build Flashcards** → Turn your notes into bite-sized flashcards for revision  
+        3. **Test Yourself** → Take adaptive quizzes with instant feedback  
+        4. **Track Progress** → Watch your performance improve over time  
+        """)
+
+        # --- Recent Activity ---
+        if st.session_state.get("study_sessions"):
+            st.subheader("📅 Recent Activity")
+            recent_sessions = sorted(
+                st.session_state.study_sessions,
+                key=lambda x: x.get('timestamp', ''), reverse=True
+            )[:5]
+
+            for session in recent_sessions:
+                timestamp = datetime.fromisoformat(session['timestamp']).strftime("%Y-%m-%d %H:%M")
+                activity = session.get('activity_type', 'Unknown')
+
+                if activity == 'quiz':
+                    score = session.get('score', 0)
+                    st.write(f"🧠 {timestamp} - Quiz completed: {score:.1f}%")
+                elif activity == 'flashcards':
+                    count = session.get('flashcards_studied', 0)
+                    st.write(f"📚 {timestamp} - Studied {count} flashcards")
+                elif activity == 'flashcards_created':
+                    count = session.get('flashcards_created', 0)
+                    st.write(f"➕ {timestamp} - Created {count} flashcards")
 elif st.session_state.page == "📝 Notes":
     st.title("📝 AI Note Generator")
 

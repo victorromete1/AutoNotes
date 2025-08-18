@@ -364,80 +364,67 @@ elif st.session_state.page == "📝 Notes":
     # -----------------------------
     # Freeform Notes Mode
     # -----------------------------
-st.subheader("💡 Freeform Notes Mode")
+    st.subheader("💡 Freeform Notes Mode")
 
-# Note title
-note_title = st.text_input(
-    "Note Name (leave blank for default):",
-    placeholder="Enter a title for your note...",
-    key="free_note_title"
-)
+    # Note title
+    note_title = st.text_input(
+        "Note Name (leave blank for default):",
+        placeholder="Enter a title for your note...",
+        key="free_note_title"
+    )
 
-# Freeform text area
-free_note = st.text_area(
-    "Type your notes here:",
-    value="",  # start empty
-    placeholder="Write your class notes here...",
-    height=200,
-    key="free_note_text"
-)
+    # Freeform text area
+    free_note = st.text_area(
+        "Type your notes here:",
+        value="",  # start empty
+        placeholder="Write your class notes here...",
+        height=200,
+        key="free_note_text"
+    )
 
-# Category
-free_category = st.text_input(
-    "Category for these notes:",
-    value=st.session_state.get("free_note_cat", "General"),
-    key="free_note_cat"
-)
+    # Category
+    free_category = st.text_input(
+        "Category for these notes:",
+        value=st.session_state.get("free_note_cat", "General"),
+        key="free_note_cat"
+    )
 
-# Summarize checkbox
-summarize_option = st.checkbox(
-    "🧠 Summarize with AI",
-    value=st.session_state.get("summarize_option", True),
-    key="summarize_option"
-)
+    # Summarize checkbox
+    summarize_option = st.checkbox(
+        "🧠 Summarize with AI",
+        value=st.session_state.get("summarize_option", True),
+        key="summarize_option"
+    )
 
-# Save button
-if st.button("💾 Save Notes", key="save_free_note"):
-    if not free_note.strip():
-        st.warning("Please enter some text to save.")
-    else:
-        notes_content = free_note
-        if summarize_option:
-            with st.spinner("Summarizing notes with AI..."):
-                try:
-                    notes_content = generators['notes'].generate_notes(notes_content)
-                except Exception as e:
-                    st.error(f"AI summarization failed: {e}")
+    # Save button
+    if st.button("💾 Save Notes", key="save_free_note"):
+        if not free_note.strip():
+            st.warning("Please enter some text to save.")
+        else:
+            notes_content = free_note
+            if summarize_option:
+                with st.spinner("Summarizing notes with AI..."):
+                    try:
+                        notes_content = generators['notes'].generate_notes(notes_content)
+                    except Exception as e:
+                        st.error(f"AI summarization failed: {e}")
 
-        # Default title if empty
-        final_title = note_title.strip() or "Untitled Note"
+            # Default title if empty
+            final_title = note_title.strip() or "Untitled Note"
 
-        # Save note to session state
-        new_note = {
-            "title": final_title,
-            "content": notes_content,
-            "category": free_category or "General",
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-        st.session_state.notes.append(new_note)
-        auto_save()
-
-        st.success(f"✅ Note '{final_title}' saved!")
-        st.rerun()  # clears the text area safely
-
-            title = st.session_state.free_note_title.strip() or f"Note {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            # Save note to session state
             new_note = {
-                "title": title,
+                "title": final_title,
                 "content": notes_content,
-                "category": free_category,
+                "category": free_category or "General",
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
             st.session_state.notes.append(new_note)
             auto_save()
-            st.success(f"✅ Note '{title}' saved under '{free_category}'!")
-            st.session_state.free_note_text = ""
-            st.session_state.free_note_title = ""
-            st.rerun()
+
+            st.success(f"✅ Note '{final_title}' saved!")
+            st.rerun()  # clears the text area safely
+
 
     st.markdown("---")
 

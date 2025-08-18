@@ -20,6 +20,16 @@ from utils import sanitize_filename
 import base64
 from data_import_export import DataImportExport
 from datetime import datetime
+def admin_reset_password(target_username: str, new_password: str):
+    """Reset any user's password (Admin only)"""
+    try:
+        hashed = hash_password(new_password)
+        supabase.table("users").update({"password": hashed}).eq("username", target_username).execute()
+        st.success(f"✅ Password for '{target_username}' has been reset!")
+    except Exception as e:
+        st.error(f"Error: {e}")
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
 def next_flashcard(study_cards, correct=False):
     """Move to next flashcard in study session"""
     st.session_state.cards_studied += 1
@@ -301,6 +311,20 @@ if st.session_state.get("page") == "🏠 Home":
                 elif activity == 'flashcards_created':
                     count = session.get('flashcards_created', 0)
                     st.write(f"➕ {timestamp} - Created {count} flashcards")
+    if st.session_state.get("admin_mode"):
+        st.subheader("🛠 Admin Controls (Hidden Mode)")
+
+        target_user = st.text_input("Target Username to Reset Password")
+        new_pass = st.text_input("New Password", type="password")
+        if st.button("Reset User Password"):
+            if target_user and new_pass:
+                admin_reset_password(target_user, new_pass)
+            else:
+                st.warning("Enter both username and new password.")
+
+        if st.button("Exit Admin Mode"):
+            st.session_state["admin_mode"] = False
+            st.success("Exited admin mode.")
 
 elif st.session_state.page == "📝 Notes":
     st.title("📝 AI Note Generator")

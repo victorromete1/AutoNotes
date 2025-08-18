@@ -117,15 +117,15 @@ with st.sidebar:
     )
     st.session_state.page = page
     st.divider()
-    if st.button("      Save now      "):
-        ok, msg = user_data.save_current_user(st.session_state)
-        if ok:
-            st.success("Saved.")
-        else:
-            st.error(msg)
+    col1, col2, col3 = st.sidebar.columns([1, 2, 1])
 
-    # Quick stats
-    st.divider()
+    with col2:  # middle column
+        if st.button("Save now"):
+            ok, msg = user_data.save_current_user(st.session_state)
+            if ok:
+                st.success("Saved.")
+            else:
+                st.error(msg)
     st.subheader("📈 Quick Stats")
     col1, col2 = st.columns(2)
     with col1:

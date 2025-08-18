@@ -26,6 +26,13 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 ADMIN_KEY = st.secrets["ADMIN_KEY"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+def admin_delete_account(target_username: str):
+    """Delete any user's account (Admin only)"""
+    try:
+        supabase.from_("users").delete().eq("username", target_username).execute()
+        st.success(f"✅ Account '{target_username}' has been deleted!")
+    except Exception as e:
+        st.error(f"Error: {e}")
 def admin_reset_password(target_username: str, new_password: str):
     """Reset any user's password (Admin only)"""
     try:
@@ -259,13 +266,11 @@ if st.session_state.get("page") == "🏠 Home":
         st.subheader(f"Hello, {st.session_state['username']}!")
         st.write("Your personalized learning dashboard is ready.")
 
-        # Logout button
-        col1, col2 = st.columns([3, 1])
-        with col2:
-            if st.button("Logout"):
-                st.session_state.clear()
-                st.success("Logged out.")
-                st.rerun()
+
+        if st.button("Logout"):
+            st.session_state.clear()
+            st.success("Logged out.")
+            st.rerun()
 
         st.markdown("---")
         # Account settings
@@ -327,6 +332,14 @@ if st.session_state.get("page") == "🏠 Home":
                 admin_reset_password(target_user, new_pass)
             else:
                 st.warning("Enter both username and new password.")
+        st.subheader("Delete a User Account")
+        del_user = st.text_input("Username to delete", key="admin_del_user")
+        if st.button("Delete Account"):
+            if del_user:
+                admin_delete_account(del_user)
+            else:
+                st.warning("Enter a username to delete.")
+
 
         if st.button("Exit Admin Mode"):
             st.session_state["admin_mode"] = False

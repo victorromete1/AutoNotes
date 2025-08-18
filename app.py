@@ -143,9 +143,7 @@ if "flashcards" not in st.session_state:
 if "study_sessions" not in st.session_state:
     st.session_state.study_sessions = []
 
-# Auto-save for logged-in users
-if st.session_state.get("logged_in"):
-    save_current_user()  # Now pushes to GitHub automatically
+
 
 # --- Home Page ---
 # --- Home Page / User Account Section ---

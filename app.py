@@ -3,6 +3,7 @@ import calendar
 from html import escape
 import streamlit as st
 import json
+import time
 from PyPDF2 import PdfReader
 import docx
 from datetime import datetime, timedelta
@@ -1125,3 +1126,9 @@ elif st.session_state.page == "📅 Calendar":
 # Auto-save every few minutes
 if len(st.session_state.study_sessions) % 5 == 0:
     auto_save()
+import time
+
+if st.session_state.get("logged_in"):
+    # save every run if logged in
+    user_data.save_current_user(st.session_state)
+

@@ -398,6 +398,7 @@ elif st.session_state.page == "📝 Notes":
 
     # Save button
     if st.button("💾 Save Notes", key="save_free_note"):
+        user_data.save_current_user(st.session_state)
         if not free_note.strip():
             st.warning("Please enter some text to save.")
         else:
@@ -445,6 +446,7 @@ elif st.session_state.page == "📝 Notes":
     )
 
     if st.button("🚀 Generate Notes", key="generate_ai_notes"):
+        user_data.save_current_user(st.session_state)
         content_to_process = ""
         note_name = ""
 
@@ -513,6 +515,7 @@ elif st.session_state.page == "📝 Notes":
                 col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
                 with col1:
                     if st.button("📚 Create Flashcards", key=f"flash_{i}"):
+                        user_data.save_current_user(st.session_state)
                         with st.spinner("Creating flashcards..."):
                             try:
                                 flashcards = generators['flashcards'].generate_flashcards(
@@ -549,6 +552,7 @@ elif st.session_state.page == "📝 Notes":
                 with col3:
                     if st.button("🗑️ Delete", key=f"delete_{i}"):
                         st.session_state.notes.remove(note)
+                        user_data.save_current_user(st.session_state)
                         auto_save()
                         st.rerun()
 
@@ -559,6 +563,7 @@ elif st.session_state.page == "📝 Notes":
                         key=f"rename_{i}"
                     )
                     if st.button("✏️ Rename", key=f"rename_btn_{i}"):
+                        user_data.save_current_user(st.session_state)
                         if new_name.strip():
                             note['title'] = new_name.strip()
                             auto_save()

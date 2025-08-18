@@ -21,11 +21,16 @@ from utils import sanitize_filename
 import base64
 from data_import_export import DataImportExport
 from datetime import datetime
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+ADMIN_KEY = st.secrets["ADMIN_KEY"]
+
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 def admin_reset_password(target_username: str, new_password: str):
     """Reset any user's password (Admin only)"""
     try:
         hashed = hash_password(new_password)
-        supabase.from_("users").update({"password": hashed}).eq("username", target_username).execute()
+        supabase.table("users").update({"password": hashed}).eq("username", target_username).execute()
         st.success(f"✅ Password for '{target_username}' has been reset!")
     except Exception as e:
         st.error(f"Error: {e}")

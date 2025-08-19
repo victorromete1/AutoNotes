@@ -382,6 +382,8 @@ if st.session_state.get("page") == "🏠 Home":
 
 elif st.session_state.page == "📝 Notes":
     # After logging quiz results
+    st.session_state.xp_system.add(10)  # +10 XP per quiz
+    show_xp_bar()
 
     st.title("📝 AI Note Generator & Class Notes")
 

@@ -287,7 +287,6 @@ if st.session_state.get("page") == "🏠 Home":
         """)
 
     else:
-        st.rerun()
         # --- Logged-in view ---
         st.subheader(f"Hello, {st.session_state['username']}!")
         st.write("Your personalized learning dashboard is ready.")

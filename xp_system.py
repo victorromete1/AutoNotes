@@ -45,3 +45,11 @@ class XPSystem:
         current_in_rank = self.xp - low
         needed = high - low if high != float("inf") else 0
         return rank, self.xp, current_in_rank, needed
+    def show_xp_bar():
+        xp_system = st.session_state.xp_system
+        rank, total_xp, current_in_segment, needed = xp_system.progress()
+        st.subheader(f"🏅 Rank: {rank}")
+        if needed > 0:
+            st.progress(current_in_segment / needed)
+        st.markdown(f"**{total_xp} XP**")
+

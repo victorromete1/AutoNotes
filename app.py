@@ -22,7 +22,7 @@ from utils import sanitize_filename
 import base64
 from data_import_export import DataImportExport
 from datetime import datetime
-from xp_system import XPSystem
+
 
 # Initialize XP system
 if "xp_system" not in st.session_state:
@@ -32,14 +32,6 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 ADMIN_KEY = st.secrets["ADMIN_KEY"]
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-def show_xp_bar():
-    xp_system = st.session_state.xp_system
-    xp_system.tick_time()  # update time-based XP
-    rank, total_xp, current, needed = xp_system.progress()
-    
-    st.subheader(f"🏅 Rank: {rank}")
-    st.progress(current / needed)
-    st.markdown(f"**{total_xp} XP**")
 
 def admin_delete_account(target_username: str):
     """Delete any user's account (Admin only)"""
@@ -310,8 +302,6 @@ if st.session_state.get("page") == "🏠 Home":
                     st.error(msg)
 
         st.markdown("---")
-        show_xp_bar()  # call once on Home page load
-        st.session_state.xp_system.tick_time()
 
         # Show XP progress bar
         rank, total_xp, current, needed = st.session_state.xp_system.progress()

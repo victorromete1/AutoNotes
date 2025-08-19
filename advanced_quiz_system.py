@@ -105,6 +105,7 @@ class AdvancedQuizSystem:
         if st.session_state.quiz_state['completed']:
             progress = 1.0
             status = "Quiz completed!"
+            st.session_state.xp_system.add(10)
         else:
             progress = (current) / total if total else 0.0
             status = f"Question {current + 1} of {total}"

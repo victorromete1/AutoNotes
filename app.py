@@ -22,6 +22,7 @@ from utils import sanitize_filename
 import base64
 from data_import_export import DataImportExport
 from datetime import datetime
+from xp_learn import XPSystem
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 ADMIN_KEY = st.secrets["ADMIN_KEY"]
@@ -44,6 +45,8 @@ def admin_reset_password(target_username: str, new_password: str):
         st.error(f"Error: {e}")
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
+if "xp" not in st.session_state:
+    st.session_state.xp_system = XPSystem()
 def next_flashcard(study_cards, correct=False):
     """Move to next flashcard in study session"""
     st.session_state.cards_studied += 1
@@ -294,6 +297,15 @@ if st.session_state.get("page") == "🏠 Home":
                     st.error(msg)
 
         st.markdown("---")
+        st.session_state.xp_system.tick_time()
+
+        # Show XP progress bar
+        rank, total_xp, current, needed = st.session_state.xp_system.progress()
+        st.subheader(f"🏅 Rank: {rank}")
+        if needed > 0:
+            st.progress(current / needed, text=f"{total_xp}/{needed + (total_xp - current)} XP")
+        else:
+            st.progress(1.0, text=f"{total_xp} XP (Max)")
 
         # Features / overview for logged-in users (optional, can remove)
         st.subheader("🚀 Quick Overview of SmartStudy")

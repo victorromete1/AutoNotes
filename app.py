@@ -515,6 +515,7 @@ elif st.session_state.page == "📝 Notes":
             # Use typed topic directly
             content_to_process = topic
             note_name = topic
+            
 
         # Generate notes via NoteGenerator
         if content_to_process:
@@ -533,6 +534,7 @@ elif st.session_state.page == "📝 Notes":
                         st.success(f"✅ Notes generated successfully for '{note_name}'!")
                         with st.expander("📖 Preview Generated Notes", expanded=True):
                             st.markdown(notes_content)
+                            user_data.save_current_user(st.session_state)
                     else:
                         st.error("Failed to generate notes. Please try again.")
                 except Exception as e:
@@ -735,7 +737,6 @@ elif st.session_state.page == "📚 Flashcards":
                 category = st.text_input("Category:", value="General")
 
             if st.button("🚀 Generate Flashcards", type="primary"):
-                user_data.save_current_user(st.session_state)
                 if content.strip():
                     with st.spinner("Creating flashcards..."):
                         try:
@@ -767,6 +768,7 @@ elif st.session_state.page == "📚 Flashcards":
                                     st.write(f"**Back:** {card['back']}")
                             if len(flashcards) > 3:
                                 st.info(f"+ {len(flashcards) - 3} more cards created!")
+                                ser_data.save_current_user(st.session_state)
                         except Exception as e:
                             st.error(f"Error: {str(e)}")
                 else:
@@ -790,6 +792,7 @@ elif st.session_state.page == "📚 Flashcards":
                         }
                         st.session_state.flashcards.append(new_card)
                         auto_save()
+                        ser_data.save_current_user(st.session_state)
                         st.success("✅ Flashcard added!")
                     else:
                         st.warning("Please fill in both sides.")
@@ -830,6 +833,7 @@ elif st.session_state.page == "📚 Flashcards":
 
                             st.session_state.flashcards.extend(flashcards)
                             auto_save()
+                            user_data.save_current_user(st.session_state)
                             st.success(f"✅ Generated {len(flashcards)} flashcards!")
 
                             # Log activity
@@ -886,6 +890,7 @@ elif st.session_state.page == "📚 Flashcards":
 
                                     st.session_state.flashcards.extend(flashcards)
                                     auto_save()
+                                    user_data.save_current_user(st.session_state)
                                     st.success(f"✅ Generated {len(flashcards)} flashcards from note!")
 
                                     # Log activity

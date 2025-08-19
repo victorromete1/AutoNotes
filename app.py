@@ -628,13 +628,14 @@ elif st.session_state.page == "📚 Flashcards":
 
                 # Answer section
                 if st.session_state.show_answer:
-                    st.markdown(f"""
-                    <div style="border: 2px solid #4CAF50; border-radius: 10px; padding: 20px; margin: 20px 0; 
-                               background-color: #e8f5e8; text-align: center;">
-                        <h4>Answer:</h4>
-                        <p>{current_card['back']}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                st.markdown(f"""
+                <div style="border: 2px solid #4CAF50; border-radius: 10px; padding: 20px; margin: 20px 0; 
+                           background-color: #e8f5e8; color: black; text-align: center;">
+                    <h4>Answer:</h4>
+                    <p>{current_card['back']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
 
                     st.markdown("### How well did you know this?")
                     col1, col2, col3 = st.columns(3)
@@ -1222,6 +1223,7 @@ elif st.session_state.page == "📅 Calendar":
     html = """
     <style>
         .calendar-day {
+            color: black;
             padding: 10px;
             background: #f9f9f9;
             border-radius: 8px;

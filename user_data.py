@@ -1,226 +1,127 @@
-# user_data.py
-# Helpers for Supabase user + data sync. Meant to be imported by app.py.
-
+# user_data.py - Complete Case-Insensitive Solution (No DB Changes)
 import hashlib
 from datetime import datetime
-from typing import List, Dict, Optional
-
-# NOTE: this file reads secrets from streamlit's st.secrets.
-# If you don't use streamlit.secrets, replace these lines in app.py before importing.
+from typing import Tuple, Optional, Dict, List
 import streamlit as st
 from supabase import create_client
 
+# Initialize Supabase
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-ADMIN_KEY = st.secrets.get("ADMIN_KEY", "")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-
-# ---------- Utilities ----------
-def _now_iso():
-    return datetime.utcnow().isoformat()
-
-
+# ---- Core Functions ----
 def hash_password(password: str) -> str:
-    """Simple sha256 hashing. Replace with bcrypt/argon2 for production."""
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    """SHA-256 hashing for passwords"""
+    return hashlib.sha256(password.encode()).hexdigest()
 
+def _find_user_by_username(username: str) -> Optional[Dict]:
+    """Case-insensitive user lookup (helper function)"""
+    users = supabase.table("users").select("*").execute().data
+    return next((u for u in users if u["username"].lower() == username.lower()), None)
 
-# ---------- Auth / user management ----------
-def register_user(username: str, password: str) -> (bool, str):
-    """Create a user row. Returns (success, message)."""
-    if not username or not password:
-        return False, "username & password required"
+# ---- Authentication ----
+def register_user(username: str, password: str) -> Tuple[bool, str]:
+    """Register with original casing but case-insensitive checks"""
+    if len(username) < 4:
+        return False, "Username must be 4+ characters"
+    
+    existing_user = _find_user_by_username(username)
+    if existing_user:
+        return False, f"Username '{existing_user['username']}' already exists (case-insensitive)"
+    
     try:
-        q = supabase.table("users").select("username").eq("username", username).execute()
-        if q.data and len(q.data) > 0:
-            return False, "username already exists"
-        hashed = hash_password(password)
         supabase.table("users").insert({
-            "username": username,
-            "password": hashed,
-            "created_at": _now_iso()
+            "username": username,  # Store with original case
+            "password": hash_password(password),
+            "created_at": datetime.utcnow().isoformat()
         }).execute()
-        return True, "user created"
+        return True, "Registration successful!"
     except Exception as e:
-        return False, f"register error: {e}"
+        return False, f"Registration failed: {str(e)}"
 
+def authenticate(username: str, password: str) -> Tuple[bool, str, Optional[str]]:
+    """Login with any username casing, returns (success, message, actual_username)"""
+    user = _find_user_by_username(username)
+    if not user:
+        return False, "User not found", None
+    
+    if user["password"] == hash_password(password):
+        return True, "Login successful", user["username"]  # Return actual username casing
+    return False, "Incorrect password", None
 
-def authenticate(username: str, password: str) -> (bool, str):
-    """Return (is_authenticated, message)."""
+# ---- User Management ----
+def update_password(username: str, new_password: str) -> Tuple[bool, str]:
+    """Case-insensitive password update"""
+    user = _find_user_by_username(username)
+    if not user:
+        return False, "User not found"
+    
     try:
-        hashed = hash_password(password)
-        r = supabase.table("users").select("username").eq("username", username).eq("password", hashed).execute()
-        ok = bool(r.data and len(r.data) > 0)
-        return ok, "authenticated" if ok else "invalid username/password"
+        supabase.table("users").update({"password": hash_password(new_password)}) \
+             .eq("username", user["username"]).execute()
+        return True, "Password updated"
     except Exception as e:
-        return False, f"auth error: {e}"
+        return False, f"Update failed: {str(e)}"
 
-
-def admin_reset_password(target_username: str, new_password: str) -> (bool, str):
+def delete_user(username: str) -> Tuple[bool, str]:
+    """Case-insensitive account deletion"""
+    user = _find_user_by_username(username)
+    if not user:
+        return False, "User not found"
+    
     try:
-        hashed = hash_password(new_password)
-        supabase.table("users").update({"password": hashed}).eq("username", target_username).execute()
-        return True, "password reset"
+        # Delete all user data first
+        supabase.table("user_data").delete().eq("username", user["username"]).execute()
+        supabase.table("users").delete().eq("username", user["username"]).execute()
+        return True, "Account deleted"
     except Exception as e:
-        return False, f"admin reset error: {e}"
+        return False, f"Deletion failed: {str(e)}"
 
-
-def delete_account_db(username: str) -> (bool, str):
+# ---- Data Handling ----
+def save_user_data(username: str, data_type: str, data: List[Dict]) -> Tuple[bool, str]:
+    """Save notes/flashcards/etc with case-insensitive lookup"""
+    user = _find_user_by_username(username)
+    if not user:
+        return False, "User not found"
+    
     try:
-        supabase.table("users").delete().eq("username", username).execute()
-        return True, "account deleted"
+        # First clear existing data
+        supabase.table(data_type).delete().eq("username", user["username"]).execute()
+        
+        # Insert new data with timestamp
+        records = [{**item, "username": user["username"], 
+                   "updated_at": datetime.utcnow().isoformat()} 
+                  for item in data]
+        
+        supabase.table(data_type).insert(records).execute()
+        return True, "Data saved successfully"
     except Exception as e:
-        return False, f"delete error: {e}"
+        return False, f"Save error: {str(e)}"
 
-
-# ---------- Save / load user data ----------
-def save_current_user(session_state: dict) -> (bool, str):
-    """
-    Push st.session_state-like dict to Supabase.
-    Expects session_state to contain:
-      - 'username' (str)
-      - keys: notes (list of dict), flashcards (list), study_sessions (list), events (list)
-    Returns (success, message).
-    """
-    username = session_state.get("username")
-    logged = session_state.get("logged_in", False)
-    if not logged or not username:
-        return False, "not logged in"
-
+def load_user_data(username: str, data_type: str) -> Tuple[bool, List[Dict]]:
+    """Load user data with case-insensitive lookup"""
+    user = _find_user_by_username(username)
+    if not user:
+        return False, []
+    
     try:
-        # ensure user row exists (upsert)
-
-        # Notes: remove existing for user, insert current (simple strategy)
-        supabase.table("notes").delete().eq("username", username).execute()
-        notes_to_insert = []
-        for n in session_state.get("notes", []):
-            notes_to_insert.append({
-                "username": username,
-                "title": n.get("title"),
-                "content": n.get("content"),
-                "category": n.get("category", "General"),
-                "created_at": n.get("timestamp") or _now_iso(),
-                "updated_at": n.get("timestamp") or _now_iso()
-            })
-        if notes_to_insert:
-            supabase.table("notes").insert(notes_to_insert).execute()
-
-        # Flashcards
-        supabase.table("flashcards").delete().eq("username", username).execute()
-        fcs = []
-        for c in session_state.get("flashcards", []):
-            fcs.append({
-                "username": username,
-                "front": c.get("front"),
-                "back": c.get("back"),
-                "category": c.get("category", "General"),
-                "created_at": c.get("created") or _now_iso()
-            })
-        if fcs:
-            supabase.table("flashcards").insert(fcs).execute()
-
-        # Study sessions (store as JSON objects)
-        supabase.table("study_sessions").delete().eq("username", username).execute()
-        ss = []
-        for s in session_state.get("study_sessions", []):
-            ss.append({
-                "username": username,
-                "timestamp": s.get("timestamp") or _now_iso(),
-                "activity_type": s.get("activity_type"),
-                "data": s
-            })
-        if ss:
-            supabase.table("study_sessions").insert(ss).execute()
-
-        # Events (calendar)
-        supabase.table("events").delete().eq("username", username).execute()
-        events = []
-        for e in session_state.get("events", []):
-            events.append({
-                "username": username,
-                "name": e.get("name"),
-                "date": e.get("date"),
-                "notes": e.get("notes"),
-                "color": e.get("color"),
-                "created_at": e.get("created") or _now_iso()
-            })
-        if events:
-            supabase.table("events").insert(events).execute()
-
-        return True, "saved"
+        data = supabase.table(data_type) \
+                     .select("*") \
+                     .eq("username", user["username"]) \
+                     .execute().data
+        return True, data
     except Exception as e:
-        return False, f"save error: {e}"
+        return False, []
 
+# ---- Admin Tools ----
+def admin_get_all_users() -> List[Dict]:
+    """Get all users (admin only)"""
+    return supabase.table("users").select("username, created_at").execute().data
 
-def load_user_data(username: str, merge_local: bool = False, local_state: Optional[dict] = None) -> (bool, dict):
-    """
-    Load user data from DB. Returns (success, payload).
-    payload is a dict with keys: notes, flashcards, study_sessions, events.
-    If merge_local==True and local_state provided, DB rows are appended after local rows.
-    """
-    try:
-        # notes
-        r = supabase.table("notes").select("*").eq("username", username).execute()
-        notes = []
-        if r.data:
-            for row in r.data:
-                notes.append({
-                    "title": row.get("title"),
-                    "content": row.get("content"),
-                    "category": row.get("category"),
-                    "timestamp": row.get("created_at")
-                })
-
-        # flashcards
-        r = supabase.table("flashcards").select("*").eq("username", username).execute()
-        flashcards = []
-        if r.data:
-            for row in r.data:
-                flashcards.append({
-                    "front": row.get("front"),
-                    "back": row.get("back"),
-                    "category": row.get("category"),
-                    "created": row.get("created_at")
-                })
-
-        # study_sessions
-        r = supabase.table("study_sessions").select("*").eq("username", username).execute()
-        study_sessions = []
-        if r.data:
-            for row in r.data:
-                study_sessions.append(row.get("data") or {"timestamp": row.get("timestamp"), "activity_type": row.get("activity_type")})
-
-        # events
-        r = supabase.table("events").select("*").eq("username", username).execute()
-        events = []
-        if r.data:
-            for row in r.data:
-                events.append({
-                    "name": row.get("name"),
-                    "date": row.get("date"),
-                    "notes": row.get("notes"),
-                    "color": row.get("color"),
-                    "created": row.get("created_at")
-                })
-
-        payload = {
-            "notes": notes,
-            "flashcards": flashcards,
-            "study_sessions": study_sessions,
-            "events": events
-        }
-
-        # merge logic (simple concat)
-        if merge_local and local_state:
-            merged = {
-                "notes": local_state.get("notes", []) + payload["notes"],
-                "flashcards": local_state.get("flashcards", []) + payload["flashcards"],
-                "study_sessions": local_state.get("study_sessions", []) + payload["study_sessions"],
-                "events": local_state.get("events", []) + payload["events"]
-            }
-            return True, merged
-
-        return True, payload
-    except Exception as e:
-        return False, {"error": str(e)}
+def admin_impersonate(username: str) -> Tuple[bool, str, Optional[Dict]]:
+    """Admin login-as (returns actual user data)"""
+    user = _find_user_by_username(username)
+    if not user:
+        return False, "User not found", None
+    return True, "Impersonation successful", user

@@ -176,7 +176,8 @@ with st.sidebar:
         "Navigate:",
         ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📋 Reports", "📅 Calendar", "📝 Autograder"],
         key="navigation"
-    ).session_state.page = page
+    )
+    st.session_state.page = page
 
     # Manual save action
     col1, col2, col3 = st.sidebar.columns([1, 2, 1])

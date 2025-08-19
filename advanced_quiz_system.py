@@ -3,7 +3,6 @@ import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 import streamlit as st
-from xp_system import XPSystem
 
 class AdvancedQuizSystem:
     def __init__(self, quiz_generator):
@@ -105,7 +104,6 @@ class AdvancedQuizSystem:
         if st.session_state.quiz_state['completed']:
             progress = 1.0
             status = "Quiz completed!"
-            st.session_state.xp_system.add(10)
         else:
             progress = (current) / total if total else 0.0
             status = f"Question {current + 1} of {total}"

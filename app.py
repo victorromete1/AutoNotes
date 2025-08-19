@@ -1223,7 +1223,6 @@ elif st.session_state.page == "📅 Calendar":
     html = """
     <style>
         .calendar-day {
-            color: black;
             padding: 10px;
             background: #f9f9f9;
             border-radius: 8px;
@@ -1278,7 +1277,7 @@ elif st.session_state.page == "📅 Calendar":
 
     # Weekday headers
     for wd in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
-        html += f"<div style='font-weight:bold; padding:10px; background:#f0f0f0; border-radius:4px;'>{wd}</div>"
+        html += f"<div style='font-weight:bold; padding:10px; background:#f0f0f0; border-radius:4px; color: black;'>{wd}</div>"
 
     today = datetime.now().date()
 

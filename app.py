@@ -195,12 +195,15 @@ if st.session_state.get("page") == "🏠 Home":
         mode = st.radio("Choose mode", ["Login", "Sign Up"], horizontal=True, key="auth_mode")
 
         if mode == "Sign Up":
-            su = st.text_input("Username", key="su_user")
+            su = st.text_input("Username", max_chars=10, key="su_user")
             sp = st.text_input("Password", type="password", key="su_pass")
             confirm = st.text_input("Confirm Password", type="password", key="su_confirm")
+
             if st.button("Create account"):
                 if not su or not sp:
                     st.warning("Enter username and password.")
+                elif len(su) > 10:
+                    st.warning("Username must be 10 characters or fewer.")
                 elif sp != confirm:
                     st.error("Passwords do not match.")
                 else:
@@ -213,6 +216,7 @@ if st.session_state.get("page") == "🏠 Home":
                         st.rerun()
                     else:
                         st.error(msg)
+
         else:
             lu = st.text_input("Username (Case Sensitive)", key="li_user")
             lp = st.text_input("Password", type="password", key="li_pass")

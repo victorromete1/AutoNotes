@@ -198,7 +198,6 @@ from datetime import datetime
 
 if st.session_state.get("page") == "🏠 Home":
     st.title("🎓 Welcome to SmartStudy!")
-    show_xp_bar()  # call once on Home page load
 
     if not st.session_state.get("logged_in", False):
         # --- Logged-out view ---
@@ -311,6 +310,7 @@ if st.session_state.get("page") == "🏠 Home":
                     st.error(msg)
 
         st.markdown("---")
+        show_xp_bar()  # call once on Home page load
         st.session_state.xp_system.tick_time()
 
         # Show XP progress bar

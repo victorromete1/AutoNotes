@@ -195,7 +195,7 @@ if st.session_state.get("page") == "🏠 Home":
         mode = st.radio("Choose mode", ["Login", "Sign Up"], horizontal=True, key="auth_mode")
 
         if mode == "Sign Up":
-            su = st.text_input("Username", max_chars=10, key="su_user")
+            su = st.text_input("Username", max_chars=15, key="su_user")
             sp = st.text_input("Password", type="password", key="su_pass")
             confirm = st.text_input("Confirm Password", type="password", key="su_confirm")
 
@@ -203,7 +203,7 @@ if st.session_state.get("page") == "🏠 Home":
                 if not su or not sp:
                     st.warning("Enter username and password.")
                 elif len(su) > 10 or len(su) < 4:
-                    st.warning("Username must be between 4 and 10 characters.")
+                    st.warning("Username must be between 4 and 15 characters.")
                 elif sp != confirm:
                     st.error("Passwords do not match.")
                 else:

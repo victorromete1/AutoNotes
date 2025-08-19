@@ -1,26 +1,18 @@
-# ============================
-# AI Study Platform (Streamlit)
-# Cleaned version with inline comments and section notes
-# - No features removed
-# - Imports deduped and ordered (shortest -> longest)
-# - Clear inline comments for every function/section
-# ============================
-
-# ---------- Imports (shortest -> longest) ----------
-import io                           # For byte streams (e.g., reading uploaded files)
+#imports
+import io
 import calendar                     # For building the calendar view
 import hashlib                      # For hashing passwords
-from datetime import datetime       # For timestamps / date handling
-from datetime import timedelta      # For duration math (if needed)
-from collections import defaultdict # For aggregating activity by day
+from datetime import datetime       # For dates
+from datetime import timedelta      # For duration 
+from collections import defaultdict 
 
-import streamlit as st              # Streamlit UI framework
+import streamlit as st              
 from PyPDF2 import PdfReader        # PDF text extraction
-import docx                         # Word (.docx) text extraction
+import docx                         # Docx text extraction
 
-from supabase import create_client  # Supabase client (database)
+from supabase import create_client  # Supabase client
 
-# Local / project modules (these are your existing modules)
+# Local Imports
 import user_data
 from note_generator import NoteGenerator
 from flashcard_generator import FlashcardGenerator
@@ -33,11 +25,10 @@ from data_import_export import DataImportExport
 from utils import sanitize_filename
 
 
-# ============================
-# Configuration & Setup
-# ============================
 
-# -- App base configuration --
+# Configuration & Setup
+
+# App base configuration
 st.set_page_config(
     page_title="AI Study Platform",
     page_icon="🎓",
@@ -45,29 +36,25 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# -- Secrets & Keys --
-# These must be set in .streamlit/secrets.toml
+# Secrets & Keys
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 ADMIN_KEY = st.secrets["ADMIN_KEY"]  # Used for hidden admin mode toggle
 
-# -- Supabase Client --
-# NOTE: We name the variable `supabase` (same as module name) on purpose,
-# but we do NOT import the module `supabase` itself to avoid confusion.
+# Supabase Client
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
-# ============================
-# Utility Functions (Admin, Auth Helpers, Flashcard Flow, Autosave)
-# ============================
 
-# Hash a raw password into a SHA-256 hex digest
+# Functions
+
+# Hash a raw password into SHA-256
 def hash_password(password: str) -> str:
     # Returns a hex string hash for secure storage
     return hashlib.sha256(password.encode()).hexdigest()
 
 
-# Delete any user's account (Admin-only; action is permanent)
+# Delete any user's account, admin only.
 def admin_delete_account(target_username: str):
     # Attempts to delete a user row from Supabase 'users' table
     try:
@@ -89,14 +76,14 @@ def admin_reset_password(target_username: str, new_password: str):
         st.error(f"Error: {e}")
 
 
-# Advance the flashcard study session to the next card, recording correctness
+# Advance the flashcard study session to the next card
 def next_flashcard(study_cards, correct=False):
     # Increment counters for studied and correct answers
     st.session_state.cards_studied += 1
     if correct:
         st.session_state.cards_correct += 1
 
-    # Move index and hide answer for the next card
+    # Hide answer for the next card
     st.session_state.study_index += 1
     st.session_state.show_answer = False
 
@@ -124,24 +111,20 @@ def next_flashcard(study_cards, correct=False):
             if key in st.session_state:
                 del st.session_state[key]
 
-    # Refresh the UI to show next card / end state
+    # Refresh UI
     st.rerun()
 
 
-# Autosave wrapper (silent)
+# Autosave
 def auto_save():
-    # Tries to persist current user data without breaking the flow if it fails
     try:
         persistence.auto_save_data()
     except Exception:
         pass
 
+# Resources
 
-# ============================
-# Resource Initialization
-# ============================
-
-# Cache heavy generator resources across reruns (faster UX)
+# Cache heavy generator resources across reruns
 @st.cache_resource
 def get_generators():
     # Construct and return a dictionary of the various generators
@@ -158,10 +141,7 @@ persistence = DataPersistence()
 data_io = DataImportExport(persistence)
 advanced_quiz = AdvancedQuizSystem(generators['quiz'])
 
-
-# ============================
 # Session State Initialization
-# ============================
 
 def init_session_state():
     # Provide defaults for keys we rely upon throughout the app
@@ -185,15 +165,12 @@ init_session_state()
 # Load previously persisted data (per-user)
 persistence.load_all_data()
 
-
-# ============================
-# Sidebar (Navigation + Quick Actions)
-# ============================
+# Sidebar
 
 with st.sidebar:
     st.title("🎓 Study Platform")
 
-    # -- Navigation selector --
+    # Navigation selector
     page = st.selectbox(
         "Navigate:",
         ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📋 Reports", "📅 Calendar"],
@@ -201,7 +178,7 @@ with st.sidebar:
     )
     st.session_state.page = page
 
-    # -- Manual "Save now" action --
+    # Manual save action
     col1, col2, col3 = st.sidebar.columns([1, 2, 1])
     with col2:
         if st.button("Save now"):
@@ -211,7 +188,7 @@ with st.sidebar:
             else:
                 st.error(msg)
 
-    # -- Quick Stats summary --
+    # Quick Stats summary
     st.subheader("📈 Quick Stats")
     c1, c2 = st.columns(2)
     with c1:
@@ -222,12 +199,12 @@ with st.sidebar:
         st.metric("Quizzes", len(quiz_sessions))
         st.metric("Sessions", len(st.session_state.study_sessions))
 
-    # -- Data import/export controls --
+    # Data import/export controls
     data_io.render_sidebar_controls()
 
 
 # ============================
-# Home Page (Auth + Overview + Admin Hidden)
+# Home Page
 # ============================
 
 if st.session_state.get("page") == "🏠 Home":
@@ -244,7 +221,7 @@ if st.session_state.get("page") == "🏠 Home":
         # Login / Sign Up toggle
         mode = st.radio("Choose mode", ["Login", "Sign Up"], horizontal=True, key="auth_mode")
 
-        # --- Sign Up flow ---
+        # Sign up
         if mode == "Sign Up":
             su = st.text_input("Username", max_chars=15, key="su_user")
             sp = st.text_input("Password", type="password", key="su_pass")
@@ -274,7 +251,7 @@ if st.session_state.get("page") == "🏠 Home":
                     else:
                         st.error(msg)
 
-        # --- Login flow ---
+        # Login
         else:
             lu = st.text_input("Username", key="li_user")
             lp = st.text_input("Password", type="password", key="li_pass")
@@ -307,7 +284,7 @@ if st.session_state.get("page") == "🏠 Home":
 
         st.markdown("---")
 
-        # Why SmartStudy (features overview)
+        # Explaination
         st.subheader("🚀 Why SmartStudy?")
         st.markdown("""
         Unlock your full learning potential with an intelligent, all-in-one study platform powered by AI.  
@@ -344,7 +321,7 @@ if st.session_state.get("page") == "🏠 Home":
 
         st.markdown("---")
 
-        # Account settings (user-initiated password change)
+        # Account settings
         st.subheader("Account Settings")
         new_pass = st.text_input("New password (leave blank to keep)", type="password", key="acc_new_pass")
         if st.button("Change Password"):
@@ -358,7 +335,7 @@ if st.session_state.get("page") == "🏠 Home":
 
         st.markdown("---")
 
-        # Feature overview (kept for context)
+        # Feature overview
         st.subheader("🚀 Quick Overview of SmartStudy")
         st.markdown("""
         Unlock your full learning potential with an intelligent, all-in-one study platform powered by AI.  
@@ -425,13 +402,6 @@ if st.session_state.get("page") == "🏠 Home":
 # ============================
 
 elif st.session_state.page == "📝 Notes":
-    # Optional XP hook (won't crash if xp_system isn't set elsewhere)
-    if "xp_system" in st.session_state:
-        try:
-            st.session_state.xp_system.add(10)  # +10 XP per visit/action
-        except Exception:
-            pass
-
     st.title("📝 AI Note Generator & Class Notes")
 
     # Ensure keys used by this page exist
@@ -444,7 +414,7 @@ elif st.session_state.page == "📝 Notes":
             elif "summarize_option" in key:
                 st.session_state[key] = True
 
-    # --- Freeform Notes Mode ---
+    # Freeform Notes Mode
     st.subheader("💡 Freeform Notes Mode")
 
     note_title = st.text_input(
@@ -505,7 +475,7 @@ elif st.session_state.page == "📝 Notes":
 
     st.markdown("---")
 
-    # --- AI Note Generation from Topic or File ---
+    # AII Note Generation from Topic or File
     st.subheader("🚀 Generate AI Notes from Topic or File")
     col1, col2 = st.columns([2, 1])
     with col1:
@@ -570,7 +540,7 @@ elif st.session_state.page == "📝 Notes":
         else:
             st.warning("Please enter a topic or upload a file.")
 
-    # --- Existing Notes List / Actions ---
+    # Existing Notes List
     if st.session_state.notes:
         st.divider()
         st.subheader("📚 Your Notes")
@@ -658,7 +628,7 @@ elif st.session_state.page == "📚 Flashcards":
 
     tab1, tab2, tab3 = st.tabs(["📖 Study", "➕ Create", "📂 Manage"])
 
-    # --- Study Tab ---
+    # Study Tab
     with tab1:
         st.subheader("📖 Study Session")
 
@@ -738,12 +708,12 @@ elif st.session_state.page == "📚 Flashcards":
                         st.session_state.show_answer = True
                         st.rerun()
 
-                # Session accuracy metric
+                # Session accuracy m
                 if st.session_state.cards_studied > 0:
                     accuracy = (st.session_state.cards_correct / st.session_state.cards_studied) * 100
                     st.metric("Session Accuracy", f"{accuracy:.1f}%")
 
-    # --- Create Tab ---
+    # Create Tab
     with tab2:
         st.subheader("➕ Create Flashcards")
 
@@ -943,7 +913,7 @@ elif st.session_state.page == "📚 Flashcards":
             else:
                 st.info("No notes available. Create some first!")
 
-    # --- Manage Tab ---
+    # Manage Tab
     with tab3:
         st.subheader("📂 Manage Flashcards")
 
@@ -1003,7 +973,7 @@ elif st.session_state.page == "🧠 Quizzes":
 
     tab1, tab2 = st.tabs(["📝 Take Quiz", "📊 History"])
 
-    # --- Take Quiz ---
+    # Take Quiz
     with tab1:
         # If a quiz is active, display it via AdvancedQuizSystem
         if st.session_state.get('quiz_active', False):
@@ -1084,7 +1054,7 @@ elif st.session_state.page == "🧠 Quizzes":
                 else:
                     st.warning("Please provide content for the quiz.")
 
-    # --- History ---
+    # History
     with tab2:
         st.subheader("📊 Quiz History")
 
@@ -1113,7 +1083,7 @@ elif st.session_state.page == "🧠 Quizzes":
                     st.write(f"**Score:** {score:.1f}%")
                     st.write(f"**Difficulty:** {session.get('difficulty', 'N/A')}")
 
-                    # Retake flow: store parameters and go back to creation tab
+                    # Retake
                     if st.button("🔄 Retake This Quiz", key=f"retake_{i}"):
                         user_data.save_current_user(st.session_state)
                         st.session_state.retake_quiz_content = session.get('original_content', '')
@@ -1200,7 +1170,7 @@ elif st.session_state.page == "📋 Reports":
                     # Ensure sessions are dicts (defensive)
                     valid_sessions = [s for s in st.session_state.study_sessions if isinstance(s, dict)]
 
-                    # Generate PDF bytes via PDFReportGenerator
+                    # Generate PDF via PDFReportGenerator
                     pdf_data = generators['pdf'].generate_progress_report(
                         valid_sessions,
                         st.session_state.notes,
@@ -1276,7 +1246,7 @@ elif st.session_state.page == "📅 Calendar":
 
     st.divider()
 
-    # Month Navigation Controls (‹ and ›)
+    # Month Navigation Controls
     c1, c2, c3 = st.columns([1, 3, 1])
     with c1:
         st.button("‹", key="prev_month", on_click=change_month, args=(-1,))
@@ -1445,7 +1415,7 @@ elif st.session_state.page == "📅 Calendar":
 
 
 # ============================
-# Autosave hook (lightweight)
+# Autosave hook 
 # ============================
 
 # Every 5 sessions, trigger an autosave (kept same behavior)

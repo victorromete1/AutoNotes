@@ -195,7 +195,7 @@ if st.session_state.get("page") == "🏠 Home":
         mode = st.radio("Choose mode", ["Login", "Sign Up"], horizontal=True, key="auth_mode")
 
         if mode == "Sign Up":
-            su = st.text_input("Username", max_chars=10, min_chars=4, key="su_user")
+            su = st.text_input("Username", max_chars=10, key="su_user")
             sp = st.text_input("Password", type="password", key="su_pass")
             confirm = st.text_input("Confirm Password", type="password", key="su_confirm")
 

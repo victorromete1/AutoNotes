@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 import streamlit as st
-
+from xp_system import XPSystem
 
 class AdvancedQuizSystem:
     def __init__(self, quiz_generator):

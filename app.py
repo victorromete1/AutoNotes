@@ -23,6 +23,7 @@ from data_persistence import DataPersistence
 from advanced_quiz_system import AdvancedQuizSystem
 from data_import_export import DataImportExport
 from utils import sanitize_filename
+from autograder import AutoGrader
 
 
 
@@ -173,10 +174,9 @@ with st.sidebar:
     # Navigation selector
     page = st.selectbox(
         "Navigate:",
-        ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📋 Reports", "📅 Calendar"],
+        ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes", "📊 Progress", "📋 Reports", "📅 Calendar", "📝 Autograder"],
         key="navigation"
-    )
-    st.session_state.page = page
+    ).session_state.page = page
 
     # Manual save action
     col1, col2, col3 = st.sidebar.columns([1, 2, 1])
@@ -1417,6 +1417,45 @@ elif st.session_state.page == "📅 Calendar":
                     user_data.save_current_user(st.session_state)
     else:
         st.info("No events to delete.")
+elif st.session_state.page == "📝 Autograder":
+    from autograder import AutoGrader
+    st.title("📝 AI Autograder")
+
+    text_input = st.text_area("✍️ Paste your essay, story, or text:", height=250, placeholder="Write or paste your text here...")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        text_type = st.selectbox("Text type:", ["Essay", "Story", "Article", "Other"])
+    with col2:
+        extra_notes = st.text_input("Extra notes (optional)", placeholder="e.g., Focus on creativity, academic tone...")
+
+    if st.button("🚀 Grade Now", type="primary", use_container_width=True):
+        if not text_input.strip():
+            st.warning("Please enter some text to grade.")
+        else:
+            grader = AutoGrader()
+            with st.spinner("Grading with AI..."):
+                result = grader.grade_text(text_input, text_type, extra_notes)
+
+            # --- Stylish Results ---
+            st.subheader(f"📊 Score: {result.get('score', 0)}/10")
+            st.progress(int(result.get("score", 0)) / 10)
+
+            st.markdown("### ✅ Strengths")
+            for s in result.get("strengths", []):
+                st.markdown(f"- {s}")
+
+            st.markdown("### ⚠️ Weaknesses")
+            for w in result.get("weaknesses", []):
+                st.markdown(f"- {w}")
+
+            st.markdown("### 💡 Suggestions to Improve")
+            for sug in result.get("suggestions", []):
+                st.markdown(f"- {sug}")
+
+            st.markdown("### 📝 Detailed Feedback")
+            st.info(result.get("detailed_feedback", "No feedback provided."))
+
 
 
 # ============================

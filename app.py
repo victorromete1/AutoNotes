@@ -611,11 +611,20 @@ elif st.session_state.page == "📚 Flashcards":
 
                 # Card display
                 st.markdown(f"""
-                <div style="border: 2px solid #ddd; border-radius: 10px; padding: 30px; margin: 20px 0; 
-                           background-color: #f9f9f9; text-align: center; min-height: 150px;">
+                <div style="
+                    border: 2px solid #ddd;
+                    border-radius: 10px;
+                    padding: 30px;
+                    margin: 20px 0;
+                    background-color: #f9f9f9;
+                    color: black;
+                    text-align: center;
+                    min-height: 150px;
+                ">
                     <h3>{current_card['front']}</h3>
                 </div>
                 """, unsafe_allow_html=True)
+
 
                 # Answer section
                 if st.session_state.show_answer:

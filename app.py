@@ -202,8 +202,12 @@ if st.session_state.get("page") == "🏠 Home":
             if st.button("Create account"):
                 if not su or not sp:
                     st.warning("Enter username and password.")
-                elif len(su) > 10 or len(su) < 4:
+                elif len(su) > 15 or len(su) < 4:
                     st.warning("Username must be between 4 and 15 characters.")
+                elif ' ' in su:
+                    st.error("Username cannot contain spaces")
+                elif not su.isalnum():
+                    st.error("Username can only contain letters and numbers (no special characters)")
                 elif sp != confirm:
                     st.error("Passwords do not match.")
                 else:

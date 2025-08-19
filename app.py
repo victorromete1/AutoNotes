@@ -300,13 +300,6 @@ if st.session_state.get("page") == "🏠 Home":
 
         st.markdown("---")
 
-        # Show XP progress bar
-        rank, total_xp, current, needed = st.session_state.xp_system.progress()
-        st.subheader(f"🏅 Rank: {rank}")
-        if needed > 0:
-            st.progress(current / needed, text=f"{total_xp}/{needed + (total_xp - current)} XP")
-        else:
-            st.progress(1.0, text=f"{total_xp} XP (Max)")
 
         # Features / overview for logged-in users (optional, can remove)
         st.subheader("🚀 Quick Overview of SmartStudy")

@@ -22,7 +22,11 @@ from utils import sanitize_filename
 import base64
 from data_import_export import DataImportExport
 from datetime import datetime
-from xp_system import XPSystem
+from xp_learn import XPSystem
+
+# Initialize XP system
+if "xp_system" not in st.session_state:
+    st.session_state.xp_system = XPSystem()
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 ADMIN_KEY = st.secrets["ADMIN_KEY"]

@@ -49,8 +49,6 @@ def admin_reset_password(target_username: str, new_password: str):
         st.error(f"Error: {e}")
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
-if "xp" not in st.session_state:
-    st.session_state.xp_system = XPSystem()
 def next_flashcard(study_cards, correct=False):
     """Move to next flashcard in study session"""
     st.session_state.cards_studied += 1

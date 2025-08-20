@@ -402,6 +402,7 @@ if st.session_state.get("page") == "🏠 Home":
 # Notes Page
 # ============================
 
+
 elif st.session_state.page == "📝 Notes":
     st.title("📝 AI Note Generator & Class Notes")
 
@@ -476,7 +477,7 @@ elif st.session_state.page == "📝 Notes":
 
     st.markdown("---")
 
-    # AII Note Generation from Topic or File
+    # AI Note Generation from Topic or File
     st.subheader("🚀 Generate AI Notes from Topic or File")
     col1, col2 = st.columns([2, 1])
     with col1:
@@ -542,6 +543,43 @@ elif st.session_state.page == "📝 Notes":
                     st.error(f"Error: {e}")
         else:
             st.warning("Please enter a topic or upload a file.")
+
+    st.markdown("---")
+
+    # 🎥 Generate AI Notes from YouTube
+    st.subheader("🎥 Generate AI Notes from YouTube")
+    youtube_url = st.text_input("Paste a YouTube link:", key="youtube_url")
+
+    if st.button("🎬 Generate Notes from YouTube", key="generate_youtube_notes"):
+        user_data.save_current_user(st.session_state)
+        video_id = extract_video_id(youtube_url)
+        if not video_id:
+            st.error("⚠️ Invalid YouTube link.")
+        else:
+            with st.spinner("Fetching transcript and generating notes..."):
+                transcript = fetch_transcript(video_id)
+                if transcript.startswith("Error"):
+                    st.error(transcript)
+                else:
+                    try:
+                        notes_content = generators['notes'].generate_notes(transcript)
+                        if notes_content:
+                            new_note = {
+                                "title": f"YouTube Note {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                                "content": notes_content,
+                                "category": "YouTube",
+                                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            }
+                            st.session_state.notes.append(new_note)
+                            auto_save()
+                            st.success("✅ Notes generated successfully from YouTube!")
+                            with st.expander("📖 Preview Generated Notes", expanded=True):
+                                st.markdown(notes_content)
+                                user_data.save_current_user(st.session_state)
+                        else:
+                            st.error("Failed to generate notes. Please try again.")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
 
     # Existing Notes List
     if st.session_state.notes:

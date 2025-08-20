@@ -88,8 +88,10 @@ def admin_reset_password(target_username: str, new_password: str):
 def extract_video_id(url):
     """
     Extract the 11-character video ID from a YouTube URL.
-    Supports full URLs and shortened youtu.be links.
+    Returns None if the URL is invalid or empty.
     """
+    if not url or not isinstance(url, str):
+        return None
     pattern = r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11})"
     match = re.search(pattern, url)
     if match:

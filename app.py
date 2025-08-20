@@ -75,6 +75,17 @@ def admin_reset_password(target_username: str, new_password: str):
         st.success(f"✅ Password for '{target_username}' has been reset!")
     except Exception as e:
         st.error(f"Error: {e}")
+        
+def extract_video_id(url):
+    """
+    Extract the 11-character video ID from a YouTube URL.
+    Supports full URLs and shortened youtu.be links.
+    """
+    pattern = r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11})"
+    match = re.search(pattern, url)
+    if match:
+        return match.group(1)
+    return None
 
 
 # Advance the flashcard study session to the next card

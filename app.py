@@ -569,7 +569,7 @@ elif st.session_state.page == "📝 Notes":
     st.markdown("---")
 
     # 🎥 Generate AI Notes from YouTube
-    st.subheader("🎥 Generate AI Notes from YouTube")
+    st.subheader("🎥 Generate AI Notes from YouTube (Broken right now)")
     youtube_url = st.text_input("Paste a YouTube link:", key="youtube_url")
 
     if st.button("🎬 Generate Notes from YouTube", key="generate_youtube_notes"):

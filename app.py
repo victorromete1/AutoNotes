@@ -5,6 +5,7 @@ import hashlib                      # For hashing passwords
 from datetime import datetime       # For dates
 from datetime import timedelta      # For duration 
 from collections import defaultdict 
+from youtube_transcript_api import YouTubeTranscriptApi
 
 import streamlit as st              
 from PyPDF2 import PdfReader        # PDF text extraction
@@ -53,6 +54,14 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 def hash_password(password: str) -> str:
     # Returns a hex string hash for secure storage
     return hashlib.sha256(password.encode()).hexdigest()
+
+def fetch_transcript(video_id):
+    try:
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        text = " ".join([t["text"] for t in transcript])
+        return text
+    except Exception as e:
+        return f"Error fetching transcript: {e}"
 
 
 # Delete any user's account, admin only.

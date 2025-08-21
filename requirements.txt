@@ -1,6 +1,6 @@
-beautifulsoup4==4.12.2
+beautifulsoup4
 
-lxml==4.9.3
+lxml
 youtube-transcript-api
 pygithub
 altair==5.5.0

@@ -570,7 +570,7 @@ elif st.session_state.page == "📝 Notes":
                     transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
                     transcript = " ".join([t["text"] for t in transcript_data])
                 except Exception as e:
-                    st.error(f"⚠️ Error fetching transcript: {e}")
+                    st.error("❌ No transcript available for this video (captions may be disabled).")
                     transcript = None
 
                 if transcript:

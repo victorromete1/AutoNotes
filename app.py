@@ -6,7 +6,7 @@ import hashlib                      # For hashing passwords
 from datetime import datetime       # For dates
 from datetime import timedelta      # For duration 
 from collections import defaultdict 
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 
 import streamlit as st              
 from PyPDF2 import PdfReader        # PDF text extraction

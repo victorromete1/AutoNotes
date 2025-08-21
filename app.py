@@ -253,6 +253,37 @@ with st.sidebar:
             st.success("Logged out.")
             st.rerun()
 
+        # Manual save action (only if logged in)
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("💾 Save now"):
+                ok, msg = user_data.save_current_user(st.session_state)
+                if ok:
+                    st.success("Saved.")
+                else:
+                    st.error(msg)
+
+        # Quick Stats summary
+        st.subheader("📈 Quick Stats")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.metric("📝 Notes", len(st.session_state.notes))
+            st.metric("🎴 Flashcards", len(st.session_state.flashcards))
+        with c2:
+            quiz_sessions = [
+                s for s in st.session_state.study_sessions
+                if s.get('activity_type') == 'quiz'
+            ]
+            st.metric("🧠 Quizzes", len(quiz_sessions))
+            st.metric("📚 Sessions", len(st.session_state.study_sessions))
+
+        # Admin mode indicator
+        if st.session_state.get("admin_mode"):
+            st.info("🛠 Admin Mode Active")
+
+        # Data import/export controls
+        data_io.render_sidebar_controls()
+
     # Navigation (only show if logged in)
     if st.session_state.get("logged_in", False):
         page = st.selectbox(

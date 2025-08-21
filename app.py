@@ -46,7 +46,6 @@ ADMIN_KEY = st.secrets["ADMIN_KEY"]  # Used for hidden admin mode toggle
 
 # Supabase Client
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
 
 
 

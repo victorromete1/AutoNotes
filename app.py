@@ -623,7 +623,7 @@ elif st.session_state.page == "📝 Notes":
                     
                     if response.status_code != 200:
                         st.error("❌ Could not access YouTube video")
-                        return None
+                        continue
                     
                     # Parse the HTML to find transcript data
                     soup = BeautifulSoup(response.text, 'html.parser')

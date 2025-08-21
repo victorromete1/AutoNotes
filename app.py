@@ -608,49 +608,68 @@ elif st.session_state.page == "📝 Notes":
         else:
             with st.spinner("Fetching transcript and generating notes..."):
                 try:
-                    # Use ScraAPI as a proxy to bypass YouTube's cloud blocking
-                    import requests
-                    
-                    # Free proxy service that works with YouTube transcripts
-                    api_url = f"https://api.scraapi.com/v1/youtube/transcripts"
-                    params = {
-                        "api_key": "YOUR_FREE_API_KEY",  # Get from https://scraapi.com
-                        "video_id": video_id,
-                        "language": "en"
-                    }
-                    
-                    response = requests.get(api_url, params=params)
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        if data.get('success') and data.get('data'):
-                            transcript_text = data['data']['transcript']
+                    # Method 1: Try direct approach first (might work sometimes)
+                    try:
+                        from youtube_transcript_api import YouTubeTranscriptApi
+                        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+                        transcript_text = " ".join([t['text'] for t in transcript])
+                    except:
+                        # Method 2: Use alternative library
+                        try:
+                            import youtube_transcript_api
+                            transcript_list = youtube_transcript_api.YouTubeTranscriptApi.list_transcripts(video_id)
+                            transcript = transcript_list.find_transcript(['en']).fetch()
+                            transcript_text = " ".join([t['text'] for t in transcript])
+                        except:
+                            # Method 3: Use requests with custom headers to mimic browser
+                            import requests
+                            headers = {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                            }
                             
-                            # Generate notes from transcript
-                            notes_content = generators['notes'].generate_notes(transcript_text)
+                            # Try different transcript API endpoints
+                            endpoints = [
+                                f"https://youtubetranscript.com/?server_vid={video_id}",
+                                f"https://video.google.com/timedtext?lang=en&v={video_id}",
+                                f"https://www.youtube.com/api/timedtext?lang=en&v={video_id}"
+                            ]
                             
-                            if notes_content:
-                                new_note = {
-                                    "title": f"YouTube Note {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                                    "content": notes_content,
-                                    "category": "YouTube",
-                                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                }
-                                st.session_state.notes.append(new_note)
-                                auto_save()
-                                st.success("✅ Notes generated successfully from YouTube!")
-                                with st.expander("📖 Preview Generated Notes", expanded=True):
-                                    st.markdown(notes_content)
-                                    user_data.save_current_user(st.session_state)
-                            else:
-                                st.error("Failed to generate notes. Please try again.")
-                        else:
-                            st.error("❌ Could not fetch transcript. Video may not have captions.")
+                            transcript_text = None
+                            for endpoint in endpoints:
+                                try:
+                                    response = requests.get(endpoint, headers=headers, timeout=10)
+                                    if response.status_code == 200:
+                                        # Simple text extraction - you might need to parse XML
+                                        transcript_text = response.text
+                                        break
+                                except:
+                                    continue
+                            
+                            if not transcript_text:
+                                raise Exception("All methods failed")
+                    
+                    # Generate notes from transcript
+                    notes_content = generators['notes'].generate_notes(transcript_text)
+                    
+                    if notes_content:
+                        new_note = {
+                            "title": f"YouTube Note {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                            "content": notes_content,
+                            "category": "YouTube",
+                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        }
+                        st.session_state.notes.append(new_note)
+                        auto_save()
+                        st.success("✅ Notes generated successfully from YouTube!")
+                        with st.expander("📖 Preview Generated Notes", expanded=True):
+                            st.markdown(notes_content)
+                            user_data.save_current_user(st.session_state)
                     else:
-                        st.error("❌ Transcript service unavailable. Please try again later.")
+                        st.error("Failed to generate notes. Please try again.")
                         
                 except Exception as e:
-                    st.error(f"⚠️ Error: {str(e)}")
+                    st.error(f"❌ Could not fetch transcript: {str(e)}")
+                    st.info("💡 Tip: Try a different video or use a local setup instead of Streamlit Cloud")
 
 
     # Existing Notes List

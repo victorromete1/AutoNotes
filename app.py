@@ -345,16 +345,12 @@ if st.session_state.page == "🏠 Home":
                 elif activity == 'flashcards_created':
                     st.write(f"➕ {timestamp} - Created {session.get('flashcards_created', 0)} flashcards")
 
-        # Reports
-        st.subheader("📑 Reports")
-        if st.button("📥 Download Study Report"):
-            st.success("Report generated and downloaded!")  # hook into report generator
-
-        # Calendar / Events
         st.subheader("📅 Calendar & Events")
         if "events" in st.session_state and st.session_state.events:
             for event in st.session_state.events:
-                st.write(f"📌 {event['date']} - {event['title']}")
+                event_date = event.get("date", "No Date")
+                event_title = event.get("title", "Untitled Event")
+                st.write(f"📌 {event_date} - {event_title}")
         else:
             st.info("No events scheduled. Add events in the Calendar tab.")
 

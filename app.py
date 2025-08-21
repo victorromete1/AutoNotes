@@ -168,6 +168,10 @@ persistence.load_all_data()
 import streamlit as st
 from datetime import datetime
 
+
+import streamlit as st
+from datetime import datetime
+
 # ============================
 # Sidebar with Login / Navigation
 # ============================
@@ -246,6 +250,7 @@ with st.sidebar:
         if st.button("Logout", use_container_width=True):
             st.session_state.clear()
             st.session_state["logged_in"] = False
+            st.session_state["page"] = "🏠 Home"   # Ensure home page shows after logout
             st.success("Logged out.")
             st.rerun()
 
@@ -258,26 +263,10 @@ with st.sidebar:
             key="navigation"
         )
         st.session_state.page = page
-
-        # Manual save
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            if st.button("Save now"):
-                ok, msg = user_data.save_current_user(st.session_state)
-                st.success("Saved.") if ok else st.error(msg)
-
-        # Quick Stats
-        st.subheader("📈 Quick Stats")
-        c1, c2 = st.columns(2)
-        with c1:
-            st.metric("Notes", len(st.session_state.notes))
-            st.metric("Flashcards", len(st.session_state.flashcards))
-        with c2:
-            quiz_sessions = [s for s in st.session_state.study_sessions if s.get('activity_type') == 'quiz']
-            st.metric("Quizzes", len(quiz_sessions))
-            st.metric("Sessions", len(st.session_state.study_sessions))
-
-        data_io.render_sidebar_controls()
+    else:
+        # Default page for logged out users
+        if "page" not in st.session_state:
+            st.session_state.page = "🏠 Home"
 
 
 # ============================
@@ -326,56 +315,6 @@ if st.session_state.get("page") == "🏠 Home":
         ---
         👉 Create a free account or log in now to unlock all features and track your progress!
         """)
-
-
-# ============================
-# Settings Page
-# ============================
-if st.session_state.get("page") == "⚙️ Settings" and st.session_state.get("logged_in"):
-    st.title("⚙️ Account Settings")
-
-    # Change password
-    new_pass = st.text_input("New password (leave blank to keep)", type="password", key="acc_new_pass")
-    if st.button("Change Password"):
-        if new_pass.strip():
-            ok, msg = user_data.admin_reset_password(st.session_state["username"], new_pass)
-            st.success("Password updated.") if ok else st.error(msg)
-
-    st.markdown("---")
-
-    # Delete own account
-    if st.button("❌ Delete My Account"):
-        confirm = st.text_input("Type your username to confirm:", key="delete_confirm")
-        if confirm == st.session_state["username"]:
-            user_data.admin_delete_account(confirm)
-            st.session_state.clear()
-            st.session_state["logged_in"] = False
-            st.success("Your account has been deleted.")
-            st.rerun()
-
-    st.markdown("---")
-
-    # Admin-only settings
-    if st.session_state.get("admin_mode"):
-        st.subheader("🛠 Admin Controls")
-
-        target_user = st.text_input("Target Username to Reset Password")
-        new_pass = st.text_input("New Password", type="password", key="admin_reset_pass")
-        if st.button("Reset User Password"):
-            if target_user and new_pass:
-                ok, msg = user_data.admin_reset_password(target_user, new_pass)
-                st.success("Password reset.") if ok else st.error(msg)
-
-        del_user = st.text_input("Username to delete", key="admin_del_user")
-        if st.button("Delete User Account"):
-            if del_user:
-                user_data.admin_delete_account(del_user)
-                st.success(f"Deleted user: {del_user}")
-
-        if st.button("Exit Admin Mode"):
-            st.session_state["admin_mode"] = False
-            st.success("Exited admin mode.")
-            st.rerun()
 
 # ============================
 # Notes Page

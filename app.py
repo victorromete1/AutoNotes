@@ -7,7 +7,7 @@ from datetime import datetime       # For dates
 from datetime import timedelta      # For duration 
 from collections import defaultdict 
 import xml.etree.ElementTree as ET
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
+    from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound, VideoUnavailable
 
 import streamlit as st              
 from PyPDF2 import PdfReader        # PDF text extraction
@@ -57,6 +57,45 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 def hash_password(password: str) -> str:
     # Returns a hex string hash for secure storage
     return hashlib.sha256(password.encode()).hexdigest()
+
+    def fetch_best_transcript(video_id: str, preferred_langs=['en']):
+        """
+        Try to fetch the best available transcript for a YouTube video.
+        Order of preference: manual transcript > auto-generated > translation.
+        """
+        try:
+            # List all transcripts for this video
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+
+            # 1. Try exact language transcripts (manual or auto)
+            for lang in preferred_langs:
+                try:
+                    return transcript_list.find_transcript([lang]).fetch()
+                except Exception:
+                    continue
+
+            # 2. Try translating transcripts into preferred languages
+            for lang in preferred_langs:
+                try:
+                    transcript = transcript_list.find_transcript(transcript_list._manually_created_transcripts.keys())
+                    return transcript.translate(lang).fetch()
+                except Exception:
+                    continue
+
+            # 3. Fallback: just take the first available transcript
+            try:
+                return transcript_list.find_transcript([t.language_code for t in transcript_list]).fetch()
+            except Exception:
+                pass
+
+            return None  # No transcript found at all
+
+        except (TranscriptsDisabled, NoTranscriptFound, VideoUnavailable) as e:
+            print(f"Transcript error: {e}")
+            return None
+        except Exception as e:
+            print(f"Unexpected error while fetching transcript: {e}")
+            return None
 
 # Delete any user's account, admin only.
 def admin_delete_account(target_username: str):
@@ -554,6 +593,44 @@ elif st.session_state.page == "📝 Notes":
 
     youtube_url = st.text_input("Paste a YouTube link:", key="youtube_url")
 
+    def fetch_best_transcript(video_id: str, preferred_langs=['en']):
+        """
+        Try to fetch the best available transcript for a YouTube video.
+        Preference order: manual transcript > auto-generated > translation.
+        """
+        try:
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+
+            # 1. Try preferred language transcripts
+            for lang in preferred_langs:
+                try:
+                    return transcript_list.find_transcript([lang]).fetch()
+                except Exception:
+                    continue
+
+            # 2. Try translating transcripts into preferred languages
+            for lang in preferred_langs:
+                try:
+                    for t in transcript_list:
+                        return t.translate(lang).fetch()
+                except Exception:
+                    continue
+
+            # 3. Fallback: just grab the first available transcript
+            for t in transcript_list:
+                try:
+                    return t.fetch()
+                except Exception:
+                    continue
+
+            return None
+
+        except (TranscriptsDisabled, NoTranscriptFound, VideoUnavailable):
+            return None
+        except Exception as e:
+            print(f"Unexpected error while fetching transcript: {e}")
+            return None
+
     if st.button("🎬 Generate Notes from YouTube", key="generate_youtube_notes"):
         user_data.save_current_user(st.session_state)
 
@@ -568,19 +645,11 @@ elif st.session_state.page == "📝 Notes":
             st.error("⚠️ Invalid YouTube link.")
         else:
             with st.spinner("Fetching transcript and generating notes..."):
-                try:
-                    transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-                    transcript = transcript_list.find_transcript(['en']).fetch()
-                    text = " ".join([t["text"] for t in transcript])
-                except (TranscriptsDisabled, NoTranscriptFound):
-                    st.error("❌ No transcript found (captions disabled or unavailable).")
-                    text = None
-                except ET.ParseError:
-                    st.error("❌ Could not parse transcript (likely no captions or blocked).")
-                    text = None
+                transcript = fetch_best_transcript(video_id)
 
-                if text:
+                if transcript:
                     try:
+                        text = " ".join([t["text"] for t in transcript])
                         notes_content = generators['notes'].generate_notes(text)
                         if notes_content:
                             new_note = {
@@ -599,6 +668,8 @@ elif st.session_state.page == "📝 Notes":
                             st.error("Failed to generate notes. Please try again.")
                     except Exception as e:
                         st.error(f"⚠️ Error generating notes: {e}")
+                else:
+                    st.error("❌ Could not fetch transcript (captions disabled, blocked, or unavailable).")
 
 
     # Existing Notes List

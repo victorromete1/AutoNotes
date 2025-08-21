@@ -681,12 +681,10 @@ elif st.session_state.page == "📝 Notes":
                     
                     except Exception as e:
                         st.error(f"❌ Error parsing transcript: {str(e)}")
-                        return
                     
                     if not transcript_text:
                         st.error("❌ Could not extract transcript from video")
                         st.info("This video may not have captions enabled")
-                        return
                     
                     # Generate notes from the actual transcript
                     notes_content = generators['notes'].generate_notes(transcript_text)

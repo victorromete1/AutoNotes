@@ -290,7 +290,7 @@ with st.sidebar:
             st.info("🛠 Admin Mode Active")
 
         # Data import/export
-        data_io.render_sidebar_controls()
+        #not added currently data_io.render_sidebar_controls()
 
         # Logout
         if st.button("Logout", use_container_width=True):

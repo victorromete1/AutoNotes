@@ -165,13 +165,12 @@ init_session_state()
 # Load previously persisted data (per-user)
 persistence.load_all_data()
 
-import streamlit as st
-from datetime import datetime
-
-
-import streamlit as st
-from datetime import datetime
-
+# ============================
+# Ensure page state always exists
+# ============================
+if "page" not in st.session_state:
+    st.session_state.page = "🏠 Home"
+    
 # ============================
 # Sidebar with Login / Navigation
 # ============================

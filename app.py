@@ -547,6 +547,7 @@ elif st.session_state.page == "📝 Notes":
 
     st.markdown("---")
 
+
     # 🎥 Generate AI Notes from YouTube
     st.subheader("🎥 Generate AI Notes from YouTube")
 
@@ -566,18 +567,22 @@ elif st.session_state.page == "📝 Notes":
             st.error("⚠️ Invalid YouTube link.")
         else:
             with st.spinner("Fetching transcript and generating notes..."):
+                text = None
                 try:
                     transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-                    # Pick the first transcript (auto-generated or manual)
-                    transcript = transcript_list.find_transcript(['en']).fetch()
-                    text = " ".join([t["text"] for t in transcript])
+                    try:
+                        transcript = transcript_list.find_transcript(['en']).fetch()
+                        text = " ".join([t["text"] for t in transcript])
+                    except ET.ParseError:
+                        st.error("❌ Could not parse transcript (likely blocked or unavailable).")
                 except (TranscriptsDisabled, NoTranscriptFound):
                     st.error("❌ No transcript found (captions disabled or unavailable).")
-                    text = None
+                except Exception as e:
+                    st.error(f"⚠️ Unexpected error fetching transcript: {e}")
 
-                if transcript:
+                if text:
                     try:
-                        notes_content = generators['notes'].generate_notes(transcript)
+                        notes_content = generators['notes'].generate_notes(text)
                         if notes_content:
                             new_note = {
                                 "title": f"YouTube Note {datetime.now().strftime('%Y-%m-%d %H:%M')}",

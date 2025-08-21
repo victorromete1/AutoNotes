@@ -461,8 +461,17 @@ class AdvancedQuizSystem:
             q = self._ensure_question_fields(q, fallback_type)
             normalized_questions.append(q)
 
-        data["questions"] = normalized_questions
+        # ✅ Deduplicate questions by text
+        seen = set()
+        unique_questions = []
+        for q in normalized_questions:
+            if q["question"] not in seen:
+                unique_questions.append(q)
+                seen.add(q["question"])
+
+        data["questions"] = unique_questions
         return data
+
 
     def _ensure_question_fields(self, q: Dict[str, Any], fallback_type: str) -> Dict[str, Any]:
         """Ensure all required question fields exist with proper values"""

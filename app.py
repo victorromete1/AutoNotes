@@ -171,20 +171,23 @@ persistence.load_all_data()
 if "page" not in st.session_state:
     st.session_state.page = "🏠 Home"
 
-# ============================
-# Sidebar with Login / Navigation
-# ============================
+import streamlit as st
+from datetime import datetime
+
+# ----------------------------
+# Sidebar
+# ----------------------------
 with st.sidebar:
     st.title("🎓 Study Platform")
 
-    # If not logged in → show login/signup
+    # ===========================
+    # Logged Out → Login / Sign Up
+    # ===========================
     if not st.session_state.get("logged_in", False):
         st.subheader("🔑 Account Access")
 
-        # Login / Sign Up toggle
         mode = st.radio("Choose mode", ["Login", "Sign Up"], horizontal=True, key="auth_mode")
 
-        # --- Sign Up ---
         if mode == "Sign Up":
             su = st.text_input("Username", max_chars=15, key="su_user")
             sp = st.text_input("Password", type="password", key="su_pass")
@@ -198,7 +201,7 @@ with st.sidebar:
                 elif ' ' in su:
                     st.error("Username cannot contain spaces")
                 elif not su.isalnum():
-                    st.error("Username can only contain letters and numbers (no special characters)")
+                    st.error("Username can only contain letters and numbers")
                 elif sp != confirm:
                     st.error("Passwords do not match.")
                 else:
@@ -212,8 +215,7 @@ with st.sidebar:
                     else:
                         st.error(msg)
 
-        # --- Login ---
-        else:
+        else:  # Login
             lu = st.text_input("Username", key="li_user")
             lp = st.text_input("Password", type="password", key="li_pass")
 
@@ -240,20 +242,27 @@ with st.sidebar:
                     else:
                         st.error(msg)
 
+        # Force Home page when logged out
+        st.session_state.page = "🏠 Home"
+
+    # ===========================
+    # Logged In → Sidebar Nav, Stats, Save
+    # ===========================
     else:
-        # If logged in → show welcome + logout
+        # Navigation at the top
+        page = st.selectbox(
+            "Navigate:",
+            ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes",
+             "📊 Progress", "📋 Reports", "📅 Calendar", "📝 Autograder", "⚙️ Settings"],
+            key="navigation"
+        )
+        st.session_state.page = page
+
         st.subheader(f"👋 Welcome, {st.session_state['username']}")
         if st.session_state.get("admin_mode"):
             st.caption("🛠 Admin Mode Enabled")
 
-        if st.button("Logout", use_container_width=True):
-            st.session_state.clear()
-            st.session_state["logged_in"] = False
-            st.session_state["page"] = "🏠 Home"   # Reset to home on logout
-            st.success("Logged out.")
-            st.rerun()
-
-        # Manual save action (only if logged in)
+        # Save button
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             if st.button("💾 Save now"):
@@ -263,7 +272,7 @@ with st.sidebar:
                 else:
                     st.error(msg)
 
-        # Quick Stats summary
+        # Quick Stats
         st.subheader("📈 Quick Stats")
         c1, c2 = st.columns(2)
         with c1:
@@ -281,65 +290,45 @@ with st.sidebar:
         if st.session_state.get("admin_mode"):
             st.info("🛠 Admin Mode Active")
 
-        # Data import/export controls
+        # Data import/export
         data_io.render_sidebar_controls()
 
-    # Navigation (only show if logged in)
-    if st.session_state.get("logged_in", False):
-        page = st.selectbox(
-            "Navigate:",
-            ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes",
-             "📊 Progress", "📋 Reports", "📅 Calendar", "📝 Autograder", "⚙️ Settings"],
-            key="navigation"
-        )
-        st.session_state.page = page
-    else:
-        # Force Home page when logged out
-        st.session_state.page = "🏠 Home"
+        # Logout
+        if st.button("Logout", use_container_width=True):
+            st.session_state.clear()
+            st.session_state["logged_in"] = False
+            st.session_state["page"] = "🏠 Home"
+            st.success("Logged out.")
+            st.rerun()
 
 
-# ============================
+# ----------------------------
 # Home Page
-# ============================
+# ----------------------------
 if st.session_state.page == "🏠 Home":
     st.title("🎓 SmartStudy Dashboard")
 
-    if st.session_state.get("logged_in", False):
-        st.subheader(f"Welcome back, {st.session_state['username']}!")
+    # Logged out → show app info
+    if not st.session_state.get("logged_in", False):
+        st.subheader("🚀 Welcome to SmartStudy")
+        st.markdown("### Please log in from the sidebar to access your personalized dashboard.")
+        st.markdown("""
+        SmartStudy is your **all-in-one learning companion**.  
 
-        # --- ADMIN MODE ---
-        if st.session_state.get("admin_mode"):
-            st.info("🛠 You are logged in as Admin.")
+        ### 🌟 Features:
+        - 📝 Smart Notes  
+        - 🎴 Flashcards  
+        - ❓ Adaptive Quizzes  
+        - 📑 Reports  
+        - 📅 Calendar Integration  
+        - 📝 Autograder  
+        """)
 
-            st.markdown("### 🔒 Admin Controls")
-            col1, col2, col3 = st.columns(3)
+    # Logged in → dashboard
+    else:
+        st.subheader(f"Hello, {st.session_state['username']}!")
 
-            with col1:
-                if st.button("🗑 Delete Account"):
-                    st.session_state["delete_account_mode"] = True
-                    st.warning("⚠️ Account deletion triggered!")
-
-            with col2:
-                if st.button("🔑 Reset Password"):
-                    st.session_state["reset_password_mode"] = True
-                    st.info("Password reset option selected.")
-
-            with col3:
-                if st.button("📤 Export All User Data"):
-                    st.session_state["export_data_mode"] = True
-                    st.success("Export started...")
-
-            st.divider()
-
-        # --- SAVE NOW BUTTON ---
-        if st.button("💾 Save Now"):
-            success, msg = user_data.save_current_user(st.session_state)
-            if success:
-                st.success("✅ Progress saved successfully!")
-            else:
-                st.error(f"❌ Save failed: {msg}")
-
-        # --- RECENT ACTIVITY ---
+        # Recent Activity
         if st.session_state.get("study_sessions"):
             st.subheader("📅 Recent Activity")
             recent_sessions = sorted(
@@ -356,28 +345,12 @@ if st.session_state.page == "🏠 Home":
                 elif activity == 'flashcards_created':
                     st.write(f"➕ {timestamp} - Created {session.get('flashcards_created', 0)} flashcards")
 
-        # --- PROGRESS CHARTS ---
-        st.subheader("📊 Progress Tracking")
-        if st.session_state.get("quiz_scores"):
-            scores = [s['score'] for s in st.session_state.quiz_scores]
-            dates = [datetime.fromisoformat(s['timestamp']).strftime("%m-%d") for s in st.session_state.quiz_scores]
-
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots()
-            ax.plot(dates, scores, marker='o')
-            ax.set_xlabel("Date")
-            ax.set_ylabel("Score (%)")
-            ax.set_title("Quiz Performance Over Time")
-            st.pyplot(fig)
-        else:
-            st.info("No quiz data yet. Take a quiz to see your progress!")
-
-        # --- REPORTS ---
+        # Reports
         st.subheader("📑 Reports")
         if st.button("📥 Download Study Report"):
-            st.success("Report generated and downloaded!")  # hook into your report generator here
+            st.success("Report generated and downloaded!")  # hook into report generator
 
-        # --- CALENDAR / EVENTS ---
+        # Calendar / Events
         st.subheader("📅 Calendar & Events")
         if "events" in st.session_state and st.session_state.events:
             for event in st.session_state.events:
@@ -385,26 +358,31 @@ if st.session_state.page == "🏠 Home":
         else:
             st.info("No events scheduled. Add events in the Calendar tab.")
 
-    else:
-        # --- LOGGED OUT SCREEN ---
-        st.subheader("🚀 Welcome to SmartStudy")
-        st.markdown("### Please log in from the sidebar to access your personalized study dashboard.")
+        # Admin Controls (fully functional)
+        if st.session_state.get("admin_mode"):
+            st.subheader("🛠 Admin Controls")
+            target_user = st.text_input("Username to Reset Password", key="admin_reset_user")
+            new_pass = st.text_input("New Password", type="password", key="admin_new_pass")
+            if st.button("Reset User Password"):
+                if target_user and new_pass:
+                    ok, msg = user_data.admin_reset_password(target_user, new_pass)
+                    if ok:
+                        st.success(f"Password for '{target_user}' reset successfully.")
+                    else:
+                        st.error(msg)
+                else:
+                    st.warning("Enter both username and new password.")
 
-        st.markdown("""
-        SmartStudy is your **all-in-one learning companion**, designed to help you study smarter, not harder.  
-
-        ### 🌟 What You Can Do:
-        - **📝 Smart Notes**: Instantly generate structured notes for any topic  
-        - **🎴 Flashcards**: Create interactive flashcards for revision  
-        - **❓ Adaptive Quizzes**: Test yourself with personalized, AI-driven quizzes  
-        - **📊 Progress Tracking**: Monitor your study habits and performance  
-        - **📑 Reports**: Export beautiful PDF reports of your learning journey  
-        - **📅 Calendar Integration**: Organize your study schedule  
-        - **📝 Autograder**: Get instant feedback on practice answers  
-
-        ---
-        👉 Create a free account or log in now to unlock all features and track your progress!
-        """)
+            del_user = st.text_input("Username to Delete", key="admin_del_user")
+            if st.button("Delete Account"):
+                if del_user:
+                    ok, msg = user_data.admin_delete_account(del_user)
+                    if ok:
+                        st.success(f"User '{del_user}' deleted successfully.")
+                    else:
+                        st.error(msg)
+                else:
+                    st.warning("Enter a username to delete.")
 
 
 # ============================

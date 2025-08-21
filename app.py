@@ -26,6 +26,12 @@ from advanced_quiz_system import AdvancedQuizSystem
 from data_import_export import DataImportExport
 from utils import sanitize_filename
 from autograder import AutoGrader
+from youtube_transcript_api import YouTubeTranscriptApi
+
+video_id = "q-_ezD9Swz4"
+transcript = YouTubeTranscriptApi.get_transcript(video_id)
+print(transcript[:5])  # prints first 5 caption chunks
+
 
 
 

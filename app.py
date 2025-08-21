@@ -5,11 +5,7 @@ import calendar                     # For building the calendar view
 import hashlib                      # For hashing passwords
 from datetime import datetime       # For dates
 from datetime import timedelta      # For duration 
-from collections import defaultdict 
-import xml.etree.ElementTree as ET
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound, VideoUnavailable
-from bs4 import BeautifulSoup
-
+from collections import defaultdict
 import streamlit as st              
 from PyPDF2 import PdfReader        # PDF text extraction
 import docx                         # Docx text extraction
@@ -58,45 +54,6 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 def hash_password(password: str) -> str:
     # Returns a hex string hash for secure storage
     return hashlib.sha256(password.encode()).hexdigest()
-
-    def fetch_best_transcript(video_id: str, preferred_langs=['en']):
-        """
-        Try to fetch the best available transcript for a YouTube video.
-        Order of preference: manual transcript > auto-generated > translation.
-        """
-        try:
-            # List all transcripts for this video
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-
-            # 1. Try exact language transcripts (manual or auto)
-            for lang in preferred_langs:
-                try:
-                    return transcript_list.find_transcript([lang]).fetch()
-                except Exception:
-                    continue
-
-            # 2. Try translating transcripts into preferred languages
-            for lang in preferred_langs:
-                try:
-                    transcript = transcript_list.find_transcript(transcript_list._manually_created_transcripts.keys())
-                    return transcript.translate(lang).fetch()
-                except Exception:
-                    continue
-
-            # 3. Fallback: just take the first available transcript
-            try:
-                return transcript_list.find_transcript([t.language_code for t in transcript_list]).fetch()
-            except Exception:
-                pass
-
-            return None  # No transcript found at all
-
-        except (TranscriptsDisabled, NoTranscriptFound, VideoUnavailable) as e:
-            print(f"Transcript error: {e}")
-            return None
-        except Exception as e:
-            print(f"Unexpected error while fetching transcript: {e}")
-            return None
 
 # Delete any user's account, admin only.
 def admin_delete_account(target_username: str):
@@ -585,129 +542,6 @@ elif st.session_state.page == "📝 Notes":
                     st.error(f"Error: {e}")
         else:
             st.warning("Please enter a topic or upload a file.")
-
-    st.markdown("---")
-
-
-    # 🎥 Generate AI Notes from YouTube
-    st.subheader("🎥 Generate AI Notes from YouTube")
-
-    youtube_url = st.text_input("Paste a YouTube link:", key="youtube_url")
-
-    if st.button("🎬 Generate Notes from YouTube", key="generate_youtube_notes"):
-        user_data.save_current_user(st.session_state)
-
-        # Extract video ID
-        video_id = None
-        if youtube_url and isinstance(youtube_url, str):
-            match = re.search(r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11})", youtube_url)
-            if match:
-                video_id = match.group(1)
-
-        if not video_id:
-            st.error("⚠️ Invalid YouTube link.")
-        else:
-            with st.spinner("Fetching transcript and generating notes..."):
-                try:
-                    # METHOD THAT ACTUAL WEBSITES USE: Extract from video page
-                    import requests
-                    from bs4 import BeautifulSoup
-                    
-                    # Fetch the YouTube video page
-                    headers = {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                    }
-                    
-                    video_page_url = f"https://www.youtube.com/watch?v={video_id}"
-                    response = requests.get(video_page_url, headers=headers, timeout=10)
-                    
-                    if response.status_code != 200:
-                        st.error("❌ Could not access YouTube video")
-                    
-                    # Parse the HTML to find transcript data
-                    soup = BeautifulSoup(response.text, 'html.parser')
-                    
-                    # Look for transcript data in the page (YouTube stores it in specific script tags)
-                    transcript_data = None
-                    scripts = soup.find_all('script')
-                    
-                    for script in scripts:
-                        if 'captionTracks' in str(script):
-                            # This is where YouTube stores transcript info
-                            transcript_data = str(script)
-                            break
-                    
-                    if not transcript_data:
-                        st.error("❌ No transcript found on this video page")
-                    
-                    # Extract transcript URL from the script data
-                    import json
-                    import re
-                    
-                    # Find the JSON data containing transcript info
-                    yt_initial_data = None
-                    for script in scripts:
-                        if 'ytInitialData' in str(script):
-                            match = re.search(r'ytInitialData\s*=\s*({.*?});', str(script))
-                            if match:
-                                yt_initial_data = json.loads(match.group(1))
-                                break
-                    
-                    if not yt_initial_data:
-                        st.error("❌ Could not parse video data")
-                    
-                    # Extract transcript from the JSON structure
-                    transcript_text = ""
-                    
-                    # Navigate through YouTube's complex JSON structure to find captions
-                    try:
-                        # This is the modern YouTube data structure
-                        caption_tracks = yt_initial_data.get('captions', {}).get('playerCaptionsTracklistRenderer', {}).get('captionTracks', [])
-                        
-                        if caption_tracks:
-                            # Get English transcript URL
-                            en_transcript = next((track for track in caption_tracks if track.get('languageCode') == 'en'), None)
-                            
-                            if en_transcript:
-                                transcript_url = en_transcript.get('baseUrl')
-                                if transcript_url:
-                                    # Fetch the actual transcript XML
-                                    transcript_response = requests.get(transcript_url, headers=headers)
-                                    if transcript_response.status_code == 200:
-                                        # Parse XML transcript
-                                        transcript_soup = BeautifulSoup(transcript_response.text, 'xml')
-                                        text_elements = transcript_soup.find_all('text')
-                                        transcript_text = " ".join([elem.text for elem in text_elements])
-                    
-                    except Exception as e:
-                        st.error(f"❌ Error parsing transcript: {str(e)}")
-                    
-                    if not transcript_text:
-                        st.error("❌ Could not extract transcript from video")
-                        st.info("This video may not have captions enabled")
-                    
-                    # Generate notes from the actual transcript
-                    notes_content = generators['notes'].generate_notes(transcript_text)
-                    
-                    if notes_content:
-                        new_note = {
-                            "title": f"YouTube Note {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                            "content": notes_content,
-                            "category": "YouTube",
-                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        }
-                        st.session_state.notes.append(new_note)
-                        auto_save()
-                        st.success("✅ Notes generated successfully from YouTube!")
-                        with st.expander("📖 Preview Generated Notes", expanded=True):
-                            st.markdown(notes_content)
-                            user_data.save_current_user(st.session_state)
-                    else:
-                        st.error("Failed to generate notes. Please try again.")
-                        
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
-                    st.info("This method may not work on all videos or may be blocked by YouTube")
     # Existing Notes List
     if st.session_state.notes:
         st.divider()

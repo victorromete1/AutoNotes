@@ -1,5 +1,6 @@
 #imports
 import io
+import re
 import calendar                     # For building the calendar view
 import hashlib                      # For hashing passwords
 from datetime import datetime       # For dates
@@ -55,15 +56,6 @@ def hash_password(password: str) -> str:
     # Returns a hex string hash for secure storage
     return hashlib.sha256(password.encode()).hexdigest()
 
-def fetch_transcript(video_id):
-    try:
-        transcript = YouTubeTranscriptApi.get_transcript(video_id)
-        text = " ".join([t["text"] for t in transcript])
-        return text
-    except Exception as e:
-        return f"Error fetching transcript: {e}"
-
-
 # Delete any user's account, admin only.
 def admin_delete_account(target_username: str):
     # Attempts to delete a user row from Supabase 'users' table
@@ -84,20 +76,6 @@ def admin_reset_password(target_username: str, new_password: str):
         st.success(f"✅ Password for '{target_username}' has been reset!")
     except Exception as e:
         st.error(f"Error: {e}")
-        
-def extract_video_id(url):
-    """
-    Extract the 11-character video ID from a YouTube URL.
-    Returns None if the URL is invalid or empty.
-    """
-    if not url or not isinstance(url, str):
-        return None
-    pattern = r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11})"
-    match = re.search(pattern, url)
-    if match:
-        return match.group(1)
-    return None
-
 
 # Advance the flashcard study session to the next card
 def next_flashcard(study_cards, correct=False):
@@ -569,20 +547,32 @@ elif st.session_state.page == "📝 Notes":
     st.markdown("---")
 
     # 🎥 Generate AI Notes from YouTube
-    st.subheader("🎥 Generate AI Notes from YouTube (Broken right now)")
+    st.subheader("🎥 Generate AI Notes from YouTube")
+
     youtube_url = st.text_input("Paste a YouTube link:", key="youtube_url")
 
     if st.button("🎬 Generate Notes from YouTube", key="generate_youtube_notes"):
         user_data.save_current_user(st.session_state)
-        video_id = extract_video_id(youtube_url)
+
+        # Extract video ID
+        video_id = None
+        if youtube_url and isinstance(youtube_url, str):
+            match = re.search(r"(?:v=|youtu\.be/)([a-zA-Z0-9_-]{11})", youtube_url)
+            if match:
+                video_id = match.group(1)
+
         if not video_id:
             st.error("⚠️ Invalid YouTube link.")
         else:
             with st.spinner("Fetching transcript and generating notes..."):
-                transcript = fetch_transcript(video_id)
-                if transcript.startswith("Error"):
-                    st.error(transcript)
-                else:
+                try:
+                    transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
+                    transcript = " ".join([t["text"] for t in transcript_data])
+                except Exception as e:
+                    st.error(f"⚠️ Error fetching transcript: {e}")
+                    transcript = None
+
+                if transcript:
                     try:
                         notes_content = generators['notes'].generate_notes(transcript)
                         if notes_content:
@@ -601,7 +591,7 @@ elif st.session_state.page == "📝 Notes":
                         else:
                             st.error("Failed to generate notes. Please try again.")
                     except Exception as e:
-                        st.error(f"Error: {e}")
+                        st.error(f"⚠️ Error generating notes: {e}")
 
     # Existing Notes List
     if st.session_state.notes:

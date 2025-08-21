@@ -170,7 +170,7 @@ persistence.load_all_data()
 # ============================
 if "page" not in st.session_state:
     st.session_state.page = "🏠 Home"
-    
+
 # ============================
 # Sidebar with Login / Navigation
 # ============================
@@ -249,7 +249,7 @@ with st.sidebar:
         if st.button("Logout", use_container_width=True):
             st.session_state.clear()
             st.session_state["logged_in"] = False
-            st.session_state["page"] = "🏠 Home"   # Ensure home page shows after logout
+            st.session_state["page"] = "🏠 Home"   # Reset to home on logout
             st.success("Logged out.")
             st.rerun()
 
@@ -263,15 +263,14 @@ with st.sidebar:
         )
         st.session_state.page = page
     else:
-        # Default page for logged out users
-        if "page" not in st.session_state:
-            st.session_state.page = "🏠 Home"
+        # Force Home page when logged out
+        st.session_state.page = "🏠 Home"
 
 
 # ============================
 # Home Page
 # ============================
-if st.session_state.get("page") == "🏠 Home":
+if st.session_state.page == "🏠 Home":
     st.title("🎓 SmartStudy Dashboard")
 
     if st.session_state.get("logged_in", False):

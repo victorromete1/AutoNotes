@@ -6,6 +6,7 @@ import hashlib                      # For hashing passwords
 from datetime import datetime       # For dates
 from datetime import timedelta      # For duration 
 from collections import defaultdict 
+import xml.etree.ElementTree as ET
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 
 import streamlit as st              

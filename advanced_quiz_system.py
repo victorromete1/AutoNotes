@@ -497,6 +497,13 @@ class AdvancedQuizSystem:
         q["correct_answer"] = str(q.get("correct_answer", ""))
 
         # Handle question type specifics
+        if qtype == "true_false":
+            ans = q["correct_answer"].strip().lower()
+            if ans in ["a) true", "true", "t", "yes", "1"]:
+                q["correct_answer"] = "True"
+            elif ans in ["b) false", "false", "f", "no", "0"]:
+                q["correct_answer"] = "False"
+
         if qtype == "multiple_choice":
             opts = q.get("options", [])
             if not isinstance(opts, list) or not opts:

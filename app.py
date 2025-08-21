@@ -593,44 +593,6 @@ elif st.session_state.page == "📝 Notes":
 
     youtube_url = st.text_input("Paste a YouTube link:", key="youtube_url")
 
-    def fetch_best_transcript(video_id: str, preferred_langs=['en']):
-        """
-        Try to fetch the best available transcript for a YouTube video.
-        Preference order: manual transcript > auto-generated > translation.
-        """
-        try:
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-
-            # 1. Try preferred language transcripts
-            for lang in preferred_langs:
-                try:
-                    return transcript_list.find_transcript([lang]).fetch()
-                except Exception:
-                    continue
-
-            # 2. Try translating transcripts into preferred languages
-            for lang in preferred_langs:
-                try:
-                    for t in transcript_list:
-                        return t.translate(lang).fetch()
-                except Exception:
-                    continue
-
-            # 3. Fallback: just grab the first available transcript
-            for t in transcript_list:
-                try:
-                    return t.fetch()
-                except Exception:
-                    continue
-
-            return None
-
-        except (TranscriptsDisabled, NoTranscriptFound, VideoUnavailable):
-            return None
-        except Exception as e:
-            print(f"Unexpected error while fetching transcript: {e}")
-            return None
-
     if st.button("🎬 Generate Notes from YouTube", key="generate_youtube_notes"):
         user_data.save_current_user(st.session_state)
 
@@ -645,31 +607,50 @@ elif st.session_state.page == "📝 Notes":
             st.error("⚠️ Invalid YouTube link.")
         else:
             with st.spinner("Fetching transcript and generating notes..."):
-                transcript = fetch_best_transcript(video_id)
-
-                if transcript:
-                    try:
-                        text = " ".join([t["text"] for t in transcript])
-                        notes_content = generators['notes'].generate_notes(text)
-                        if notes_content:
-                            new_note = {
-                                "title": f"YouTube Note {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                                "content": notes_content,
-                                "category": "YouTube",
-                                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            }
-                            st.session_state.notes.append(new_note)
-                            auto_save()
-                            st.success("✅ Notes generated successfully from YouTube!")
-                            with st.expander("📖 Preview Generated Notes", expanded=True):
-                                st.markdown(notes_content)
-                                user_data.save_current_user(st.session_state)
+                try:
+                    # Use ScraAPI as a proxy to bypass YouTube's cloud blocking
+                    import requests
+                    
+                    # Free proxy service that works with YouTube transcripts
+                    api_url = f"https://api.scraapi.com/v1/youtube/transcripts"
+                    params = {
+                        "api_key": "YOUR_FREE_API_KEY",  # Get from https://scraapi.com
+                        "video_id": video_id,
+                        "language": "en"
+                    }
+                    
+                    response = requests.get(api_url, params=params)
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        if data.get('success') and data.get('data'):
+                            transcript_text = data['data']['transcript']
+                            
+                            # Generate notes from transcript
+                            notes_content = generators['notes'].generate_notes(transcript_text)
+                            
+                            if notes_content:
+                                new_note = {
+                                    "title": f"YouTube Note {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                                    "content": notes_content,
+                                    "category": "YouTube",
+                                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                }
+                                st.session_state.notes.append(new_note)
+                                auto_save()
+                                st.success("✅ Notes generated successfully from YouTube!")
+                                with st.expander("📖 Preview Generated Notes", expanded=True):
+                                    st.markdown(notes_content)
+                                    user_data.save_current_user(st.session_state)
+                            else:
+                                st.error("Failed to generate notes. Please try again.")
                         else:
-                            st.error("Failed to generate notes. Please try again.")
-                    except Exception as e:
-                        st.error(f"⚠️ Error generating notes: {e}")
-                else:
-                    st.error("❌ Could not fetch transcript (captions disabled, blocked, or unavailable).")
+                            st.error("❌ Could not fetch transcript. Video may not have captions.")
+                    else:
+                        st.error("❌ Transcript service unavailable. Please try again later.")
+                        
+                except Exception as e:
+                    st.error(f"⚠️ Error: {str(e)}")
 
 
     # Existing Notes List

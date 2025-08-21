@@ -345,15 +345,6 @@ if st.session_state.page == "🏠 Home":
                 elif activity == 'flashcards_created':
                     st.write(f"➕ {timestamp} - Created {session.get('flashcards_created', 0)} flashcards")
 
-        st.subheader("📅 Calendar & Events")
-        if "events" in st.session_state and st.session_state.events:
-            for event in st.session_state.events:
-                event_date = event.get("date", "No Date")
-                event_title = event.get("title", "Untitled Event")
-                st.write(f"📌 {event_date} - {event_title}")
-        else:
-            st.info("No events scheduled. Add events in the Calendar tab.")
-
         # Admin Controls (fully functional)
         if st.session_state.get("admin_mode"):
             st.subheader("🛠 Admin Controls")

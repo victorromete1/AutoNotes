@@ -265,7 +265,7 @@ with st.sidebar:
         # Save button
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("💾 Save now", use_container_width=True):
+            if st.button("Save", use_container_width=True):
                 ok, msg = user_data.save_current_user(st.session_state)
                 if ok:
                     st.success("Saved.")

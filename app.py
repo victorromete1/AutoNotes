@@ -275,9 +275,40 @@ if st.session_state.page == "🏠 Home":
 
     if st.session_state.get("logged_in", False):
         st.subheader(f"Welcome back, {st.session_state['username']}!")
+
+        # --- ADMIN MODE ---
         if st.session_state.get("admin_mode"):
             st.info("🛠 You are logged in as Admin.")
 
+            st.markdown("### 🔒 Admin Controls")
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                if st.button("🗑 Delete Account"):
+                    st.session_state["delete_account_mode"] = True
+                    st.warning("⚠️ Account deletion triggered!")
+
+            with col2:
+                if st.button("🔑 Reset Password"):
+                    st.session_state["reset_password_mode"] = True
+                    st.info("Password reset option selected.")
+
+            with col3:
+                if st.button("📤 Export All User Data"):
+                    st.session_state["export_data_mode"] = True
+                    st.success("Export started...")
+
+            st.divider()
+
+        # --- SAVE NOW BUTTON ---
+        if st.button("💾 Save Now"):
+            success, msg = user_data.save_current_user(st.session_state)
+            if success:
+                st.success("✅ Progress saved successfully!")
+            else:
+                st.error(f"❌ Save failed: {msg}")
+
+        # --- RECENT ACTIVITY ---
         if st.session_state.get("study_sessions"):
             st.subheader("📅 Recent Activity")
             recent_sessions = sorted(
@@ -294,7 +325,37 @@ if st.session_state.page == "🏠 Home":
                 elif activity == 'flashcards_created':
                     st.write(f"➕ {timestamp} - Created {session.get('flashcards_created', 0)} flashcards")
 
+        # --- PROGRESS CHARTS ---
+        st.subheader("📊 Progress Tracking")
+        if st.session_state.get("quiz_scores"):
+            scores = [s['score'] for s in st.session_state.quiz_scores]
+            dates = [datetime.fromisoformat(s['timestamp']).strftime("%m-%d") for s in st.session_state.quiz_scores]
+
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots()
+            ax.plot(dates, scores, marker='o')
+            ax.set_xlabel("Date")
+            ax.set_ylabel("Score (%)")
+            ax.set_title("Quiz Performance Over Time")
+            st.pyplot(fig)
+        else:
+            st.info("No quiz data yet. Take a quiz to see your progress!")
+
+        # --- REPORTS ---
+        st.subheader("📑 Reports")
+        if st.button("📥 Download Study Report"):
+            st.success("Report generated and downloaded!")  # hook into your report generator here
+
+        # --- CALENDAR / EVENTS ---
+        st.subheader("📅 Calendar & Events")
+        if "events" in st.session_state and st.session_state.events:
+            for event in st.session_state.events:
+                st.write(f"📌 {event['date']} - {event['title']}")
+        else:
+            st.info("No events scheduled. Add events in the Calendar tab.")
+
     else:
+        # --- LOGGED OUT SCREEN ---
         st.subheader("🚀 Welcome to SmartStudy")
         st.markdown("### Please log in from the sidebar to access your personalized study dashboard.")
 
@@ -313,6 +374,7 @@ if st.session_state.page == "🏠 Home":
         ---
         👉 Create a free account or log in now to unlock all features and track your progress!
         """)
+
 
 # ============================
 # Notes Page

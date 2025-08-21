@@ -566,12 +566,14 @@ elif st.session_state.page == "📝 Notes":
             st.error("⚠️ Invalid YouTube link.")
         else:
             with st.spinner("Fetching transcript and generating notes..."):
-                try:
-                    transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
-                    transcript = " ".join([t["text"] for t in transcript_data])
-                except Exception as e:
-                    st.error("❌ No transcript available for this video (captions may be disabled).")
-                    transcript = None
+            try:
+                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                # Pick the first transcript (auto-generated or manual)
+                transcript = transcript_list.find_transcript(['en']).fetch()
+                text = " ".join([t["text"] for t in transcript])
+            except (TranscriptsDisabled, NoTranscriptFound):
+                st.error("❌ No transcript found (captions disabled or unavailable).")
+                text = None
 
                 if transcript:
                     try:

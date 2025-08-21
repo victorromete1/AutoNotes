@@ -588,7 +588,7 @@ elif st.session_state.page == "📝 Notes":
     st.markdown("---")
 
 
-    # 🎥 Generate AI Notes from YouTube
+    # 🎥 Generate AI Notes from YouTube (Using direct library)
     st.subheader("🎥 Generate AI Notes from YouTube")
 
     youtube_url = st.text_input("Paste a YouTube link:", key="youtube_url")
@@ -608,45 +608,22 @@ elif st.session_state.page == "📝 Notes":
         else:
             with st.spinner("Fetching transcript and generating notes..."):
                 try:
-                    # Method 1: Try direct approach first (might work sometimes)
+                    # Install and use the underlying YouTube transcript library directly
+                    import sys
+                    import subprocess
+                    
+                    # Install the required package if not already installed
                     try:
-                        from youtube_transcript_api import YouTubeTranscriptApi
-                        transcript = YouTubeTranscriptApi.get_transcript(video_id)
-                        transcript_text = " ".join([t['text'] for t in transcript])
-                    except:
-                        # Method 2: Use alternative library
-                        try:
-                            import youtube_transcript_api
-                            transcript_list = youtube_transcript_api.YouTubeTranscriptApi.list_transcripts(video_id)
-                            transcript = transcript_list.find_transcript(['en']).fetch()
-                            transcript_text = " ".join([t['text'] for t in transcript])
-                        except:
-                            # Method 3: Use requests with custom headers to mimic browser
-                            import requests
-                            headers = {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                            }
-                            
-                            # Try different transcript API endpoints
-                            endpoints = [
-                                f"https://youtubetranscript.com/?server_vid={video_id}",
-                                f"https://video.google.com/timedtext?lang=en&v={video_id}",
-                                f"https://www.youtube.com/api/timedtext?lang=en&v={video_id}"
-                            ]
-                            
-                            transcript_text = None
-                            for endpoint in endpoints:
-                                try:
-                                    response = requests.get(endpoint, headers=headers, timeout=10)
-                                    if response.status_code == 200:
-                                        # Simple text extraction - you might need to parse XML
-                                        transcript_text = response.text
-                                        break
-                                except:
-                                    continue
-                            
-                            if not transcript_text:
-                                raise Exception("All methods failed")
+                        import youtube_transcript_api
+                    except ImportError:
+                        subprocess.check_call([sys.executable, "-m", "pip", "install", "youtube-transcript-api"])
+                        import youtube_transcript_api
+                    
+                    from youtube_transcript_api import YouTubeTranscriptApi
+                    
+                    # Get transcript using the same library the MCP server uses
+                    transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=['en'])
+                    transcript_text = " ".join([entry['text'] for entry in transcript])
                     
                     # Generate notes from transcript
                     notes_content = generators['notes'].generate_notes(transcript_text)
@@ -668,9 +645,8 @@ elif st.session_state.page == "📝 Notes":
                         st.error("Failed to generate notes. Please try again.")
                         
                 except Exception as e:
-                    st.error(f"❌ Could not fetch transcript: {str(e)}")
-                    st.info("💡 Tip: Try a different video or use a local setup instead of Streamlit Cloud")
-
+                    st.error(f"❌ Error fetching transcript: {str(e)}")
+                    st.info("This video may not have English captions available")
 
     # Existing Notes List
     if st.session_state.notes:

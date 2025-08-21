@@ -165,6 +165,9 @@ init_session_state()
 # Load previously persisted data (per-user)
 persistence.load_all_data()
 
+import streamlit as st
+from datetime import datetime
+
 # ============================
 # Sidebar with Login / Navigation
 # ============================
@@ -242,6 +245,7 @@ with st.sidebar:
 
         if st.button("Logout", use_container_width=True):
             st.session_state.clear()
+            st.session_state["logged_in"] = False
             st.success("Logged out.")
             st.rerun()
 
@@ -305,7 +309,23 @@ if st.session_state.get("page") == "🏠 Home":
 
     else:
         st.subheader("🚀 Welcome to SmartStudy")
-        st.markdown("Please log in from the sidebar to access your dashboard.")
+        st.markdown("### Please log in from the sidebar to access your personalized study dashboard.")
+
+        st.markdown("""
+        SmartStudy is your **all-in-one learning companion**, designed to help you study smarter, not harder.  
+
+        ### 🌟 What You Can Do:
+        - **📝 Smart Notes**: Instantly generate structured notes for any topic  
+        - **🎴 Flashcards**: Create interactive flashcards for revision  
+        - **❓ Adaptive Quizzes**: Test yourself with personalized, AI-driven quizzes  
+        - **📊 Progress Tracking**: Monitor your study habits and performance  
+        - **📑 Reports**: Export beautiful PDF reports of your learning journey  
+        - **📅 Calendar Integration**: Organize your study schedule  
+        - **📝 Autograder**: Get instant feedback on practice answers  
+
+        ---
+        👉 Create a free account or log in now to unlock all features and track your progress!
+        """)
 
 
 # ============================
@@ -329,6 +349,7 @@ if st.session_state.get("page") == "⚙️ Settings" and st.session_state.get("l
         if confirm == st.session_state["username"]:
             user_data.admin_delete_account(confirm)
             st.session_state.clear()
+            st.session_state["logged_in"] = False
             st.success("Your account has been deleted.")
             st.rerun()
 

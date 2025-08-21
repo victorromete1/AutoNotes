@@ -639,7 +639,6 @@ elif st.session_state.page == "📝 Notes":
                     
                     if not transcript_data:
                         st.error("❌ No transcript found on this video page")
-                        return
                     
                     # Extract transcript URL from the script data
                     import json
@@ -656,7 +655,6 @@ elif st.session_state.page == "📝 Notes":
                     
                     if not yt_initial_data:
                         st.error("❌ Could not parse video data")
-                        return
                     
                     # Extract transcript from the JSON structure
                     transcript_text = ""

@@ -1429,6 +1429,66 @@ elif st.session_state.page == "📝 Autograder":
 
             st.markdown("### 📝 Detailed Feedback")
             st.info(result.get("detailed_feedback", "No feedback provided."))
+# ============================
+# Settings Page
+# ============================
+
+elif st.session_state.page == "⚙️ Settings":
+    st.title("⚙️ User Settings")
+
+    # --- Change Password Section ---
+    st.subheader("🔑 Change Your Password")
+    with st.form("change_password_form"):
+        current_password = st.text_input("Current Password", type="password")
+        new_password = st.text_input("New Password", type="password")
+        confirm_new_password = st.text_input("Confirm New Password", type="password")
+        
+        submitted = st.form_submit_button("Change Password")
+        
+        if submitted:
+            if not all([current_password, new_password, confirm_new_password]):
+                st.warning("Please fill out all password fields.")
+            elif new_password != confirm_new_password:
+                st.error("New passwords do not match.")
+            else:
+                # Authenticate user with their current password first
+                is_valid, _ = user_data.authenticate(st.session_state['username'], current_password)
+                if is_valid:
+                    # If authentication succeeds, proceed with the password update
+                    success, msg = user_data.change_password(st.session_state['username'], new_password)
+                    if success:
+                        st.success("Your password has been changed successfully!")
+                    else:
+                        st.error(f"Failed to change password: {msg}")
+                else:
+                    st.error("The current password you entered is incorrect.")
+
+    st.divider()
+
+    # --- Delete Account Section ---
+    st.subheader("🗑️ Danger Zone")
+    with st.expander("Delete Account"):
+        st.warning("This action is irreversible. All your notes, flashcards, and progress will be permanently deleted.")
+        
+        confirmation_text = st.text_input(
+            "To confirm, please type `DELETE` in the box below:"
+        )
+        
+        if st.button("Permanently Delete My Account", type="primary"):
+            if confirmation_text == "DELETE":
+                success, msg = user_data.delete_account(st.session_state['username'])
+                if success:
+                    st.success("Your account has been deleted. You have been logged out.")
+                    # Clear session and log the user out
+                    st.session_state.clear()
+                    st.session_state["logged_in"] = False
+                    st.session_state["page"] = "🏠 Home"
+                    st.rerun()
+                else:
+                    st.error(f"An error occurred while deleting your account: {msg}")
+            else:
+                st.error("Confirmation text did not match. Account deletion cancelled.")
+
 
 
 

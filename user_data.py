@@ -177,6 +177,37 @@ def save_current_user(session_state: dict) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"Save error: {str(e)}"
 
+# Add these functions to your user_data.py file
+
+def change_password(username, new_password):
+    """Changes the password for a given user."""
+    try:
+        # Hash the new password for secure storage
+        hashed_password = hash_password(new_password)
+        
+        # Update the user's record in the 'users' table
+        supabase.table("users").update({
+            "password": hashed_password
+        }).eq("username", username.lower()).execute()
+        
+        return True, "Password updated successfully."
+    except Exception as e:
+        # Return the error message if the update fails
+        return False, str(e)
+
+def delete_account(username):
+    """Deletes a user's account and all their data."""
+    try:
+        # Delete the user's row from the 'users' table
+        supabase.from_("users").delete().eq("username", username.lower()).execute()
+        
+        return True, "Account deleted successfully."
+    except Exception as e:
+        # Return the error message if the deletion fails
+        return False, str(e)
+
+
+
 def load_user_data(username: str, merge_local: bool = False, 
                  local_state: Optional[dict] = None) -> Tuple[bool, dict]:
     """Load user data with case-insensitive lookup"""

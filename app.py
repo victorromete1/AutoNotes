@@ -253,7 +253,7 @@ with st.sidebar:
         page = st.selectbox(
             "Navigate:",
             ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes",
-             "📊 Progress", "📋 Reports", "📅 Calendar", "📝 Autograder", "⚙️ Settings"],
+             "📊 Progress", "📅 Calendar", "📝 Autograder", "⚙️ Settings"],
             key="navigation"
         )
         st.session_state.page = page
@@ -1131,43 +1131,6 @@ elif st.session_state.page == "📊 Progress":
             plt.xticks(rotation=45)
             st.pyplot(fig)
 
-
-# ============================
-# Reports Page
-# ============================
-
-elif st.session_state.page == "📋 Reports":
-    st.title("📋 Progress Reports")
-
-    if st.session_state.study_sessions:
-        report_type = st.selectbox("Report type:", ["Study Summary", "Quiz Analysis", "Flashcard Report"])
-
-        if st.button("📄 Generate PDF Report", type="primary"):
-            user_data.save_current_user(st.session_state)
-            with st.spinner("Generating report..."):
-                try:
-                    # Ensure sessions are dicts (defensive)
-                    valid_sessions = [s for s in st.session_state.study_sessions if isinstance(s, dict)]
-
-                    # Generate PDF via PDFReportGenerator
-                    pdf_data = generators['pdf'].generate_progress_report(
-                        valid_sessions,
-                        st.session_state.notes,
-                        st.session_state.flashcards
-                    )
-
-                    st.download_button(
-                        "📥 Download Report",
-                        data=pdf_data,
-                        file_name=f"study_report_{datetime.now().strftime('%Y%m%d')}.pdf",
-                        mime="application/pdf"
-                    )
-                except Exception as e:
-                    st.error(f"Error generating report: {str(e)}")
-    else:
-        st.info("No data available for reports. Start studying to generate reports!")
-
-
 # ============================
 # Calendar Page
 # ============================
@@ -1175,7 +1138,7 @@ elif st.session_state.page == "📋 Reports":
 elif st.session_state.page == "📅 Calendar":
     st.title("📅 Calendar & Events")
 
-    # Initialize calendar-related session keys
+    # Initialize calendar sessions
     if "events" not in st.session_state:
         st.session_state.events = []
     if "calendar_year" not in st.session_state:

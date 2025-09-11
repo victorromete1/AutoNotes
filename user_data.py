@@ -24,6 +24,27 @@ def normalize_username(username: str) -> str:
     """Convert username to lowercase and strip whitespace"""
     return username.strip().lower()
 
+def admin_delete_account(target_username: str) -> Tuple[bool, str]:
+    """Admin deletes any user account (case-insensitive)"""
+    normalized = normalize_username(target_username)
+    try:
+        # Check if user exists
+        user_check = supabase.table("users").select("username").eq("username", normalized).execute()
+        if not user_check.data:
+            return False, "User does not exist"
+
+        # Delete all user data first
+        tables = ["notes", "flashcards", "study_sessions", "events"]
+        for table in tables:
+            supabase.table(table).delete().eq("username", normalized).execute()
+
+        # Delete the user
+        supabase.table("users").delete().eq("username", normalized).execute()
+
+        return True, "User account and data deleted successfully"
+    except Exception as e:
+        return False, f"Deletion failed: {str(e)}"
+
 # ---- Authentication ----
 def register_user(username: str, password: str) -> Tuple[bool, str]:
     """Register new user (auto-lowercase)"""
@@ -72,18 +93,21 @@ def authenticate(username: str, password: str) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"Login error: {str(e)}"
 
-# ---- User Management ----
 def admin_reset_password(target_username: str, new_password: str) -> Tuple[bool, str]:
-    """Admin password reset (case-insensitive)"""
+    """Admin password reset with user existence validation (case-insensitive)"""
     normalized = normalize_username(target_username)
     try:
-        supabase.table("users") \
-              .update({"password": hash_password(new_password)}) \
-              .eq("username", normalized) \
-              .execute()
-        return True, "Password updated"
+        # Check if user exists first
+        user_check = supabase.table("users").select("username").eq("username", normalized).execute()
+        if not user_check.data:
+            return False, "User does not exist"
+
+        # Proceed to update password
+        supabase.table("users").update({"password": hash_password(new_password)}).eq("username", normalized).execute()
+        return True, "Password updated successfully"
     except Exception as e:
         return False, f"Reset failed: {str(e)}"
+
 
 def delete_account(username: str) -> Tuple[bool, str]:
     """Delete account (case-insensitive)"""

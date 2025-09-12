@@ -301,9 +301,6 @@ with st.sidebar:
 # ----------------------------
 # Home Page
 # ----------------------------
-# ----------------------------
-# Home Page
-# ----------------------------
 if st.session_state.page == "🏠 Home":
     # Custom CSS for styling
     st.markdown("""
@@ -692,7 +689,31 @@ if st.session_state.page == "🏠 Home":
             with admin_col1:
                 st.markdown("#### Reset Password")
                 target_user = st.text_input("Username to Reset Password", key="admin_reset_user")
-                new_pass = st.text_input("New Password", type="password", key="
+                new_pass = st.text_input("New Password", type="password", key="admin_new_pass")
+                if st.button("Reset User Password", key="admin_reset_btn"):
+                    if target_user and new_pass:
+                        ok, msg = user_data.admin_reset_password(target_user, new_pass)
+                        if ok:
+                            st.success(f"Password for '{target_user}' reset successfully.")
+                        else:
+                            st.error(msg)
+                    else:
+                        st.warning("Enter both username and new password.")
+
+            with admin_col2:
+                st.markdown("#### Delete Account")
+                del_user = st.text_input("Username to Delete", key="admin_del_user")
+                if st.button("Delete Account", type="secondary", key="admin_del_btn"):
+                    if del_user:
+                        ok, msg = user_data.admin_delete_account(del_user)
+                        if ok:
+                            st.success(f"User '{del_user}' deleted successfully.")
+                        else:
+                            st.error(msg)
+                    else:
+                        st.warning("Enter a username to delete.")
+            
+            st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ============================

@@ -441,7 +441,6 @@ elif st.session_state.page == "📝 Notes":
             st.session_state.notes.append(new_note)
             user_data.save_current_user(st.session_state)
             auto_save()
-            st.rerun()
             st.session_state["free_note_title"] = ""
             st.session_state["free_note_text"] = ""
             st.session_state["free_note_cat"] = "General"

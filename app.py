@@ -322,50 +322,292 @@ if st.session_state.page == "🏠 Home":
 
     # Logged in → dashboard
     else:
-        st.subheader(f"Hello, {st.session_state['username']}!")
-
-        # Recent Activity
-        if st.session_state.get("study_sessions"):
-            st.subheader("📅 Recent Activity")
-            recent_sessions = sorted(
-                st.session_state.study_sessions,
-                key=lambda x: x.get('timestamp', ''), reverse=True
-            )[:5]
-            for session in recent_sessions:
-                timestamp = datetime.fromisoformat(session['timestamp']).strftime("%Y-%m-%d %H:%M")
-                activity = session.get('activity_type', 'Unknown')
-                if activity == 'quiz':
-                    st.write(f"🧠 {timestamp} - Quiz completed: {session.get('score', 0):.1f}%")
-                elif activity == 'flashcards':
-                    st.write(f"📚 {timestamp} - Studied {session.get('flashcards_studied', 0)} flashcards")
-                elif activity == 'flashcards_created':
-                    st.write(f"➕ {timestamp} - Created {session.get('flashcards_created', 0)} flashcards")
-
-        # Admin Controls (fully functional)
+        # Welcome message with user's name
+        st.markdown(f"<h2 style='margin-bottom: 20px;'>Welcome back, {st.session_state['username']}! 👋</h2>", unsafe_allow_html=True)
+        
+        # Display admin badge if in admin mode
         if st.session_state.get("admin_mode"):
-            st.subheader("🛠 Admin Controls")
-            target_user = st.text_input("Username to Reset Password", key="admin_reset_user")
-            new_pass = st.text_input("New Password", type="password", key="admin_new_pass")
-            if st.button("Reset User Password"):
-                if target_user and new_pass:
-                    ok, msg = user_data.admin_reset_password(target_user, new_pass)
-                    if ok:
-                        st.success(f"Password for '{target_user}' reset successfully.")
-                    else:
-                        st.error(msg)
+            st.markdown("<div style='background-color: #ff4b4b; color: white; padding: 5px 10px; border-radius: 5px; display: inline-block; margin-bottom: 15px;'>🛠 Admin Mode Active</div>", unsafe_allow_html=True)
+        
+        # Quick stats cards at the top
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown("""
+            <div style='background-color: #f0f2f6; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
+                <h3 style='margin: 0; color: #1f77b4;'>📝</h3>
+                <h2 style='margin: 5px 0;'>{}</h2>
+                <p style='margin: 0; color: #666;'>Notes</p>
+            </div>
+            """.format(len(st.session_state.notes)), unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <div style='background-color: #f0f2f6; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
+                <h3 style='margin: 0; color: #ff7f0e;'>📚</h3>
+                <h2 style='margin: 5px 0;'>{}</h2>
+                <p style='margin: 0; color: #666;'>Flashcards</p>
+            </div>
+            """.format(len(st.session_state.flashcards)), unsafe_allow_html=True)
+        
+        with col3:
+            quiz_sessions = [s for s in st.session_state.study_sessions if s.get('activity_type') == 'quiz']
+            st.markdown("""
+            <div style='background-color: #f0f2f6; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
+                <h3 style='margin: 0; color: #2ca02c;'>🧠</h3>
+                <h2 style='margin: 5px 0;'>{}</h2>
+                <p style='margin: 0; color: #666;'>Quizzes Taken</p>
+            </div>
+            """.format(len(quiz_sessions)), unsafe_allow_html=True)
+        
+        with col4:
+            st.markdown("""
+            <div style='background-color: #f0f2f6; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
+                <h3 style='margin: 0; color: #d62728;'>📊</h3>
+                <h2 style='margin: 5px 0;'>{}</h2>
+                <p style='margin: 0; color: #666;'>Study Sessions</p>
+            </div>
+            """.format(len(st.session_state.study_sessions)), unsafe_allow_html=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Main dashboard with two columns
+        col_left, col_right = st.columns([2, 1])
+        
+        with col_left:
+            # Quick actions section
+            st.markdown("### ⚡ Quick Actions")
+            action_col1, action_col2, action_col3 = st.columns(3)
+            
+            with action_col1:
+                if st.button("📝 New Note", use_container_width=True):
+                    st.session_state.page = "📝 Notes"
+                    st.rerun()
+            
+            with action_col2:
+                if st.button("📚 Study Flashcards", use_container_width=True):
+                    st.session_state.page = "📚 Flashcards"
+                    st.rerun()
+                    
+            with action_col3:
+                if st.button("🧠 Take Quiz", use_container_width=True):
+                    st.session_state.page = "🧠 Quizzes"
+                    st.rerun()
+            
+            # Recent activity section
+            if st.session_state.get("study_sessions"):
+                st.markdown("### 📅 Recent Activity")
+                
+                # Get recent sessions (last 5)
+                recent_sessions = sorted(
+                    st.session_state.study_sessions,
+                    key=lambda x: x.get('timestamp', ''), 
+                    reverse=True
+                )[:5]
+                
+                for session in recent_sessions:
+                    try:
+                        timestamp = datetime.fromisoformat(session['timestamp']).strftime("%Y-%m-%d %H:%M")
+                        activity = session.get('activity_type', 'Unknown')
+                        
+                        # Create different display based on activity type
+                        if activity == 'quiz':
+                            score = session.get('score', 0)
+                            # Color code based on performance
+                            score_color = "#2ca02c" if score >= 80 else "#ff7f0e" if score >= 60 else "#d62728"
+                            st.markdown(f"""
+                            <div style='background-color: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid {score_color}'>
+                                <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                    <div>
+                                        <b>🧠 Quiz Completed</b> - {session.get('subject', 'General')}
+                                    </div>
+                                    <div style='color: {score_color}; font-weight: bold;'>{score:.1f}%</div>
+                                </div>
+                                <div style='color: #666; font-size: 0.9em;'>{timestamp}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        
+                        elif activity == 'flashcards':
+                            studied = session.get('flashcards_studied', 0)
+                            correct = session.get('correct_answers', 0)
+                            accuracy = (correct / studied * 100) if studied > 0 else 0
+                            st.markdown(f"""
+                            <div style='background-color: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #1f77b4'>
+                                <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                    <div>
+                                        <b>📚 Flashcards Studied</b> - {session.get('subject', 'General')}
+                                    </div>
+                                    <div style='color: #1f77b4; font-weight: bold;'>{studied} cards</div>
+                                </div>
+                                <div style='color: #666; font-size: 0.9em;'>{timestamp} • Accuracy: {accuracy:.1f}%</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        
+                        elif activity == 'flashcards_created':
+                            created = session.get('flashcards_created', 0)
+                            st.markdown(f"""
+                            <div style='background-color: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #9467bd'>
+                                <div style='display: flex; justify-content: space-between; align-items: center;'>
+                                    <div>
+                                        <b>➕ Flashcards Created</b> - {session.get('subject', 'General')}
+                                    </div>
+                                    <div style='color: #9467bd; font-weight: bold;'>{created} cards</div>
+                                </div>
+                                <div style='color: #666; font-size: 0.9em;'>{timestamp}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                    except Exception as e:
+                        # Skip malformed sessions
+                        continue
+            else:
+                st.info("No recent activity. Start studying to see your progress here!")
+                
+            # Quick note creation
+            st.markdown("### ✏️ Quick Note")
+            quick_note = st.text_area("Jot something down:", placeholder="Type your quick note here...", height=100, 
+                                     label_visibility="collapsed")
+            if st.button("Save Quick Note", use_container_width=True):
+                if quick_note.strip():
+                    new_note = {
+                        "title": f"Quick Note - {datetime.now().strftime('%H:%M')}",
+                        "content": quick_note,
+                        "category": "Quick Notes",
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    }
+                    st.session_state.notes.append(new_note)
+                    auto_save()
+                    st.success("Quick note saved!")
+                    st.rerun()
+        
+        with col_right:
+            # Upcoming events from calendar
+            if "events" in st.session_state and st.session_state.events:
+                st.markdown("### 📅 Upcoming Events")
+                
+                # Get today's date and next 7 days
+                today = datetime.now().date()
+                upcoming_events = []
+                
+                for event in st.session_state.events:
+                    try:
+                        event_date = datetime.fromisoformat(event["date"]).date()
+                        if event_date >= today:
+                            upcoming_events.append({
+                                "name": event["name"],
+                                "date": event_date,
+                                "color": event.get("color", "#4CAF50"),
+                                "notes": event.get("notes", "")
+                            })
+                    except:
+                        continue
+                
+                # Sort by date and take next 3 events
+                upcoming_events.sort(key=lambda x: x["date"])
+                upcoming_events = upcoming_events[:3]
+                
+                for event in upcoming_events:
+                    days_until = (event["date"] - today).days
+                    day_text = "Today" if days_until == 0 else f"In {days_until} day{'s' if days_until != 1 else ''}"
+                    
+                    st.markdown(f"""
+                    <div style='background-color: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid {event["color"]}'>
+                        <div style='font-weight: bold;'>{event["name"]}</div>
+                        <div style='color: #666; font-size: 0.9em;'>
+                            {event["date"].strftime("%b %d")} • {day_text}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            # Study tips/random tip
+            st.markdown("### 💡 Study Tip")
+            study_tips = [
+                "Try the Pomodoro technique: 25 minutes of focused study, then a 5-minute break.",
+                "Teaching someone else is one of the best ways to reinforce your own learning.",
+                "Create flashcards for key concepts and review them regularly for better retention.",
+                "Connect new information to what you already know to improve memory formation.",
+                "Study in different locations to create multiple memory associations.",
+                "Get enough sleep - it's crucial for memory consolidation and learning.",
+                "Test yourself regularly rather than just re-reading material."
+            ]
+            
+            import random
+            tip = random.choice(study_tips)
+            st.info(f"💡 {tip}")
+            
+            # Quick progress visualization
+            if st.session_state.get("study_sessions"):
+                st.markdown("### 📈 This Week's Progress")
+                
+                # Count sessions by day for the past week
+                daily_counts = {}
+                for session in st.session_state.study_sessions:
+                    try:
+                        session_date = datetime.fromisoformat(session['timestamp']).date()
+                        if (datetime.now().date() - session_date).days <= 7:
+                            daily_counts[session_date] = daily_counts.get(session_date, 0) + 1
+                    except:
+                        continue
+                
+                # Create a simple bar chart using HTML
+                if daily_counts:
+                    max_count = max(daily_counts.values()) if daily_counts else 1
+                    html_chart = "<div style='display: flex; align-items: flex-end; height: 120px; gap: 8px;'>"
+                    
+                    # Get last 7 days
+                    dates = [(datetime.now().date() - timedelta(days=i)) for i in range(6, -1, -1)]
+                    
+                    for date in dates:
+                        count = daily_counts.get(date, 0)
+                        height = (count / max_count * 80) if max_count > 0 else 0
+                        day_name = date.strftime("%a")
+                        
+                        html_chart += f"""
+                        <div style='display: flex; flex-direction: column; align-items: center;'>
+                            <div style='background: #4CAF50; width: 30px; height: {height}px; border-radius: 4px 4px 0 0;'></div>
+                            <div style='margin-top: 5px; font-size: 12px;'>{day_name}</div>
+                            <div style='font-size: 11px;'>{count}</div>
+                        </div>
+                        """
+                    
+                    html_chart += "</div>"
+                    st.markdown(html_chart, unsafe_allow_html=True)
                 else:
-                    st.warning("Enter both username and new password.")
+                    st.info("No study sessions this week yet.")
 
-            del_user = st.text_input("Username to Delete", key="admin_del_user")
-            if st.button("Delete Account"):
-                if del_user:
-                    ok, msg = user_data.admin_delete_account(del_user)
-                    if ok:
-                        st.success(f"User '{del_user}' deleted successfully.")
+        # Admin Controls (fully functional) - at the bottom
+        if st.session_state.get("admin_mode"):
+            st.markdown("---")
+            st.subheader("🛠 Admin Controls")
+            
+            admin_col1, admin_col2 = st.columns(2)
+            
+            with admin_col1:
+                st.markdown("#### Reset Password")
+                target_user = st.text_input("Username to Reset Password", key="admin_reset_user")
+                new_pass = st.text_input("New Password", type="password", key="admin_new_pass")
+                if st.button("Reset User Password"):
+                    if target_user and new_pass:
+                        ok, msg = user_data.admin_reset_password(target_user, new_pass)
+                        if ok:
+                            st.success(f"Password for '{target_user}' reset successfully.")
+                        else:
+                            st.error(msg)
                     else:
-                        st.error(msg)
-                else:
-                    st.warning("Enter a username to delete.")
+                        st.warning("Enter both username and new password.")
+
+            with admin_col2:
+                st.markdown("#### Delete Account")
+                del_user = st.text_input("Username to Delete", key="admin_del_user")
+                if st.button("Delete Account", type="secondary"):
+                    if del_user:
+                        ok, msg = user_data.admin_delete_account(del_user)
+                        if ok:
+                            st.success(f"User '{del_user}' deleted successfully.")
+                        else:
+                            st.error(msg)
+                    else:
+                        st.warning("Enter a username to delete.")
 
 
 # ============================

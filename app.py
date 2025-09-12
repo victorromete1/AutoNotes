@@ -662,17 +662,17 @@ elif st.session_state.page == "📚 Flashcards":
                     c1, c2, c3 = st.columns(3)
 
                     with c1:
-                        if st.button("❌ Incorrect", use_container_width=True):
+                        if st.button("❌ Needs work", use_container_width=True):
                             user_data.save_current_user(st.session_state)
                             next_flashcard(study_cards, correct=False)
 
                     with c2:
-                        if st.button("🤔 Partial", use_container_width=True):
+                        if st.button("🤔 Almost", use_container_width=True):
                             user_data.save_current_user(st.session_state)
                             next_flashcard(study_cards, correct=True)
 
                     with c3:
-                        if st.button("✅ Correct", use_container_width=True):
+                        if st.button("✅ Mastered", use_container_width=True):
                             user_data.save_current_user(st.session_state)
                             next_flashcard(study_cards, correct=True)
                 else:

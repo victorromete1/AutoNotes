@@ -441,10 +441,33 @@ elif st.session_state.page == "📝 Notes":
             st.session_state.notes.append(new_note)
             user_data.save_current_user(st.session_state)
             auto_save()
-            st.session_state["free_note_title"] = ""
-            st.session_state["free_note_text"] = ""
-            st.session_state["free_note_cat"] = "General"
             st.success(f"✅ Note '{final_title}' saved!")
+            st.rerun()
+            note_title = st.text_input(
+                "Note Name:",
+                placeholder="Enter a title for your note...",
+                key="free_note_title"
+            )
+
+            free_note = st.text_area(
+                "Type your notes here:",
+                  value="",
+                placeholder="Write your class notes here...",
+                height=200,
+                key="free_note_text"
+            )
+
+            free_category = st.text_input(
+                "Category for these notes:",
+                value=st.session_state.get("free_note_cat", "General"),
+                key="free_note_cat"
+            )
+
+            summarize_option = st.checkbox(
+                "🧠 Summarize with AI",
+                value=st.session_state.get("summarize_option", True),
+                key="summarize_option"
+            )
 
     st.markdown("---")
 

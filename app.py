@@ -301,75 +301,178 @@ with st.sidebar:
 # ----------------------------
 # Home Page
 # ----------------------------
+# ----------------------------
+# Home Page
+# ----------------------------
 if st.session_state.page == "🏠 Home":
-    st.title("🎓 SmartStudy Dashboard")
-
+    # Custom CSS for styling
+    st.markdown("""
+    <style>
+    .feature-card {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        transition: transform 0.3s ease;
+    }
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+    .stat-card {
+        background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        margin-bottom: 15px;
+    }
+    .quick-action-btn {
+        background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    .quick-action-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+    .activity-item {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border-left: 4px solid #6a11cb;
+    }
+    .admin-panel {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 30px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     # Logged out → show app info
     if not st.session_state.get("logged_in", False):
-        st.subheader("🚀 Welcome to SmartStudy")
-        st.markdown("### Please log in from the sidebar to access your personalized dashboard.")
-        st.markdown("""
-        SmartStudy is your **all-in-one learning companion**.  
-
-        ### 🌟 Features:
-        - 📝 Smart Notes  
-        - 🎴 Flashcards  
-        - ❓ Adaptive Quizzes  
-        - 📑 Reports  
-        - 📅 Calendar Integration  
-        - 📝 Autograder  
-        """)
+        st.title("🎓 SmartStudy")
+        st.subheader("🚀 Welcome to Your AI-Powered Study Companion")
+        
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            st.markdown("""
+            ### Transform Your Learning Experience
+            
+            SmartStudy is your **all-in-one learning companion** designed to help you study smarter, not harder.
+            
+            ##### 🌟 Key Features:
+            - **📝 Smart Notes** - AI-powered note generation and summarization
+            - **🎴 Flashcards** - Create and study with interactive flashcards
+            - **🧠 Adaptive Quizzes** - Test your knowledge with AI-generated quizzes
+            - **📊 Progress Tracking** - Monitor your learning journey with detailed analytics
+            - **📅 Calendar Integration** - Schedule study sessions and set reminders
+            - **📝 Autograder** - Get instant feedback on your writing
+            
+            ##### 🚀 Get Started:
+            1. Create an account or log in using the sidebar
+            2. Explore the different study tools
+            3. Track your progress over time
+            4. Achieve your learning goals faster!
+            """)
+        
+        with col2:
+            st.image("https://images.unsplash.com/photo-1501504905252-473c47e087f8?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=80", 
+                    caption="Study Smarter with AI")
+            
+        # Feature cards
+        st.markdown("### ✨ How It Works")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("""
+            <div class="feature-card">
+                <h4>📝 Create Content</h4>
+                <p>Generate notes from your materials or create flashcards from your content with AI assistance.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        with col2:
+            st.markdown("""
+            <div class="feature-card">
+                <h4>🧠 Study Smart</h4>
+                <p>Use spaced repetition and adaptive quizzes to reinforce your learning effectively.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        with col3:
+            st.markdown("""
+            <div class="feature-card">
+                <h4>📈 Track Progress</h4>
+                <p>Monitor your performance with detailed analytics and identify areas for improvement.</p>
+            </div>
+            """, unsafe_allow_html=True)
 
     # Logged in → dashboard
     else:
-        # Welcome message with user's name
-        st.markdown(f"<h2 style='margin-bottom: 20px;'>Welcome back, {st.session_state['username']}! 👋</h2>", unsafe_allow_html=True)
+        # Header with welcome message
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; color: white; margin-bottom: 30px;">
+            <h1 style="margin: 0; font-size: 2.5rem;">🎓 SmartStudy Dashboard</h1>
+            <h2 style="margin: 0; font-weight: 400;">Welcome back, {st.session_state['username']}! 👋</h2>
+        </div>
+        """, unsafe_allow_html=True)
         
         # Display admin badge if in admin mode
         if st.session_state.get("admin_mode"):
-            st.markdown("<div style='background-color: #ff4b4b; color: white; padding: 5px 10px; border-radius: 5px; display: inline-block; margin-bottom: 15px;'>🛠 Admin Mode Active</div>", unsafe_allow_html=True)
+            st.markdown("""
+            <div style="background-color: #ff4b4b; color: white; padding: 10px 15px; border-radius: 8px; display: inline-block; margin-bottom: 20px;">
+                <b>🛠 Admin Mode Active</b>
+            </div>
+            """, unsafe_allow_html=True)
         
         # Quick stats cards at the top
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.markdown("""
-            <div style='background-color: #f0f2f6; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
-                <h3 style='margin: 0; color: #1f77b4;'>📝</h3>
-                <h2 style='margin: 5px 0;'>{}</h2>
-                <p style='margin: 0; color: #666;'>Notes</p>
+            st.markdown(f"""
+            <div class="stat-card">
+                <h3 style="margin: 0; font-size: 2rem;">{len(st.session_state.notes)}</h3>
+                <p style="margin: 0;">Notes</p>
             </div>
-            """.format(len(st.session_state.notes)), unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
         
         with col2:
-            st.markdown("""
-            <div style='background-color: #f0f2f6; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
-                <h3 style='margin: 0; color: #ff7f0e;'>📚</h3>
-                <h2 style='margin: 5px 0;'>{}</h2>
-                <p style='margin: 0; color: #666;'>Flashcards</p>
+            st.markdown(f"""
+            <div class="stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                <h3 style="margin: 0; font-size: 2rem;">{len(st.session_state.flashcards)}</h3>
+                <p style="margin: 0;">Flashcards</p>
             </div>
-            """.format(len(st.session_state.flashcards)), unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
         
         with col3:
             quiz_sessions = [s for s in st.session_state.study_sessions if s.get('activity_type') == 'quiz']
-            st.markdown("""
-            <div style='background-color: #f0f2f6; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
-                <h3 style='margin: 0; color: #2ca02c;'>🧠</h3>
-                <h2 style='margin: 5px 0;'>{}</h2>
-                <p style='margin: 0; color: #666;'>Quizzes Taken</p>
+            st.markdown(f"""
+            <div class="stat-card" style="background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);">
+                <h3 style="margin: 0; font-size: 2rem;">{len(quiz_sessions)}</h3>
+                <p style="margin: 0;">Quizzes Taken</p>
             </div>
-            """.format(len(quiz_sessions)), unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
         
         with col4:
-            st.markdown("""
-            <div style='background-color: #f0f2f6; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
-                <h3 style='margin: 0; color: #d62728;'>📊</h3>
-                <h2 style='margin: 5px 0;'>{}</h2>
-                <p style='margin: 0; color: #666;'>Study Sessions</p>
+            st.markdown(f"""
+            <div class="stat-card" style="background: linear-gradient(135deg, #4A00E0 0%, #8E2DE2 100%);">
+                <h3 style="margin: 0; font-size: 2rem;">{len(st.session_state.study_sessions)}</h3>
+                <p style="margin: 0;">Study Sessions</p>
             </div>
-            """.format(len(st.session_state.study_sessions)), unsafe_allow_html=True)
-        
-        st.markdown("<br>", unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
         
         # Main dashboard with two columns
         col_left, col_right = st.columns([2, 1])
@@ -380,17 +483,17 @@ if st.session_state.page == "🏠 Home":
             action_col1, action_col2, action_col3 = st.columns(3)
             
             with action_col1:
-                if st.button("📝 New Note", use_container_width=True):
+                if st.button("📝 New Note", use_container_width=True, key="quick_note"):
                     st.session_state.page = "📝 Notes"
                     st.rerun()
             
             with action_col2:
-                if st.button("📚 Study Flashcards", use_container_width=True):
+                if st.button("📚 Study Flashcards", use_container_width=True, key="quick_flashcards"):
                     st.session_state.page = "📚 Flashcards"
                     st.rerun()
                     
             with action_col3:
-                if st.button("🧠 Take Quiz", use_container_width=True):
+                if st.button("🧠 Take Quiz", use_container_width=True, key="quick_quiz"):
                     st.session_state.page = "🧠 Quizzes"
                     st.rerun()
             
@@ -405,7 +508,7 @@ if st.session_state.page == "🏠 Home":
                     reverse=True
                 )[:5]
                 
-                for session in recent_sessions:
+                for i, session in enumerate(recent_sessions):
                     try:
                         timestamp = datetime.fromisoformat(session['timestamp']).strftime("%Y-%m-%d %H:%M")
                         activity = session.get('activity_type', 'Unknown')
@@ -416,14 +519,14 @@ if st.session_state.page == "🏠 Home":
                             # Color code based on performance
                             score_color = "#2ca02c" if score >= 80 else "#ff7f0e" if score >= 60 else "#d62728"
                             st.markdown(f"""
-                            <div style='background-color: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid {score_color}'>
-                                <div style='display: flex; justify-content: space-between; align-items: center;'>
+                            <div class="activity-item" style="border-left-color: {score_color}">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <div>
                                         <b>🧠 Quiz Completed</b> - {session.get('subject', 'General')}
                                     </div>
-                                    <div style='color: {score_color}; font-weight: bold;'>{score:.1f}%</div>
+                                    <div style="color: {score_color}; font-weight: bold;">{score:.1f}%</div>
                                 </div>
-                                <div style='color: #666; font-size: 0.9em;'>{timestamp}</div>
+                                <div style="color: #666; font-size: 0.9em;">{timestamp}</div>
                             </div>
                             """, unsafe_allow_html=True)
                         
@@ -432,28 +535,28 @@ if st.session_state.page == "🏠 Home":
                             correct = session.get('correct_answers', 0)
                             accuracy = (correct / studied * 100) if studied > 0 else 0
                             st.markdown(f"""
-                            <div style='background-color: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #1f77b4'>
-                                <div style='display: flex; justify-content: space-between; align-items: center;'>
+                            <div class="activity-item" style="border-left-color: #1f77b4">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <div>
                                         <b>📚 Flashcards Studied</b> - {session.get('subject', 'General')}
                                     </div>
-                                    <div style='color: #1f77b4; font-weight: bold;'>{studied} cards</div>
+                                    <div style="color: #1f77b4; font-weight: bold;">{studied} cards</div>
                                 </div>
-                                <div style='color: #666; font-size: 0.9em;'>{timestamp} • Accuracy: {accuracy:.1f}%</div>
+                                <div style="color: #666; font-size: 0.9em;">{timestamp} • Accuracy: {accuracy:.1f}%</div>
                             </div>
                             """, unsafe_allow_html=True)
                         
                         elif activity == 'flashcards_created':
                             created = session.get('flashcards_created', 0)
                             st.markdown(f"""
-                            <div style='background-color: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #9467bd'>
-                                <div style='display: flex; justify-content: space-between; align-items: center;'>
+                            <div class="activity-item" style="border-left-color: #9467bd">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <div>
                                         <b>➕ Flashcards Created</b> - {session.get('subject', 'General')}
                                     </div>
-                                    <div style='color: #9467bd; font-weight: bold;'>{created} cards</div>
+                                    <div style="color: #9467bd; font-weight: bold;">{created} cards</div>
                                 </div>
-                                <div style='color: #666; font-size: 0.9em;'>{timestamp}</div>
+                                <div style="color: #666; font-size: 0.9em;">{timestamp}</div>
                             </div>
                             """, unsafe_allow_html=True)
                             
@@ -465,20 +568,21 @@ if st.session_state.page == "🏠 Home":
                 
             # Quick note creation
             st.markdown("### ✏️ Quick Note")
-            quick_note = st.text_area("Jot something down:", placeholder="Type your quick note here...", height=100, 
-                                     label_visibility="collapsed")
-            if st.button("Save Quick Note", use_container_width=True):
-                if quick_note.strip():
-                    new_note = {
-                        "title": f"Quick Note - {datetime.now().strftime('%H:%M')}",
-                        "content": quick_note,
-                        "category": "Quick Notes",
-                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    }
-                    st.session_state.notes.append(new_note)
-                    auto_save()
-                    st.success("Quick note saved!")
-                    st.rerun()
+            with st.form("quick_note_form"):
+                quick_note = st.text_area("Jot something down:", placeholder="Type your quick note here...", height=100, 
+                                         label_visibility="collapsed", key="quick_note_text")
+                if st.form_submit_button("💾 Save Quick Note", use_container_width=True):
+                    if quick_note.strip():
+                        new_note = {
+                            "title": f"Quick Note - {datetime.now().strftime('%H:%M')}",
+                            "content": quick_note,
+                            "category": "Quick Notes",
+                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        }
+                        st.session_state.notes.append(new_note)
+                        auto_save()
+                        st.success("Quick note saved!")
+                        st.rerun()
         
         with col_right:
             # Upcoming events from calendar
@@ -564,7 +668,7 @@ if st.session_state.page == "🏠 Home":
                         
                         html_chart += f"""
                         <div style='display: flex; flex-direction: column; align-items: center;'>
-                            <div style='background: #4CAF50; width: 30px; height: {height}px; border-radius: 4px 4px 0 0;'></div>
+                            <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 30px; height: {height}px; border-radius: 4px 4px 0 0;'></div>
                             <div style='margin-top: 5px; font-size: 12px;'>{day_name}</div>
                             <div style='font-size: 11px;'>{count}</div>
                         </div>
@@ -578,36 +682,17 @@ if st.session_state.page == "🏠 Home":
         # Admin Controls (fully functional) - at the bottom
         if st.session_state.get("admin_mode"):
             st.markdown("---")
-            st.subheader("🛠 Admin Controls")
+            st.markdown("""
+            <div class="admin-panel">
+                <h3>🛠 Admin Controls</h3>
+            """, unsafe_allow_html=True)
             
             admin_col1, admin_col2 = st.columns(2)
             
             with admin_col1:
                 st.markdown("#### Reset Password")
                 target_user = st.text_input("Username to Reset Password", key="admin_reset_user")
-                new_pass = st.text_input("New Password", type="password", key="admin_new_pass")
-                if st.button("Reset User Password"):
-                    if target_user and new_pass:
-                        ok, msg = user_data.admin_reset_password(target_user, new_pass)
-                        if ok:
-                            st.success(f"Password for '{target_user}' reset successfully.")
-                        else:
-                            st.error(msg)
-                    else:
-                        st.warning("Enter both username and new password.")
-
-            with admin_col2:
-                st.markdown("#### Delete Account")
-                del_user = st.text_input("Username to Delete", key="admin_del_user")
-                if st.button("Delete Account", type="secondary"):
-                    if del_user:
-                        ok, msg = user_data.admin_delete_account(del_user)
-                        if ok:
-                            st.success(f"User '{del_user}' deleted successfully.")
-                        else:
-                            st.error(msg)
-                    else:
-                        st.warning("Enter a username to delete.")
+                new_pass = st.text_input("New Password", type="password", key="
 
 
 # ============================

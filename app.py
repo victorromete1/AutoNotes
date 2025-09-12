@@ -207,13 +207,10 @@ with st.sidebar:
                 else:
                     ok, msg = user_data.register_user(su, sp)
                     if ok:
-                        st.session_state["logged_in"] = True
-                        st.session_state["username"] = su
-                        success, smsg = user_data.save_current_user(st.session_state)
-                        st.success("Account created. " + smsg)
-                        st.rerun()
+                        st.success("Account created. You can now log in.")
                     else:
                         st.error(msg)
+
 
         else:  # Login
             lu = st.text_input("Username", key="li_user")
@@ -444,9 +441,11 @@ elif st.session_state.page == "📝 Notes":
             st.session_state.notes.append(new_note)
             user_data.save_current_user(st.session_state)
             auto_save()
-
-            st.success(f"✅ Note '{final_title}' saved!")
             st.rerun()
+            st.session_state["free_note_title"] = ""
+            st.session_state["free_note_text"] = ""
+            st.session_state["free_note_cat"] = "General"
+            st.success(f"✅ Note '{final_title}' saved!")
 
     st.markdown("---")
 

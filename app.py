@@ -301,7 +301,7 @@ with st.sidebar:
 # ----------------------------
 # Home Page - Logged In (Minimalist Style)
 # ----------------------------
-elif st.session_state.page == "🏠 Home":
+if st.session_state.page == "🏠 Home":
     # Minimalist CSS styling
     st.markdown("""
     <style>

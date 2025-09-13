@@ -402,49 +402,6 @@ if st.session_state.page == "🏠 Home":
         </div>
         """, unsafe_allow_html=True)
         
-        # Admin badge if in admin mode
-        if st.session_state.get("admin_mode"):
-            st.markdown("""
-            <div style="background-color: #f8f9fa; color: #666; padding: 8px 12px; border-radius: 6px; display: inline-block; margin-bottom: 20px; border: 1px solid #dee2e6;">
-                <b>🛠 Admin Mode Active</b>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Stats cards
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.markdown(f"""
-            <div class="stat-card">
-                <h3 style="margin: 0; font-size: 1.5rem; color: #333; font-weight: 500;">{len(st.session_state.notes)}</h3>
-                <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">Notes</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(f"""
-            <div class="stat-card">
-                <h3 style="margin: 0; font-size: 1.5rem; color: #333; font-weight: 500;">{len(st.session_state.flashcards)}</h3>
-                <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">Flashcards</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            quiz_sessions = [s for s in st.session_state.study_sessions if s.get('activity_type') == 'quiz']
-            st.markdown(f"""
-            <div class="stat-card">
-                <h3 style="margin: 0; font-size: 1.5rem; color: #333; font-weight: 500;">{len(quiz_sessions)}</h3>
-                <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">Quizzes</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col4:
-            st.markdown(f"""
-            <div class="stat-card">
-                <h3 style="margin: 0; font-size: 1.5rem; color: #333; font-weight: 500;">{len(st.session_state.study_sessions)}</h3>
-                <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">Sessions</p>
-            </div>
-            """, unsafe_allow_html=True)
         
         # Main content area
         col_left, col_right = st.columns([2, 1])

@@ -406,7 +406,7 @@ if st.session_state.page == "🏠 Home":
         with col1:
             st.markdown("""
             <div class="feature-card" style="color: black;">
-                <h4>📝 Create Content</h4>
+                <h4>&#128221; Create Content</h4>
                 <p>Generate notes from your materials or create flashcards from your content with AI assistance.</p>
             </div>
             """, unsafe_allow_html=True)
@@ -414,7 +414,7 @@ if st.session_state.page == "🏠 Home":
         with col2:
                 st.markdown("""
                 <div class="feature-card" style="color: black;">
-                    <h4>🧠 Study Smart</h4>
+                    <h4>&#129504; Study Smart</h4>
                     <p>Use spaced repetition and adaptive quizzes to reinforce your learning effectively.</p>
                 </div>
                 """, unsafe_allow_html=True)
@@ -422,7 +422,7 @@ if st.session_state.page == "🏠 Home":
         with col3:
                 st.markdown("""
                 <div class="feature-card" style="color: black;">
-                    <h4>📈 Track Progress</h4>
+                    <h4>&#128200; Track Progress</h4>
                     <p>Monitor your performance with detailed analytics and identify areas for improvement.</p>
                 </div>
                 """, unsafe_allow_html=True)

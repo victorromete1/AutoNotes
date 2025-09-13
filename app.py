@@ -358,35 +358,7 @@ if st.session_state.page == "🏠 Home":
             </ul>
         </div>
         """, unsafe_allow_html=True)
-        border: none;
-        padding: 12px 20px;
-        border-radius: 8px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        width: 100%;
-        margin-bottom: 10px;
-    }
-    .quick-action-btn:hover {
-        transform: scale(1.05);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    }
-    .activity-item {
-        background-color: #f8f9fa;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        border-left: 4px solid #6a11cb;
-    }
-    .admin-panel {
-        background-color: #fff3cd;
-        border: 1px solid #ffeaa7;
-        border-radius: 10px;
-        padding: 20px;
-        margin-top: 30px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    # ...existing code...
     
     # Logged out → show app info
     if not st.session_state.get("logged_in", False):

@@ -1,5 +1,6 @@
 #imports
 import io
+import random
 import re
 import calendar                     # For building the calendar view
 import hashlib                      # For hashing passwords

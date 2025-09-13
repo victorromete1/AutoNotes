@@ -451,7 +451,8 @@ if st.session_state.page == "🏠 Home":
         
         with col_left:
             # Quick actions
-            st.markdown('<p class="section-title">Quick Actions</p>', unsafe_allow_html=True)
+            st.markdown("---")
+            st.markdown('<h3 style="color: white; margin-bottom: 20px;">⚡ Quick Actions</h3>', unsafe_allow_html=True)
             action_col1, action_col2, action_col3 = st.columns(3)
             
             with action_col1:
@@ -470,7 +471,8 @@ if st.session_state.page == "🏠 Home":
                     st.rerun()
             
             # Recent activity
-            st.markdown('<p class="section-title">Recent Activity</p>', unsafe_allow_html=True)
+            st.markdown("---")
+            st.markdown('<h3 style="color: white; margin-bottom: 20px;">📅 Recent Activity</h3>', unsafe_allow_html=True)
             
             if st.session_state.get("study_sessions"):
                 recent_sessions = sorted(
@@ -516,7 +518,8 @@ if st.session_state.page == "🏠 Home":
                 st.info("No recent activity. Start studying to see your progress here.")
                 
             # Quick note
-            st.markdown('<p class="section-title">Quick Note</p>', unsafe_allow_html=True)
+            st.markdown("---")
+            st.markdown('<h3 style="color: white; margin-bottom: 20px;">✏️ Quick Note</h3>', unsafe_allow_html=True)
             with st.form("quick_note_form"):
                 quick_note = st.text_area("Jot something down:", placeholder="Type your quick note here...", height=100, 
                                          label_visibility="collapsed", key="quick_note_text")
@@ -536,7 +539,8 @@ if st.session_state.page == "🏠 Home":
         with col_right:
             # Upcoming events
             if "events" in st.session_state and st.session_state.events:
-                st.markdown('<p class="section-title">Upcoming Events</p>', unsafe_allow_html=True)
+                st.markdown("---")
+                st.markdown('<h3 style="color: white; margin-bottom: 20px;">📅 Upcoming Events</h3>', unsafe_allow_html=True)
                 
                 today = datetime.now().date()
                 upcoming_events = []
@@ -571,7 +575,8 @@ if st.session_state.page == "🏠 Home":
                     """, unsafe_allow_html=True)
             
             # Study tip
-            st.markdown('<p class="section-title">Study Tip</p>', unsafe_allow_html=True)
+            st.markdown("---")
+            st.markdown('<h3 style="color: white; margin-bottom: 20px;">💡 Study Tip</h3>', unsafe_allow_html=True)
             study_tips = [
                 "Focus on understanding concepts rather than memorizing facts.",
                 "Take regular breaks to maintain focus and retention.",

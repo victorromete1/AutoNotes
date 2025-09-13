@@ -419,16 +419,16 @@ if st.session_state.page == "🏠 Home":
     """, unsafe_allow_html=True)
 
         # Header
-    st.markdown(f"""
-        <div class="minimal-container">
-            <div class="minimal-header">
-                <div>
-                    <div class="minimal-title">&#127891; SmartStudy</div>
-                    <div class="minimal-sub">Welcome, <strong>{username}</strong></div>
-                </div>
-                <div class="minimal-sub">Your learning dashboard</div>
-            </div>
-        """, unsafe_allow_html=True)
+                st.markdown(f"""
+<div class="minimal-container">
+    <div class="minimal-header">
+        <div>
+            <div class="minimal-title">&#127891; SmartStudy</div>
+            <div class="minimal-sub">Welcome, <strong>{username}</strong></div>
+        </div>
+        <div class="minimal-sub">Your learning dashboard</div>
+    </div>
+""", unsafe_allow_html=True)
 
         # Stats row
     st.markdown("<div class='minimal-stats'>", unsafe_allow_html=True)
@@ -462,7 +462,7 @@ if st.session_state.page == "🏠 Home":
                 <p>Sessions</p>
             </div>
             """, unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
         # Main content columns
         left_col, right_col = st.columns([2,1])
@@ -511,36 +511,36 @@ if st.session_state.page == "🏠 Home":
                 </script>
             """, unsafe_allow_html=True)
 
-            left_col, right_col = st.columns([2,1])
-            with left_col:
+        left_col, right_col = st.columns([2,1])
+        with left_col:
                 # Focus Timer
-                st.markdown("""
-                <div class="minimal-card">
-                    <div style="font-weight:600; margin-bottom:8px;">Focus Timer</div>
-                    <div style='display:flex; gap:8px; align-items:center;'>
-                        <input id='focus_minutes' type='number' min='1' max='180' value='25' style='width:70px; padding:5px; border-radius:5px; border:1px solid #e2e8f0;' />
-                        <button id='start_focus' class='qa-btn'>Start</button>
-                        <button id='pause_focus' class='qa-btn' style='background:#e9ecef; color:#22223b;'>Pause</button>
-                        <button id='reset_focus' class='qa-btn' style='background:#e9ecef; color:#22223b;'>Reset</button>
-                    </div>
-                    <div style='margin-top:10px; font-size:1.3rem; font-weight:600;' id='focus_display'>25:00</div>
-                    <div class='small-muted' style='margin-top:4px;'>Set a focus period and stay productive.</div>
-                    <script>
-                    let timer = null;
-                    let remaining = 25*60;
-                    const display = document.getElementById('focus_display');
-                    const startBtn = document.getElementById('start_focus');
-                    const pauseBtn = document.getElementById('pause_focus');
-                    const resetBtn = document.getElementById('reset_focus');
-                    const minutesInput = document.getElementById('focus_minutes');
-                    function formatTime(s){ const m = Math.floor(s/60); const r = s%60; return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`; }
-                    function tick(){ if(remaining<=0){ clearInterval(timer); timer=null; display.innerText='00:00'; return; } remaining -=1; display.innerText = formatTime(remaining); }
-                    startBtn.onclick = ()=>{ remaining = parseInt(minutesInput.value||25)*60; display.innerText = formatTime(remaining); if(timer) clearInterval(timer); timer = setInterval(tick,1000); };
-                    pauseBtn.onclick = ()=>{ if(timer){ clearInterval(timer); timer=null;} };
-                    resetBtn.onclick = ()=>{ if(timer){ clearInterval(timer); timer=null;} remaining = parseInt(minutesInput.value||25)*60; display.innerText = formatTime(remaining); };
-                    </script>
-                </div>
-                """, unsafe_allow_html=True)
+                            st.markdown("""
+    <div class="minimal-card">
+        <div style="font-weight:600; margin-bottom:8px;">Focus Timer</div>
+        <div style='display:flex; gap:8px; align-items:center;'>
+            <input id='focus_minutes' type='number' min='1' max='180' value='25' style='width:70px; padding:5px; border-radius:5px; border:1px solid #e2e8f0;' />
+            <button id='start_focus' class='qa-btn'>Start</button>
+            <button id='pause_focus' class='qa-btn' style='background:#e9ecef; color:#22223b;'>Pause</button>
+            <button id='reset_focus' class='qa-btn' style='background:#e9ecef; color:#22223b;'>Reset</button>
+        </div>
+        <div style='margin-top:10px; font-size:1.3rem; font-weight:600;' id='focus_display'>25:00</div>
+        <div class='small-muted' style='margin-top:4px;'>Set a focus period and stay productive.</div>
+        <script>
+            let timer = null;
+            let remaining = 25*60;
+            const display = document.getElementById('focus_display');
+            const startBtn = document.getElementById('start_focus');
+            const pauseBtn = document.getElementById('pause_focus');
+            const resetBtn = document.getElementById('reset_focus');
+            const minutesInput = document.getElementById('focus_minutes');
+            function formatTime(s){ const m = Math.floor(s/60); const r = s%60; return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`; }
+            function tick(){ if(remaining<=0){ clearInterval(timer); timer=null; display.innerText='00:00'; return; } remaining -=1; display.innerText = formatTime(remaining); }
+            startBtn.onclick = ()=>{ remaining = parseInt(minutesInput.value||25)*60; display.innerText = formatTime(remaining); if(timer) clearInterval(timer); timer = setInterval(tick,1000); };
+            pauseBtn.onclick = ()=>{ if(timer){ clearInterval(timer); timer=null;} };
+            resetBtn.onclick = ()=>{ if(timer){ clearInterval(timer); timer=null;} remaining = parseInt(minutesInput.value||25)*60; display.innerText = formatTime(remaining); };
+        </script>
+    </div>
+    """, unsafe_allow_html=True)
                 # Quick Actions
                 st.markdown("""
                 <div class="minimal-card">

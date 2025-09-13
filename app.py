@@ -392,275 +392,252 @@ if st.session_state.page == "🏠 Home":
             </div>
             """, unsafe_allow_html=True)
 
-    # Logged in → dashboard
+    # Logged in → Notion-like dashboard
     else:
-        # Header with welcome message
-        st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; color: white; margin-bottom: 30px;">
-            <h1 style="margin: 0; font-size: 2.5rem;">🎓 SmartStudy Dashboard</h1>
-            <h2 style="margin: 0; font-weight: 400;">Welcome back, {st.session_state['username']}! 👋</h2>
-        </div>
+        username = st.session_state.get('username', 'User')
+
+        # Notion-like CSS
+        st.markdown("""
+        <style>
+        .notion-container { max-width: 1100px; margin: 0 auto 24px; }
+        .notion-header { background: #ffffff; border-radius: 12px; padding: 18px 22px; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06); margin-bottom: 18px; display:flex; justify-content:space-between; align-items:center; }
+        .notion-title { font-size: 1.5rem; font-weight: 600; color: #0f172a; }
+        .notion-sub { color: #475569; font-size: 0.95rem; }
+        .notion-stats { display:flex; gap:12px; margin-bottom:18px; }
+        .notion-stat { background:#fff; padding:14px; border-radius:10px; box-shadow: 0 4px 12px rgba(2,6,23,0.04); min-width:140px; text-align:center; }
+        .notion-stat h3 { margin:0; font-size:1.25rem; color:#0f172a; }
+        .notion-stat p { margin:0; color:#64748b; font-size:0.85rem; }
+        .notion-main { display:flex; gap:20px; }
+        .notion-left { flex:2; }
+        .notion-right { flex:1; }
+        .notion-card { background:#fff; border-radius:10px; padding:16px; box-shadow: 0 6px 18px rgba(15,23,42,0.04); margin-bottom:16px; }
+        .quick-actions { display:flex; gap:10px; }
+        .qa-btn { background:linear-gradient(90deg,#667eea,#764ba2); color:white; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; }
+        .activity-item { background:#f8fafc; padding:12px; border-radius:8px; margin-bottom:10px; }
+        .small-muted { color:#64748b; font-size:0.9rem; }
+        </style>
         """, unsafe_allow_html=True)
-        
-        # Display admin badge if in admin mode
-        if st.session_state.get("admin_mode"):
-            st.markdown("""
-            <div style="background-color: #ff4b4b; color: white; padding: 10px 15px; border-radius: 8px; display: inline-block; margin-bottom: 20px;">
-                <b>🛠 Admin Mode Active</b>
+
+        # Header
+        st.markdown(f"""
+        <div class="notion-container">
+            <div class="notion-header">
+                <div>
+                    <div class="notion-title">&#127891; SmartStudy</div>
+                    <div class="notion-sub">Welcome back, <strong>{username}</strong></div>
+                </div>
+                <div class="notion-sub">Your personal learning workspace</div>
             </div>
-            """, unsafe_allow_html=True)
-        
-        # Quick stats cards at the top
+        """, unsafe_allow_html=True)
+
+        # Stats row
         col1, col2, col3, col4 = st.columns(4)
-        
         with col1:
             st.markdown(f"""
-            <div class="stat-card">
-                <h3 style="margin: 0; font-size: 2rem;">{len(st.session_state.notes)}</h3>
-                <p style="margin: 0;">Notes</p>
+            <div class="notion-stat">
+                <h3>{len(st.session_state.get('notes', []))}</h3>
+                <p>Notes</p>
             </div>
             """, unsafe_allow_html=True)
-        
         with col2:
             st.markdown(f"""
-            <div class="stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
-                <h3 style="margin: 0; font-size: 2rem;">{len(st.session_state.flashcards)}</h3>
-                <p style="margin: 0;">Flashcards</p>
+            <div class="notion-stat">
+                <h3>{len(st.session_state.get('flashcards', []))}</h3>
+                <p>Flashcards</p>
             </div>
             """, unsafe_allow_html=True)
-        
         with col3:
-            quiz_sessions = [s for s in st.session_state.study_sessions if s.get('activity_type') == 'quiz']
+            quiz_sessions = [s for s in st.session_state.get('study_sessions', []) if s.get('activity_type') == 'quiz']
             st.markdown(f"""
-            <div class="stat-card" style="background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);">
-                <h3 style="margin: 0; font-size: 2rem;">{len(quiz_sessions)}</h3>
-                <p style="margin: 0;">Quizzes Taken</p>
+            <div class="notion-stat">
+                <h3>{len(quiz_sessions)}</h3>
+                <p>Quizzes Taken</p>
             </div>
             """, unsafe_allow_html=True)
-        
         with col4:
             st.markdown(f"""
-            <div class="stat-card" style="background: linear-gradient(135deg, #4A00E0 0%, #8E2DE2 100%);">
-                <h3 style="margin: 0; font-size: 2rem;">{len(st.session_state.study_sessions)}</h3>
-                <p style="margin: 0;">Study Sessions</p>
+            <div class="notion-stat">
+                <h3>{len(st.session_state.get('study_sessions', []))}</h3>
+                <p>Study Sessions</p>
             </div>
             """, unsafe_allow_html=True)
-        
-        # Main dashboard with two columns
-        col_left, col_right = st.columns([2, 1])
-        
-        with col_left:
-            # Quick actions section
-            st.markdown("### ⚡ Quick Actions")
-            action_col1, action_col2, action_col3 = st.columns(3)
-            
-            with action_col1:
-                if st.button("📝 New Note", use_container_width=True, key="quick_note"):
+
+        # Main content columns
+        left_col, right_col = st.columns([2,1])
+
+        with left_col:
+            # Quick actions (Streamlit buttons for interactivity)
+            st.markdown("""
+            <div class="notion-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="font-weight:600;">Quick Actions</div>
+                    <div class="small-muted">Fast shortcuts</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            qa1, qa2, qa3 = st.columns(3)
+            with qa1:
+                if st.button("New Note", use_container_width=True, key="quick_note"):
                     st.session_state.page = "📝 Notes"
                     st.rerun()
-            
-            with action_col2:
-                if st.button("📚 Study Flashcards", use_container_width=True, key="quick_flashcards"):
+            with qa2:
+                if st.button("Study Flashcards", use_container_width=True, key="quick_flashcards"):
                     st.session_state.page = "📚 Flashcards"
                     st.rerun()
-                    
-            with action_col3:
-                if st.button("🧠 Take Quiz", use_container_width=True, key="quick_quiz"):
+            with qa3:
+                if st.button("Take Quiz", use_container_width=True, key="quick_quiz"):
                     st.session_state.page = "🧠 Quizzes"
                     st.rerun()
-            
-            # Recent activity section
-            if st.session_state.get("study_sessions"):
-                st.markdown("### 📅 Recent Activity")
-                
-                # Get recent sessions (last 5)
-                recent_sessions = sorted(
-                    st.session_state.study_sessions,
-                    key=lambda x: x.get('timestamp', ''), 
-                    reverse=True
-                )[:5]
-                
-                for i, session in enumerate(recent_sessions):
+
+            # Recent Activity
+            st.markdown("""
+                </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div class="notion-card">
+                <div style="font-weight:600; margin-bottom:8px;">Recent Activity</div>
+            """, unsafe_allow_html=True)
+
+            if st.session_state.get('study_sessions'):
+                recent_sessions = sorted(st.session_state.get('study_sessions', []), key=lambda x: x.get('timestamp',''), reverse=True)[:6]
+                for s in recent_sessions:
                     try:
-                        timestamp = datetime.fromisoformat(session['timestamp']).strftime("%Y-%m-%d %H:%M")
-                        activity = session.get('activity_type', 'Unknown')
-                        
-                        # Create different display based on activity type
-                        if activity == 'quiz':
-                            score = session.get('score', 0)
-                            # Color code based on performance
-                            score_color = "#2ca02c" if score >= 80 else "#ff7f0e" if score >= 60 else "#d62728"
-                            st.markdown(f"""
-                            <div class="activity-item" style="border-left-color: {score_color}">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <div>
-                                        <b>🧠 Quiz Completed</b> - {session.get('subject', 'General')}
-                                    </div>
-                                    <div style="color: {score_color}; font-weight: bold;">{score:.1f}%</div>
-                                </div>
-                                <div style="color: #666; font-size: 0.9em;">{timestamp}</div>
+                        ts = datetime.fromisoformat(s.get('timestamp')).strftime("%b %d %Y %H:%M")
+                    except:
+                        ts = s.get('timestamp','')
+                    atype = s.get('activity_type','activity')
+                    if atype == 'quiz':
+                        score = s.get('score',0)
+                        color = '#2ca02c' if score>=80 else '#ff7f0e' if score>=60 else '#d62728'
+                        st.markdown(f"""
+                        <div class='activity-item'>
+                            <div style='display:flex; justify-content:space-between; align-items:center;'>
+                                <div><strong>Quiz</strong> • {s.get('subject','General')}</div>
+                                <div style='color:{color}; font-weight:600'>{score:.1f}%</div>
                             </div>
-                            """, unsafe_allow_html=True)
-                        
-                        elif activity == 'flashcards':
-                            studied = session.get('flashcards_studied', 0)
-                            correct = session.get('correct_answers', 0)
-                            accuracy = (correct / studied * 100) if studied > 0 else 0
-                            st.markdown(f"""
-                            <div class="activity-item" style="border-left-color: #1f77b4">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <div>
-                                        <b>📚 Flashcards Studied</b> - {session.get('subject', 'General')}
-                                    </div>
-                                    <div style="color: #1f77b4; font-weight: bold;">{studied} cards</div>
-                                </div>
-                                <div style="color: #666; font-size: 0.9em;">{timestamp} • Accuracy: {accuracy:.1f}%</div>
+                            <div class='small-muted'>{ts}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    elif atype == 'flashcards':
+                        studied = s.get('flashcards_studied',0)
+                        correct = s.get('correct_answers',0)
+                        acc = (correct/studied*100) if studied>0 else 0
+                        st.markdown(f"""
+                        <div class='activity-item'>
+                            <div style='display:flex; justify-content:space-between; align-items:center;'>
+                                <div><strong>Flashcards</strong> • {s.get('subject','General')}</div>
+                                <div style='font-weight:600'>{studied} cards</div>
                             </div>
-                            """, unsafe_allow_html=True)
-                        
-                        elif activity == 'flashcards_created':
-                            created = session.get('flashcards_created', 0)
-                            st.markdown(f"""
-                            <div class="activity-item" style="border-left-color: #9467bd">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <div>
-                                        <b>➕ Flashcards Created</b> - {session.get('subject', 'General')}
-                                    </div>
-                                    <div style="color: #9467bd; font-weight: bold;">{created} cards</div>
-                                </div>
-                                <div style="color: #666; font-size: 0.9em;">{timestamp}</div>
+                            <div class='small-muted'>{ts} • Accuracy: {acc:.1f}%</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"""
+                        <div class='activity-item'>
+                            <div style='display:flex; justify-content:space-between; align-items:center;'>
+                                <div><strong>{atype.capitalize()}</strong></div>
+                                <div class='small-muted'>{ts}</div>
                             </div>
-                            """, unsafe_allow_html=True)
-                            
-                    except Exception as e:
-                        # Skip malformed sessions
-                        continue
+                        </div>
+                        """, unsafe_allow_html=True)
             else:
                 st.info("No recent activity. Start studying to see your progress here!")
-                
-            # Quick note creation
-            st.markdown("### ✏️ Quick Note")
+
+            # Quick Note form
+            st.markdown("""
+            </div>
+            """, unsafe_allow_html=True)
+
             with st.form("quick_note_form"):
-                quick_note = st.text_area("Jot something down:", placeholder="Type your quick note here...", height=100, 
-                                         label_visibility="collapsed", key="quick_note_text")
-                if st.form_submit_button("💾 Save Quick Note", use_container_width=True):
+                quick_note = st.text_area("Jot something down:", placeholder="Type your quick note here...", height=120, label_visibility="collapsed", key="quick_note_text")
+                if st.form_submit_button("Save Quick Note", use_container_width=True):
                     if quick_note.strip():
-                        new_note = {
-                            "title": f"Quick Note - {datetime.now().strftime('%H:%M')}",
-                            "content": quick_note,
-                            "category": "Quick Notes",
-                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        }
+                        new_note = {"title": f"Quick Note - {datetime.now().strftime('%H:%M')}", "content": quick_note, "category": "Quick Notes", "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
                         st.session_state.notes.append(new_note)
                         auto_save()
                         st.success("Quick note saved!")
                         st.rerun()
-        
-        with col_right:
-            # Upcoming events from calendar
-            if "events" in st.session_state and st.session_state.events:
-                st.markdown("### 📅 Upcoming Events")
-                
-                # Get today's date and next 7 days
+
+        with right_col:
+            # Upcoming events
+            st.markdown("""
+            <div class='notion-card'>
+                <div style='font-weight:600; margin-bottom:8px;'>Upcoming Events</div>
+            """, unsafe_allow_html=True)
+            if st.session_state.get('events'):
                 today = datetime.now().date()
-                upcoming_events = []
-                
-                for event in st.session_state.events:
+                upcoming = []
+                for ev in st.session_state.get('events',[]):
                     try:
-                        event_date = datetime.fromisoformat(event["date"]).date()
-                        if event_date >= today:
-                            upcoming_events.append({
-                                "name": event["name"],
-                                "date": event_date,
-                                "color": event.get("color", "#4CAF50"),
-                                "notes": event.get("notes", "")
-                            })
+                        d = datetime.fromisoformat(ev.get('date')).date()
+                        if d >= today:
+                            upcoming.append({'name':ev.get('name'), 'date':d, 'color': ev.get('color','#4CAF50')})
                     except:
                         continue
-                
-                # Sort by date and take next 3 events
-                upcoming_events.sort(key=lambda x: x["date"])
-                upcoming_events = upcoming_events[:3]
-                
-                for event in upcoming_events:
-                    days_until = (event["date"] - today).days
-                    day_text = "Today" if days_until == 0 else f"In {days_until} day{'s' if days_until != 1 else ''}"
-                    
+                upcoming = sorted(upcoming, key=lambda x: x['date'])[:3]
+                for ev in upcoming:
+                    days = (ev['date'] - today).days
+                    when = 'Today' if days==0 else f'In {days} day' + ('s' if days!=1 else '')
                     st.markdown(f"""
-                    <div style='background-color: #f9f9f9; padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid {event["color"]}'>
-                        <div style='font-weight: bold;'>{event["name"]}</div>
-                        <div style='color: #666; font-size: 0.9em;'>
-                            {event["date"].strftime("%b %d")} • {day_text}
-                        </div>
+                    <div style='background:#f9fafb; padding:10px; border-radius:8px; margin-bottom:8px; border-left:4px solid {ev['color']}'>
+                        <div style='font-weight:600'>{ev['name']}</div>
+                        <div class='small-muted'>{ev['date'].strftime('%b %d')} • {when}</div>
                     </div>
                     """, unsafe_allow_html=True)
-            
-            # Study tips/random tip
-            st.markdown("### 💡 Study Tip")
-            study_tips = [
-                "Try the Pomodoro technique: 25 minutes of focused study, then a 5-minute break.",
-                "Teaching someone else is one of the best ways to reinforce your own learning.",
-                "Create flashcards for key concepts and review them regularly for better retention.",
-                "Connect new information to what you already know to improve memory formation.",
-                "Study in different locations to create multiple memory associations.",
-                "Get enough sleep - it's crucial for memory consolidation and learning.",
-                "Test yourself regularly rather than just re-reading material."
-            ]
-            
+            else:
+                st.markdown("<div class='small-muted'>No upcoming events.</div>", unsafe_allow_html=True)
+
+            # Study tip
+            st.markdown("""
+            </div>
+            <div class='notion-card'>
+                <div style='font-weight:600; margin-bottom:8px;'>Study Tip</div>
+            """, unsafe_allow_html=True)
             import random
-            tip = random.choice(study_tips)
-            st.info(f"💡 {tip}")
-            
-            # Quick progress visualization
-            if st.session_state.get("study_sessions"):
-                st.markdown("### 📈 This Week's Progress")
-                
-                # Count sessions by day for the past week
+            tips = [
+                "Try the Pomodoro technique: 25 minutes focused, 5 minutes break.",
+                "Teach someone else to reinforce learning.",
+                "Create flashcards for key concepts and review regularly.",
+            ]
+            st.info(random.choice(tips))
+
+            # Progress mini-chart (reuse existing logic)
+            if st.session_state.get('study_sessions'):
                 daily_counts = {}
-                for session in st.session_state.study_sessions:
+                for session in st.session_state.get('study_sessions',[]):
                     try:
-                        session_date = datetime.fromisoformat(session['timestamp']).date()
-                        if (datetime.now().date() - session_date).days <= 7:
-                            daily_counts[session_date] = daily_counts.get(session_date, 0) + 1
+                        sd = datetime.fromisoformat(session.get('timestamp')).date()
+                        if (datetime.now().date() - sd).days <= 7:
+                            daily_counts[sd] = daily_counts.get(sd,0) + 1
                     except:
                         continue
-                
-                # Create a simple bar chart using HTML
                 if daily_counts:
-                    max_count = max(daily_counts.values()) if daily_counts else 1
-                    html_chart = "<div style='display: flex; align-items: flex-end; height: 120px; gap: 8px;'>"
-                    
-                    # Get last 7 days
+                    max_count = max(daily_counts.values())
                     dates = [(datetime.now().date() - timedelta(days=i)) for i in range(6, -1, -1)]
-                    
-                    for date in dates:
-                        count = daily_counts.get(date, 0)
-                        height = (count / max_count * 80) if max_count > 0 else 0
-                        day_name = date.strftime("%a")
-                        
-                        html_chart += f"""
-                        <div style='display: flex; flex-direction: column; align-items: center;'>
-                            <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 30px; height: {height}px; border-radius: 4px 4px 0 0;'></div>
-                            <div style='margin-top: 5px; font-size: 12px;'>{day_name}</div>
-                            <div style='font-size: 11px;'>{count}</div>
-                        </div>
-                        """
-                    
-                    html_chart += "</div>"
-                    st.markdown(html_chart, unsafe_allow_html=True)
+                    bars = "<div style='display:flex; gap:6px; align-items:flex-end; height:90px;'>"
+                    for d in dates:
+                        cnt = daily_counts.get(d,0)
+                        h = int((cnt/max_count)*70) if max_count>0 else 0
+                        bars += f"<div style='text-align:center; font-size:11px;'><div style='background:linear-gradient(90deg,#667eea,#764ba2); width:18px; height:{h}px; border-radius:4px;'></div><div style='margin-top:6px;'>{d.strftime('%a')}</div></div>"
+                    bars += "</div>"
+                    st.markdown(bars, unsafe_allow_html=True)
                 else:
-                    st.info("No study sessions this week yet.")
+                    st.markdown("<div class='small-muted'>No study sessions this week yet.</div>", unsafe_allow_html=True)
 
-        # Admin Controls (fully functional) - at the bottom
+        # Close container
+        st.markdown("""
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Admin Controls preserved
         if st.session_state.get("admin_mode"):
             st.markdown("---")
             st.markdown("""
-            <div class="admin-panel">
-                <h3>🛠 Admin Controls</h3>
+            <div class="notion-card">
+                <h3>Admin Controls</h3>
             """, unsafe_allow_html=True)
-            
             admin_col1, admin_col2 = st.columns(2)
-            
             with admin_col1:
                 st.markdown("#### Reset Password")
                 target_user = st.text_input("Username to Reset Password", key="admin_reset_user")
@@ -674,11 +651,10 @@ if st.session_state.page == "🏠 Home":
                             st.error(msg)
                     else:
                         st.warning("Enter both username and new password.")
-
             with admin_col2:
                 st.markdown("#### Delete Account")
                 del_user = st.text_input("Username to Delete", key="admin_del_user")
-                if st.button("Delete Account", type="secondary", key="admin_del_btn"):
+                if st.button("Delete Account", key="admin_del_btn"):
                     if del_user:
                         ok, msg = user_data.admin_delete_account(del_user)
                         if ok:
@@ -687,7 +663,6 @@ if st.session_state.page == "🏠 Home":
                             st.error(msg)
                     else:
                         st.warning("Enter a username to delete.")
-            
             st.markdown("</div>", unsafe_allow_html=True)
 
 

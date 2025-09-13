@@ -398,7 +398,7 @@ if st.session_state.page == "🏠 Home":
         st.markdown(f"""
         <div class="minimal-header">
             <h1 style="margin: 0; font-size: 1.8rem; font-weight: 500; color: #FFFFFF;">Welcome back, {st.session_state['username']}</h1>
-            <p style="margin: 5px 0 0 0; color: #666;">Your learning dashboard</p>
+            <p style="margin: 5px 0 0 0; color: #FFFFFF;">Your learning dashboard</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -408,7 +408,6 @@ if st.session_state.page == "🏠 Home":
         
         with col_left:
             # Quick actions
-            st.markdown("---")
             st.markdown('<h3 style="color: white; margin-bottom: 20px;">⚡ Quick Actions</h3>', unsafe_allow_html=True)
             action_col1, action_col2, action_col3 = st.columns(3)
             

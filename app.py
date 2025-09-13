@@ -467,12 +467,46 @@ if st.session_state.page == "🏠 Home":
 
         with left_col:
             # Quick actions (Streamlit buttons for interactivity)
+            # Focus timer UI
             st.markdown("""
             <div class="notion-card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <div style="font-weight:600;">Quick Actions</div>
-                    <div class="small-muted">Fast shortcuts</div>
+                    <div style="font-weight:600;">Focus Timer</div>
+                    <div class="small-muted">Stay focused</div>
                 </div>
+                <div style='display:flex; gap:8px; align-items:center;'>
+                    <input id='focus_minutes' type='number' min='1' max='180' value='25' style='width:80px; padding:6px; border-radius:6px; border:1px solid #e2e8f0;' />
+                    <button id='start_focus' class='qa-btn'>Start</button>
+                    <button id='pause_focus' class='qa-btn' style='background:#94a3b8;'>Pause</button>
+                    <button id='reset_focus' class='qa-btn' style='background:#e2e8f0; color:#0f172a;'>Reset</button>
+                </div>
+                <div style='margin-top:12px; font-size:1.5rem; font-weight:600;' id='focus_display'>25:00</div>
+                <div class='small-muted' style='margin-top:6px;'>Use this timer to set a focused study period.</div>
+                <script>
+                // Simple client-side timer
+                let timer = null;
+                let remaining = 25*60;
+                const display = document.getElementById('focus_display');
+                const startBtn = document.getElementById('start_focus');
+                const pauseBtn = document.getElementById('pause_focus');
+                const resetBtn = document.getElementById('reset_focus');
+                const minutesInput = document.getElementById('focus_minutes');
+
+                function formatTime(s){
+                    const m = Math.floor(s/60); const r = s%60; return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`;
+                }
+                function tick(){
+                    if(remaining<=0){ clearInterval(timer); timer=null; display.innerText='00:00'; return; }
+                    remaining -=1; display.innerText = formatTime(remaining);
+                }
+                startBtn.onclick = ()=>{
+                    remaining = parseInt(minutesInput.value||25)*60; display.innerText = formatTime(remaining);
+                    if(timer) clearInterval(timer);
+                    timer = setInterval(tick,1000);
+                };
+                pauseBtn.onclick = ()=>{ if(timer){ clearInterval(timer); timer=null;} else { timer = setInterval(tick,1000); } };
+                resetBtn.onclick = ()=>{ if(timer){ clearInterval(timer); timer=null;} remaining = parseInt(minutesInput.value||25)*60; display.innerText = formatTime(remaining); };
+                </script>
             """, unsafe_allow_html=True)
 
             qa1, qa2, qa3 = st.columns(3)

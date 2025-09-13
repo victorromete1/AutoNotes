@@ -301,28 +301,63 @@ with st.sidebar:
 # ----------------------------
 # Home Page
 # ----------------------------
-if st.session_state.page == "🏠 Home":
-    # Custom CSS for styling
+# ----------------------------
+# Home Page - Logged In (Notion-inspired)
+# ----------------------------
+elif st.session_state.page == "🏠 Home":
+    # Custom CSS for Notion-like styling
     st.markdown("""
     <style>
-    .feature-card {
-        background-color: #f8f9fa;
-        padding: 20px;
-        color: black;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        margin-bottom: 20px;
-        transition: transform 0.3s ease;
+    .notion-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 30px;
+        border-radius: 15px;
+        color: white;
+        margin-bottom: 30px;
     }
-    .feature-card:hover {
+    .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        text-align: center;
+        transition: transform 0.2s ease;
+    }
+    .stat-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+    .activity-item {
+        background: white;
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        border-left: 4px solid #667eea;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .quick-action-btn {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .quick-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    .admin-panel {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 30px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # ...existing code...
-    
     # Logged out → show app info
     if not st.session_state.get("logged_in", False):
         st.title("🎓 SmartStudy")
@@ -360,7 +395,7 @@ if st.session_state.page == "🏠 Home":
 
         with col1:
             st.markdown("""
-            <div class="feature-card" style="color: black;">
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; color: black;">
                 <h4>&#128221; Create Content</h4>
                 <ul style='padding-left: 1em;'>
                     <li>Generate notes from your materials</li>
@@ -371,7 +406,7 @@ if st.session_state.page == "🏠 Home":
             """, unsafe_allow_html=True)
         with col2:
             st.markdown("""
-            <div class="feature-card" style="color: black;">
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; color: black;">
                 <h4>&#129504; Study Smart</h4>
                 <ul style='padding-left: 1em;'>
                     <li>Spaced repetition</li>
@@ -382,7 +417,7 @@ if st.session_state.page == "🏠 Home":
             """, unsafe_allow_html=True)
         with col3:
             st.markdown("""
-            <div class="feature-card" style="color: black;">
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 10px; color: black;">
                 <h4>&#128200; Track Progress</h4>
                 <ul style='padding-left: 1em;'>
                     <li>Monitor your performance</li>
@@ -392,11 +427,11 @@ if st.session_state.page == "🏠 Home":
             </div>
             """, unsafe_allow_html=True)
 
-    # Logged in → dashboard
+    # Logged in → Notion-inspired dashboard
     else:
         # Header with welcome message
         st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; color: white; margin-bottom: 30px;">
+        <div class="notion-header">
             <h1 style="margin: 0; font-size: 2.5rem;">🎓 SmartStudy Dashboard</h1>
             <h2 style="margin: 0; font-weight: 400;">Welcome back, {st.session_state['username']}! 👋</h2>
         </div>
@@ -416,33 +451,33 @@ if st.session_state.page == "🏠 Home":
         with col1:
             st.markdown(f"""
             <div class="stat-card">
-                <h3 style="margin: 0; font-size: 2rem;">{len(st.session_state.notes)}</h3>
-                <p style="margin: 0;">Notes</p>
+                <h3 style="margin: 0; font-size: 2rem; color: #667eea;">{len(st.session_state.notes)}</h3>
+                <p style="margin: 0; color: #666;">Notes</p>
             </div>
             """, unsafe_allow_html=True)
         
         with col2:
             st.markdown(f"""
-            <div class="stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
-                <h3 style="margin: 0; font-size: 2rem;">{len(st.session_state.flashcards)}</h3>
-                <p style="margin: 0;">Flashcards</p>
+            <div class="stat-card">
+                <h3 style="margin: 0; font-size: 2rem; color: #11998e;">{len(st.session_state.flashcards)}</h3>
+                <p style="margin: 0; color: #666;">Flashcards</p>
             </div>
             """, unsafe_allow_html=True)
         
         with col3:
             quiz_sessions = [s for s in st.session_state.study_sessions if s.get('activity_type') == 'quiz']
             st.markdown(f"""
-            <div class="stat-card" style="background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);">
-                <h3 style="margin: 0; font-size: 2rem;">{len(quiz_sessions)}</h3>
-                <p style="margin: 0;">Quizzes Taken</p>
+            <div class="stat-card">
+                <h3 style="margin: 0; font-size: 2rem; color: #ff9966;">{len(quiz_sessions)}</h3>
+                <p style="margin: 0; color: #666;">Quizzes Taken</p>
             </div>
             """, unsafe_allow_html=True)
         
         with col4:
             st.markdown(f"""
-            <div class="stat-card" style="background: linear-gradient(135deg, #4A00E0 0%, #8E2DE2 100%);">
-                <h3 style="margin: 0; font-size: 2rem;">{len(st.session_state.study_sessions)}</h3>
-                <p style="margin: 0;">Study Sessions</p>
+            <div class="stat-card">
+                <h3 style="margin: 0; font-size: 2rem; color: #4A00E0;">{len(st.session_state.study_sessions)}</h3>
+                <p style="margin: 0; color: #666;">Study Sessions</p>
             </div>
             """, unsafe_allow_html=True)
         

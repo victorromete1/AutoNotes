@@ -307,7 +307,7 @@ if st.session_state.page == "🏠 Home":
     <style>
             st.markdown("""
             <div class="feature-card" style="color: black;">
-                <h4>📝 Create Content</h4>
+                <h4>&#128221; Create Content</h4>
                 <ul style='padding-left: 1em;'>
                     <li>Generate notes from your materials</li>
                     <li>Create flashcards from your content</li>
@@ -318,7 +318,7 @@ if st.session_state.page == "🏠 Home":
     }
     .feature-card:hover {
             st.markdown("""
-                <h4>🧠 Study Smart</h4>
+                <h4>&#129504; Study Smart</h4>
                 <ul style='padding-left: 1em;'>
                     <li>Spaced repetition</li>
                     <li>Adaptive quizzes</li>
@@ -330,7 +330,7 @@ if st.session_state.page == "🏠 Home":
         border-radius: 10px;
             st.markdown("""
             <div class="feature-card" style="color: black;">
-                <h4>📈 Track Progress</h4>
+                <h4>&#128200; Track Progress</h4>
                 <ul style='padding-left: 1em;'>
                     <li>Monitor your performance</li>
                     <li>Detailed analytics</li>

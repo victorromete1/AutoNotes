@@ -378,14 +378,14 @@ with st.sidebar:
 
     # Logged in → dashboard
     else:
-        # Modern Notion-inspired header
+        # Modern Notion-inspired header (no emoji)
         st.markdown(f"""
         <div style="background: #fff; border-radius: 16px; box-shadow: 0 2px 16px rgba(60,60,60,0.08); padding: 32px 40px 24px 40px; margin-bottom: 32px;">
             <div style="display: flex; align-items: center; gap: 18px;">
                 <img src='https://upload.wikimedia.org/wikipedia/commons/4/45/Notion_app_logo.png' width='48' style='border-radius: 12px; box-shadow: 0 2px 8px rgba(60,60,60,0.10);'>
                 <div>
                     <h1 style="margin: 0; font-size: 2.5rem; font-weight: 700; color: #222; letter-spacing: -1px;">SmartStudy Dashboard</h1>
-                    <h2 style="margin: 0; font-size: 1.25rem; font-weight: 400; color: #555;">Welcome back, <span style='color:#764ba2'>{st.session_state['username']}</span>! 👋</h2>
+                    <h2 style="margin: 0; font-size: 1.25rem; font-weight: 400; color: #555;">Welcome back, <span style='color:#764ba2'>{st.session_state['username']}</span></h2>
                 </div>
             </div>
         </div>

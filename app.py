@@ -419,7 +419,7 @@ if st.session_state.page == "🏠 Home":
     """, unsafe_allow_html=True)
 
         # Header
-        st.markdown(f"""
+    st.markdown(f"""
         <div class="minimal-container">
             <div class="minimal-header">
                 <div>

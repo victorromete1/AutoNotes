@@ -307,25 +307,25 @@ if st.session_state.page == "🏠 Home":
     <style>
     # Minimalistic dashboard CSS
     st.markdown("""
-    <style>
-    .minimal-container { max-width: 900px; margin: 0 auto; }
-    .minimal-header { background: #f7f7fa; border-radius: 10px; padding: 20px 28px; margin-bottom: 18px; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-    .minimal-title { font-size: 1.35rem; font-weight: 600; color: #22223b; letter-spacing: 0.01em; }
-    .minimal-sub { color: #4a4e69; font-size: 1rem; }
-    .minimal-stats { display:flex; gap:16px; margin-bottom:18px; }
-    .minimal-stat { background:#fff; padding:12px 0; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); min-width:110px; text-align:center; border: 1px solid #e9ecef; }
-    .minimal-stat h3 { margin:0; font-size:1.15rem; color:#22223b; font-weight:500; }
-    .minimal-stat p { margin:0; color:#4a4e69; font-size:0.85rem; }
-    .minimal-main { display:flex; gap:18px; }
-    .minimal-left { flex:2; }
-    .minimal-right { flex:1; }
-    .minimal-card { background:#fff; border-radius:8px; padding:14px 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom:14px; border: 1px solid #e9ecef; }
-    .qa-btn { background:#22223b; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; font-size:0.98rem; }
-    .qa-btn:hover { background:#4a4e69; }
-    .activity-item { background:#f7f7fa; padding:10px; border-radius:6px; margin-bottom:8px; border-left: 3px solid #22223b; }
-    .small-muted { color:#4a4e69; font-size:0.9rem; }
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+.minimal-container { max-width: 900px; margin: 0 auto; }
+.minimal-header { background: #f7f7fa; border-radius: 10px; padding: 20px 28px; margin-bottom: 18px; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+.minimal-title { font-size: 1.35rem; font-weight: 600; color: #22223b; letter-spacing: 0.01em; }
+.minimal-sub { color: #4a4e69; font-size: 1rem; }
+.minimal-stats { display:flex; gap:16px; margin-bottom:18px; }
+.minimal-stat { background:#fff; padding:12px 0; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); min-width:110px; text-align:center; border: 1px solid #e9ecef; }
+.minimal-stat h3 { margin:0; font-size:1.15rem; color:#22223b; font-weight:500; }
+.minimal-stat p { margin:0; color:#4a4e69; font-size:0.85rem; }
+.minimal-main { display:flex; gap:18px; }
+.minimal-left { flex:2; }
+.minimal-right { flex:1; }
+.minimal-card { background:#fff; border-radius:8px; padding:14px 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); margin-bottom:14px; border: 1px solid #e9ecef; }
+.qa-btn { background:#22223b; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; font-size:0.98rem; }
+.qa-btn:hover { background:#4a4e69; }
+.activity-item { background:#f7f7fa; padding:10px; border-radius:6px; margin-bottom:8px; border-left: 3px solid #22223b; }
+.small-muted { color:#4a4e69; font-size:0.9rem; }
+</style>
+""", unsafe_allow_html=True)
 
     # Header
     st.markdown(f"""

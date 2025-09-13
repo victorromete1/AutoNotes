@@ -33,303 +33,232 @@ from autograder import AutoGrader
 # App base configuration
 st.set_page_config(
     page_title="AI Study Platform",
-    page_icon="🎓",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# Secrets & Keys
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-ADMIN_KEY = st.secrets["ADMIN_KEY"]  # Used for hidden admin mode toggle
-
-# Supabase Client
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-
-
-# Functions
-
-# Hash a raw password into SHA-256
-def hash_password(password: str) -> str:
-    # Returns a hex string hash for secure storage
-    return hashlib.sha256(password.encode()).hexdigest()
-
-# Delete any user's account, admin only.
-def admin_delete_account(target_username: str):
-    # Attempts to delete a user row from Supabase 'users' table
-    try:
-        supabase.from_("users").delete().eq("username", target_username).execute()
-        st.success(f"✅ Account '{target_username}' has been deleted!")
-    except Exception as e:
-        st.error(f"Error: {e}")
-
-
-# Reset any user's password (Admin-only)
-def admin_reset_password(target_username: str, new_password: str):
-    # Hash the new password and update the user's record
-    try:
-        hashed = hash_password(new_password)
-        # FIXED: call lower() properly
-        supabase.table("users").update({"password": hashed}).eq("username", target_username.lower()).execute()
-        st.success(f"✅ Password for '{target_username}' has been reset!")
-    except Exception as e:
-        st.error(f"Error: {e}")
-
-# Advance the flashcard study session to the next card
-def next_flashcard(study_cards, correct=False):
-    # Increment counters for studied and correct answers
-    st.session_state.cards_studied += 1
-    if correct:
-        st.session_state.cards_correct += 1
-
-    # Hide answer for the next card
-    st.session_state.study_index += 1
-    st.session_state.show_answer = False
-
-    # If we reached the end, finalize the session
-    if st.session_state.study_index >= len(study_cards):
-        # Compute accuracy for this study session
-        accuracy = (st.session_state.cards_correct / st.session_state.cards_studied) * 100
-
-        # Save a "flashcards" study session record
-        session = {
-            'timestamp': datetime.now().isoformat(),
-            'activity_type': 'flashcards',
-            'subject': study_cards[0].get('category', 'General') if study_cards else 'General',
-            'flashcards_studied': st.session_state.cards_studied,
-            'correct_answers': st.session_state.cards_correct,
-            'accuracy': accuracy
-        }
-        st.session_state.study_sessions.append(session)
-        auto_save()
-
-        st.success(f"Session complete! Accuracy: {accuracy:.1f}%")
-
-        # Clean up study session keys
-        for key in ['study_index', 'show_answer', 'cards_studied', 'cards_correct']:
-            if key in st.session_state:
-                del st.session_state[key]
-
-    # Refresh UI
-    st.rerun()
-
-
-# Autosave
-def auto_save():
-    try:
-        persistence.auto_save_data()
-    except Exception:
-        pass
-
-# Resources
-
-# Cache heavy generator resources across reruns
-@st.cache_resource
-def get_generators():
-    # Construct and return a dictionary of the various generators
-    return {
-        'notes': NoteGenerator(),
-        'flashcards': FlashcardGenerator(),
-        'quiz': QuizGenerator(),
-        'progress': ProgressTracker(),
-        'pdf': PDFReportGenerator()
-    }
-
-generators = get_generators()
-persistence = DataPersistence()
-data_io = DataImportExport(persistence)
-advanced_quiz = AdvancedQuizSystem(generators['quiz'])
-
-# Session State Initialization
-
-def init_session_state():
-    # Provide defaults for keys we rely upon throughout the app
-    defaults = {
-        'notes': [],
-        'flashcards': [],
-        'study_sessions': [],
-        'current_note': "",
-        'note_title': "",
-        'note_category': "General",
-        'page': 'Home',
-        'logged_in': False,
-        'username': ""
-    }
-    for key, default_value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = default_value
-
-init_session_state()
-
-# Load previously persisted data (per-user)
-persistence.load_all_data()
-
-# ============================
-# Ensure page state always exists
-# ============================
-if "page" not in st.session_state:
-    st.session_state.page = "🏠 Home"
-
-import streamlit as st
-from datetime import datetime
-
-# ----------------------------
-# Sidebar
-# ----------------------------
-with st.sidebar:
-    st.title("🎓 Study Platform")
-
-    # ===========================
-    # Logged Out → Login / Sign Up
-    # ===========================
-    if not st.session_state.get("logged_in", False):
-        st.subheader("🔑 Account Access")
-
-        mode = st.radio("Choose mode", ["Login", "Sign Up"], horizontal=True, key="auth_mode")
-
-        if mode == "Sign Up":
-            su = st.text_input("Username", max_chars=15, key="su_user")
-            sp = st.text_input("Password", type="password", key="su_pass")
-            confirm = st.text_input("Confirm Password", type="password", key="su_confirm")
-
-            if st.button("Create account", use_container_width=True):
-                if not su or not sp:
-                    st.warning("Enter username and password.")
-                elif len(su) > 15 or len(su) < 4:
-                    st.warning("Username must be between 4 and 15 characters.")
-                elif ' ' in su:
-                    st.error("Username cannot contain spaces")
-                elif not su.isalnum():
-                    st.error("Username can only contain letters and numbers")
-                elif sp != confirm:
-                    st.error("Passwords do not match.")
-                else:
-                    ok, msg = user_data.register_user(su, sp)
-                    if ok:
-                        st.success("Account created. You can now log in.")
-                    else:
-                        st.error(msg)
-
-
-        else:  # Login
-            lu = st.text_input("Username", key="li_user")
-            lp = st.text_input("Password", type="password", key="li_pass")
-
-            if st.button("Login", use_container_width=True):
-                if lu.strip() == "" and lp == st.secrets.get("ADMIN_KEY", ""):
-                    st.session_state["admin_mode"] = True
-                    st.session_state["logged_in"] = True
-                    st.session_state["username"] = "Admin"
-                    st.success("✅ Admin mode enabled")
-                    st.rerun()
-                else:
-                    ok, msg = user_data.authenticate(lu, lp)
-                    if ok:
-                        st.session_state["logged_in"] = True
-                        st.session_state["username"] = lu
-                        loaded_ok, data = user_data.load_user_data(
-                            lu, merge_local=True, local_state=st.session_state
-                        )
-                        if loaded_ok:
-                            st.session_state.update(data)
-                            user_data.save_current_user(st.session_state)
-                        st.success(f"Welcome back, {lu}")
-                        st.rerun()
-                    else:
-                        st.error(msg)
-
-        # Force Home page when logged out
-        st.session_state.page = "🏠 Home"
-
-    # ===========================
-    # Logged In → Sidebar Nav, Stats, Save
-    # ===========================
+    # Stylish dashboard redesign
     else:
-        # Navigation at the top
-        page = st.selectbox(
-            "Navigate:",
-            ["🏠 Home", "📝 Notes", "📚 Flashcards", "🧠 Quizzes",
-             "📊 Progress", "📅 Calendar", "📝 Autograder", "⚙️ Settings"],
-            key="navigation"
-        )
-        st.session_state.page = page
-
-        st.subheader(f"👋 Welcome, {st.session_state['username']}")
-        if st.session_state.get("admin_mode"):
-            st.caption("🛠 Admin Mode Enabled")
-
-        # Save button
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            if st.button("Save", use_container_width=True):
-                ok, msg = user_data.save_current_user(st.session_state)
-                if ok:
-                    st.success("Saved.")
-                else:
-                    st.error(msg)
-        # Quick Stats
-        st.subheader("📈 Quick Stats")
-        c1, c2 = st.columns(2)
-        with c1:
-            st.metric("📝 Notes", len(st.session_state.notes))
-            st.metric("🎴 Flashcards", len(st.session_state.flashcards))
-        with c2:
-            quiz_sessions = [
-                s for s in st.session_state.study_sessions
-                if s.get('activity_type') == 'quiz'
+        username = st.session_state.get('username', 'User')
+        st.markdown("""
+        <style>
+        .dashboard-container { max-width: 1000px; margin: 0 auto; }
+        .dashboard-header { background: linear-gradient(90deg,#667eea,#764ba2); color: #fff; border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; box-shadow: 0 6px 24px rgba(15,23,42,0.08); }
+        .dashboard-title { font-size: 2.2rem; font-weight: 700; margin-bottom: 6px; }
+        .dashboard-sub { font-size: 1.1rem; color: #e0e7ff; }
+        .dashboard-stats { display: flex; gap: 18px; margin-bottom: 24px; }
+        .dashboard-stat { background: #fff; color: #334155; border-radius: 12px; padding: 18px 0; flex: 1; text-align: center; box-shadow: 0 2px 8px rgba(15,23,42,0.04); }
+        .dashboard-stat h3 { margin:0; font-size: 2rem; font-weight: 700; }
+        .dashboard-stat p { margin:0; font-size: 1rem; color: #64748b; }
+        .dashboard-main { display: flex; gap: 28px; }
+        .dashboard-left { flex:2; }
+        .dashboard-right { flex:1; }
+        .dashboard-card { background: #fff; border-radius: 12px; padding: 20px 22px; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(15,23,42,0.04); }
+        .dashboard-actions { display: flex; gap: 12px; margin-bottom: 18px; }
+        .dashboard-btn { background: linear-gradient(90deg,#667eea,#764ba2); color: #fff; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: box-shadow 0.2s; }
+        .dashboard-btn:hover { box-shadow: 0 2px 12px rgba(102,126,234,0.15); }
+        .dashboard-activity { background: #f8fafc; border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
+        .dashboard-muted { color: #64748b; font-size: 0.95rem; }
+        </style>
+        """, unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class='dashboard-container'>
+            <div class='dashboard-header'>
+                <div class='dashboard-title'>&#127891; SmartStudy</div>
+                <div class='dashboard-sub'>Welcome back, <strong>{username}</strong> &mdash; Your personal learning dashboard</div>
+            </div>
+        """, unsafe_allow_html=True)
+        # Stats row
+        stats = [
+            (len(st.session_state.get('notes', [])), 'Notes'),
+            (len(st.session_state.get('flashcards', [])), 'Flashcards'),
+            (len([s for s in st.session_state.get('study_sessions', []) if s.get('activity_type') == 'quiz']), 'Quizzes Taken'),
+            (len(st.session_state.get('study_sessions', [])), 'Study Sessions')
+        ]
+        st.markdown("<div class='dashboard-stats'>", unsafe_allow_html=True)
+        for count, label in stats:
+            st.markdown(f"<div class='dashboard-stat'><h3>{count}</h3><p>{label}</p></div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        # Main content columns
+        left, right = st.columns([2,1])
+        with left:
+            # Focus Timer
+            st.markdown("""
+            <div class='dashboard-card'>
+                <div style='font-weight:600; font-size:1.1rem; margin-bottom:8px;'>Focus Timer</div>
+                <div style='display:flex; gap:10px; align-items:center;'>
+                    <input id='focus_minutes' type='number' min='1' max='180' value='25' style='width:80px; padding:7px; border-radius:7px; border:1px solid #e2e8f0;' />
+                    <button id='start_focus' class='dashboard-btn'>Start</button>
+                    <button id='pause_focus' class='dashboard-btn' style='background:#94a3b8;'>Pause</button>
+                    <button id='reset_focus' class='dashboard-btn' style='background:#e2e8f0; color:#0f172a;'>Reset</button>
+                </div>
+                <div style='margin-top:14px; font-size:2rem; font-weight:700;' id='focus_display'>25:00</div>
+                <div class='dashboard-muted' style='margin-top:7px;'>Set a focus period and stay productive.</div>
+                <script>
+                let timer = null;
+                let remaining = 25*60;
+                const display = document.getElementById('focus_display');
+                const startBtn = document.getElementById('start_focus');
+                const pauseBtn = document.getElementById('pause_focus');
+                const resetBtn = document.getElementById('reset_focus');
+                const minutesInput = document.getElementById('focus_minutes');
+                function formatTime(s){
+                    const m = Math.floor(s/60); const r = s%60; return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`;
+                }
+                function tick(){
+                    if(remaining<=0){ clearInterval(timer); timer=null; display.innerText='00:00'; return; }
+                    remaining -=1; display.innerText = formatTime(remaining);
+                }
+                startBtn.onclick = ()=>{
+                    remaining = parseInt(minutesInput.value||25)*60; display.innerText = formatTime(remaining);
+                    if(timer) clearInterval(timer);
+                    timer = setInterval(tick,1000);
+                };
+                pauseBtn.onclick = ()=>{ if(timer){ clearInterval(timer); timer=null;} else { timer = setInterval(tick,1000); } };
+                resetBtn.onclick = ()=>{ if(timer){ clearInterval(timer); timer=null;} remaining = parseInt(minutesInput.value||25)*60; display.innerText = formatTime(remaining); };
+                </script>
+            </div>
+            """, unsafe_allow_html=True)
+            # Quick Actions
+            st.markdown("<div class='dashboard-card'>", unsafe_allow_html=True)
+            st.markdown("<div style='font-weight:600; font-size:1.1rem; margin-bottom:8px;'>Quick Actions</div>", unsafe_allow_html=True)
+            actions = [
+                ("New Note", "📝 Notes", "quick_note"),
+                ("Study Flashcards", "📚 Flashcards", "quick_flashcards"),
+                ("Take Quiz", "🧠 Quizzes", "quick_quiz")
             ]
-            st.metric("🧠 Quizzes", len(quiz_sessions))
-            st.metric("📚 Sessions", len(st.session_state.study_sessions))
-
-        # Admin mode indicator
+            ac1, ac2, ac3 = st.columns(3)
+            for (label, page, key), col in zip(actions, [ac1, ac2, ac3]):
+                with col:
+                    if st.button(label, use_container_width=True, key=key):
+                        st.session_state.page = page
+                        st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+            # Recent Activity
+            st.markdown("<div class='dashboard-card'>", unsafe_allow_html=True)
+            st.markdown("<div style='font-weight:600; font-size:1.1rem; margin-bottom:8px;'>Recent Activity</div>", unsafe_allow_html=True)
+            if st.session_state.get('study_sessions'):
+                recent_sessions = sorted(st.session_state.get('study_sessions', []), key=lambda x: x.get('timestamp',''), reverse=True)[:6]
+                for s in recent_sessions:
+                    try:
+                        ts = datetime.fromisoformat(s.get('timestamp')).strftime("%b %d %Y %H:%M")
+                    except:
+                        ts = s.get('timestamp','')
+                    atype = s.get('activity_type','activity')
+                    if atype == 'quiz':
+                        score = s.get('score',0)
+                        color = '#2ca02c' if score>=80 else '#ff7f0e' if score>=60 else '#d62728'
+                        st.markdown(f"<div class='dashboard-activity'><div style='display:flex; justify-content:space-between; align-items:center;'><div><strong>Quiz</strong> • {s.get('subject','General')}</div><div style='color:{color}; font-weight:600'>{score:.1f}%</div></div><div class='dashboard-muted'>{ts}</div></div>", unsafe_allow_html=True)
+                    elif atype == 'flashcards':
+                        studied = s.get('flashcards_studied',0)
+                        correct = s.get('correct_answers',0)
+                        acc = (correct/studied*100) if studied>0 else 0
+                        st.markdown(f"<div class='dashboard-activity'><div style='display:flex; justify-content:space-between; align-items:center;'><div><strong>Flashcards</strong> • {s.get('subject','General')}</div><div style='font-weight:600'>{studied} cards</div></div><div class='dashboard-muted'>{ts} • Accuracy: {acc:.1f}%</div></div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"<div class='dashboard-activity'><div style='display:flex; justify-content:space-between; align-items:center;'><div><strong>{atype.capitalize()}</strong></div><div class='dashboard-muted'>{ts}</div></div></div>", unsafe_allow_html=True)
+            else:
+                st.info("No recent activity. Start studying to see your progress here!")
+            st.markdown("</div>", unsafe_allow_html=True)
+            # Quick Note
+            st.markdown("<div class='dashboard-card'>", unsafe_allow_html=True)
+            st.markdown("<div style='font-weight:600; font-size:1.1rem; margin-bottom:8px;'>Quick Note</div>", unsafe_allow_html=True)
+            with st.form("quick_note_form"):
+                quick_note = st.text_area("Jot something down:", placeholder="Type your quick note here...", height=120, label_visibility="collapsed", key="quick_note_text")
+                if st.form_submit_button("Save Quick Note", use_container_width=True):
+                    if quick_note.strip():
+                        new_note = {"title": f"Quick Note - {datetime.now().strftime('%H:%M')}", "content": quick_note, "category": "Quick Notes", "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+                        st.session_state.notes.append(new_note)
+                        auto_save()
+                        st.success("Quick note saved!")
+                        st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+        with right:
+            # Upcoming Events
+            st.markdown("<div class='dashboard-card'>", unsafe_allow_html=True)
+            st.markdown("<div style='font-weight:600; font-size:1.1rem; margin-bottom:8px;'>Upcoming Events</div>", unsafe_allow_html=True)
+            if st.session_state.get('events'):
+                today = datetime.now().date()
+                upcoming = []
+                for ev in st.session_state.get('events',[]):
+                    try:
+                        d = datetime.fromisoformat(ev.get('date')).date()
+                        if d >= today:
+                            upcoming.append({'name':ev.get('name'), 'date':d, 'color': ev.get('color','#4CAF50')})
+                    except:
+                        continue
+                upcoming = sorted(upcoming, key=lambda x: x['date'])[:3]
+                for ev in upcoming:
+                    days = (ev['date'] - today).days
+                    when = 'Today' if days==0 else f'In {days} day' + ('s' if days!=1 else '')
+                    st.markdown(f"<div style='background:#f9fafb; padding:10px; border-radius:8px; margin-bottom:8px; border-left:4px solid {ev['color']}'> <div style='font-weight:600'>{ev['name']}</div> <div class='dashboard-muted'>{ev['date'].strftime('%b %d')} • {when}</div> </div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div class='dashboard-muted'>No upcoming events.</div>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+            # Study Tip
+            st.markdown("<div class='dashboard-card'>", unsafe_allow_html=True)
+            st.markdown("<div style='font-weight:600; font-size:1.1rem; margin-bottom:8px;'>Study Tip</div>", unsafe_allow_html=True)
+            import random
+            tips = [
+                "Try the Pomodoro technique: 25 minutes focused, 5 minutes break.",
+                "Teach someone else to reinforce learning.",
+                "Create flashcards for key concepts and review regularly.",
+            ]
+            st.info(random.choice(tips))
+            st.markdown("</div>", unsafe_allow_html=True)
+            # Progress mini-chart
+            st.markdown("<div class='dashboard-card'>", unsafe_allow_html=True)
+            st.markdown("<div style='font-weight:600; font-size:1.1rem; margin-bottom:8px;'>This Week's Progress</div>", unsafe_allow_html=True)
+            if st.session_state.get('study_sessions'):
+                daily_counts = {}
+                for session in st.session_state.get('study_sessions',[]):
+                    try:
+                        sd = datetime.fromisoformat(session.get('timestamp')).date()
+                        if (datetime.now().date() - sd).days <= 7:
+                            daily_counts[sd] = daily_counts.get(sd,0) + 1
+                    except:
+                        continue
+                if daily_counts:
+                    max_count = max(daily_counts.values())
+                    dates = [(datetime.now().date() - timedelta(days=i)) for i in range(6, -1, -1)]
+                    bars = "<div style='display:flex; gap:6px; align-items:flex-end; height:90px;'>"
+                    for d in dates:
+                        cnt = daily_counts.get(d,0)
+                        h = int((cnt/max_count)*70) if max_count>0 else 0
+                        bars += f"<div style='text-align:center; font-size:11px;'><div style='background:linear-gradient(90deg,#667eea,#764ba2); width:18px; height:{h}px; border-radius:4px;'></div><div style='margin-top:6px;'>{d.strftime('%a')}</div></div>"
+                    bars += "</div>"
+                    st.markdown(bars, unsafe_allow_html=True)
+                else:
+                    st.markdown("<div class='dashboard-muted'>No study sessions this week yet.</div>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        # Admin Controls
         if st.session_state.get("admin_mode"):
-            st.info("🛠 Admin Mode Active")
-
-        # Data import/export
-        #not added currently data_io.render_sidebar_controls()
-
-        # Logout
-        if st.button("Logout", use_container_width=True):
-            st.session_state.clear()
-            st.session_state["logged_in"] = False
-            st.session_state["page"] = "🏠 Home"
-            st.success("Logged out.")
-            st.rerun()
-
-
-# ----------------------------
-# Home Page
-# ----------------------------
-if st.session_state.page == "🏠 Home":
-    # Custom CSS for styling
-    st.markdown("""
-    <style>
-    .feature-card {
-        background-color: #f8f9fa;
-        padding: 20px;
-        color: black;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        margin-bottom: 20px;
-        transition: transform 0.3s ease;
-    }
-    .feature-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # ...existing code...
-    
-    # Logged out → show app info
-    if not st.session_state.get("logged_in", False):
-        st.title("🎓 SmartStudy")
-        st.subheader("🚀 Welcome to Your AI-Powered Study Companion")
-        
-        col1, col2 = st.columns([2, 1])
-        with col1:
+            st.markdown("---")
+            st.markdown("<div class='dashboard-card'>", unsafe_allow_html=True)
+            st.markdown("<h3>Admin Controls</h3>", unsafe_allow_html=True)
+            admin_col1, admin_col2 = st.columns(2)
+            with admin_col1:
+                st.markdown("#### Reset Password")
+                target_user = st.text_input("Username to Reset Password", key="admin_reset_user")
+                new_pass = st.text_input("New Password", type="password", key="admin_new_pass")
+                if st.button("Reset User Password", key="admin_reset_btn"):
+                    if target_user and new_pass:
+                        ok, msg = user_data.admin_reset_password(target_user, new_pass)
+                        if ok:
+                            st.success(f"Password for '{target_user}' reset successfully.")
+                        else:
+                            st.error(msg)
+                    else:
+                        st.warning("Enter both username and new password.")
+            with admin_col2:
+                st.markdown("#### Delete Account")
+                del_user = st.text_input("Username to Delete", key="admin_del_user")
+                if st.button("Delete Account", key="admin_del_btn"):
+                    if del_user:
+                        ok, msg = user_data.admin_delete_account(del_user)
+                        if ok:
+                            st.success(f"User '{del_user}' deleted successfully.")
+                        else:
+                            st.error(msg)
+                    else:
+                        st.warning("Enter a username to delete.")
+            st.markdown("</div>", unsafe_allow_html=True)
             st.markdown("""
             ### Transform Your Learning Experience
             

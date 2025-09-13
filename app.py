@@ -368,17 +368,17 @@ if st.session_state.page == "🏠 Home":
         """, unsafe_allow_html=True)
         
         # Stats Section using columns
-    st.subheader("Your Progress")
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Notes", len(st.session_state.get('notes', [])))
-    with col2:
-        st.metric("Flashcards", len(st.session_state.get('flashcards', [])))
-    with col3:
-        quiz_count = len([s for s in st.session_state.get('study_sessions', []) if s.get('activity_type') == 'quiz'])
-        st.metric("Quizzes", quiz_count)
-    with col4:
-        st.metric("Total Sessions", len(st.session_state.get('study_sessions', [])))
+        st.subheader("Your Progress")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Notes", len(st.session_state.get('notes', [])))
+        with col2:
+            st.metric("Flashcards", len(st.session_state.get('flashcards', [])))
+        with col3:
+            quiz_count = len([s for s in st.session_state.get('study_sessions', []) if s.get('activity_type') == 'quiz'])
+            st.metric("Quizzes", quiz_count)
+        with col4:
+            st.metric("Total Sessions", len(st.session_state.get('study_sessions', [])))
         
     # Focus Timer
     st.subheader("⏱️ Focus Timer")

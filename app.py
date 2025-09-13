@@ -406,20 +406,20 @@ if st.session_state.page == "🏠 Home":
             """, unsafe_allow_html=True)
             
         with col2:
-            st.markdown("""
-            <div class="feature-card">
-                <h4>🧠 Study Smart</h4>
-                <p>Use spaced repetition and adaptive quizzes to reinforce your learning effectively.</p>
-            </div>
-            """, unsafe_allow_html=True)
+                st.markdown("""
+                <div class="feature-card" style="color: black;">
+                    <h4>🧠 Study Smart</h4>
+                    <p>Use spaced repetition and adaptive quizzes to reinforce your learning effectively.</p>
+                </div>
+                """, unsafe_allow_html=True)
             
         with col3:
-            st.markdown("""
-            <div class="feature-card">
-                <h4>📈 Track Progress</h4>
-                <p>Monitor your performance with detailed analytics and identify areas for improvement.</p>
-            </div>
-            """, unsafe_allow_html=True)
+                st.markdown("""
+                <div class="feature-card" style="color: black;">
+                    <h4>📈 Track Progress</h4>
+                    <p>Monitor your performance with detailed analytics and identify areas for improvement.</p>
+                </div>
+                """, unsafe_allow_html=True)
 
     # Logged in → dashboard
     else:

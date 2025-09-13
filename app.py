@@ -304,7 +304,7 @@ with st.sidebar:
 # ----------------------------
 # Home Page - Logged In (Notion-inspired)
 # ----------------------------
-elif st.session_state.page == "🏠 Home":
+if st.session_state.page == "🏠 Home":
     # Custom CSS for Notion-like styling
     st.markdown("""
     <style>

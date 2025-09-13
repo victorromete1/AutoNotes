@@ -308,6 +308,7 @@ if st.session_state.page == "🏠 Home":
     .feature-card {
         background-color: #f8f9fa;
         padding: 20px;
+        color: black;
         border-radius: 10px;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         margin-bottom: 20px;
@@ -395,8 +396,10 @@ if st.session_state.page == "🏠 Home":
         
         with col1:
             st.markdown("""
-            <div class="feature-card">
-                color: black;
+            <div class="feature-card" style="
+                color: black; 
+            ">
+                
                 <h4>📝 Create Content</h4>
                 <p>Generate notes from your materials or create flashcards from your content with AI assistance.</p>
             </div>

@@ -474,11 +474,6 @@ if st.session_state.page == "🏠 Home":
         ]
         st.info(random.choice(tips))
 
-        else:
-            minutes = int(remaining.total_seconds() // 60)
-            seconds = int(remaining.total_seconds() % 60)
-            st.markdown(f"<h2 style='text-align: center; margin: 1rem 0;'>{minutes:02d}:{seconds:02d}</h2>", unsafe_allow_html=True)
-
     # Main content columns
     left_col, right_col = st.columns([2,1])
     
@@ -983,7 +978,7 @@ elif st.session_state.page == "📚 Flashcards":
                                     st.write(f"**Back:** {card['back']}")
                             if len(flashcards) > 3:
                                 st.info(f"+ {len(flashcards) - 3} more cards created!")
-                                ser_data.save_current_user(st.session_state)
+                                user_data.save_current_user(st.session_state)
                         except Exception as e:
                             st.error(f"Error: {str(e)}")
                 else:
@@ -1007,7 +1002,7 @@ elif st.session_state.page == "📚 Flashcards":
                         }
                         st.session_state.flashcards.append(new_card)
                         auto_save()
-                        ser_data.save_current_user(st.session_state)
+                        user_data.save_current_user(st.session_state)
                         st.success("✅ Flashcard added!")
                     else:
                         st.warning("Please fill in both sides.")

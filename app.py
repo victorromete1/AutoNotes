@@ -378,18 +378,23 @@ with st.sidebar:
 
     # Logged in → dashboard
     else:
-        # Header with welcome message
+        # Modern Notion-inspired header
         st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; color: white; margin-bottom: 30px;">
-            <h1 style="margin: 0; font-size: 2.5rem;">🎓 SmartStudy Dashboard</h1>
-            <h2 style="margin: 0; font-weight: 400;">Welcome back, {st.session_state['username']}! 👋</h2>
+        <div style="background: #fff; border-radius: 16px; box-shadow: 0 2px 16px rgba(60,60,60,0.08); padding: 32px 40px 24px 40px; margin-bottom: 32px;">
+            <div style="display: flex; align-items: center; gap: 18px;">
+                <img src='https://upload.wikimedia.org/wikipedia/commons/4/45/Notion_app_logo.png' width='48' style='border-radius: 12px; box-shadow: 0 2px 8px rgba(60,60,60,0.10);'>
+                <div>
+                    <h1 style="margin: 0; font-size: 2.5rem; font-weight: 700; color: #222; letter-spacing: -1px;">SmartStudy Dashboard</h1>
+                    <h2 style="margin: 0; font-size: 1.25rem; font-weight: 400; color: #555;">Welcome back, <span style='color:#764ba2'>{st.session_state['username']}</span>! 👋</h2>
+                </div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
         
         # Display admin badge if in admin mode
         if st.session_state.get("admin_mode"):
             st.markdown("""
-            <div style="background-color: #ff4b4b; color: white; padding: 10px 15px; border-radius: 8px; display: inline-block; margin-bottom: 20px;">
+            <div style="background: linear-gradient(90deg, #ff4b4b 0%, #ffb347 100%); color: white; padding: 10px 18px; border-radius: 8px; display: inline-block; margin-bottom: 20px; font-weight: 600; font-size: 1.1em; box-shadow: 0 2px 8px rgba(60,60,60,0.10);">
                 <b>🛠 Admin Mode Active</b>
             </div>
             """, unsafe_allow_html=True)

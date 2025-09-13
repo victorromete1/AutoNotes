@@ -305,30 +305,39 @@ if st.session_state.page == "🏠 Home":
     # Custom CSS for styling
     st.markdown("""
     <style>
-    .feature-card {
-        background-color: #f8f9fa;
-        padding: 20px;
-        color: black;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        margin-bottom: 20px;
-        transition: transform 0.3s ease;
+            st.markdown("""
+            <div class="feature-card" style="color: black;">
+                <h4>📝 Create Content</h4>
+                <ul style='padding-left: 1em;'>
+                    <li>Generate notes from your materials</li>
+                    <li>Create flashcards from your content</li>
+                    <li>AI assistance for summarization</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
     }
     .feature-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-    }
-    .stat-card {
-        background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-        color: white;
+            st.markdown("""
+                <h4>🧠 Study Smart</h4>
+                <ul style='padding-left: 1em;'>
+                    <li>Spaced repetition</li>
+                    <li>Adaptive quizzes</li>
+                    <li>Reinforce learning effectively</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
         padding: 15px;
         border-radius: 10px;
-        text-align: center;
-        margin-bottom: 15px;
-    }
-    .quick-action-btn {
-        background: linear-gradient(135deg, #43cea2 0%, #185a9d 100%);
-        color: white;
+            st.markdown("""
+            <div class="feature-card" style="color: black;">
+                <h4>📈 Track Progress</h4>
+                <ul style='padding-left: 1em;'>
+                    <li>Monitor your performance</li>
+                    <li>Detailed analytics</li>
+                    <li>Identify areas for improvement</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
         border: none;
         padding: 12px 20px;
         border-radius: 8px;

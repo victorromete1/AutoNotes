@@ -303,12 +303,71 @@ with st.sidebar:
 # Home Page
 # ----------------------------
 if st.session_state.page == "🏠 Home":
-    st.markdown("""
-        <h1 style='text-align: center; color: #1f2937; margin-bottom: 1rem;'>Welcome to SmartStudy</h1>
-        <p style='text-align: center; color: #4b5563; font-size: 1.1rem; margin-bottom: 2rem;'>Your Personal AI-Powered Learning Platform</p>
-    """, unsafe_allow_html=True)
-    
-    # Stats Section using columns
+    if not st.session_state.get("logged_in", False):
+        # Logged out view
+        st.markdown("""
+            <style>
+            .hero-text { text-align: center; padding: 2rem 0; }
+            .feature-card {
+                background: white;
+                padding: 1.5rem;
+                border-radius: 8px;
+                border: 1px solid #e2e8f0;
+                margin-bottom: 1rem;
+            }
+            </style>
+            <div class="hero-text">
+                <h1 style='color: #1f2937; margin-bottom: 1rem; font-size: 2.5rem;'>Welcome to SmartStudy</h1>
+                <p style='color: #4b5563; font-size: 1.25rem; margin-bottom: 2rem;'>Your Personal AI-Powered Learning Platform</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        # Feature highlights
+        st.subheader("🌟 Key Features")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+                <div class='feature-card'>
+                    <h3 style='color: #1f2937;'>📝 Smart Notes</h3>
+                    <p style='color: #4b5563;'>Transform your study materials into organized, easy-to-review notes using AI assistance.</p>
+                </div>
+                <div class='feature-card'>
+                    <h3 style='color: #1f2937;'>🎴 Flashcards</h3>
+                    <p style='color: #4b5563;'>Generate and study with AI-created flashcards to reinforce your learning.</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with col2:
+            st.markdown("""
+                <div class='feature-card'>
+                    <h3 style='color: #1f2937;'>🧠 Smart Quizzes</h3>
+                    <p style='color: #4b5563;'>Test your knowledge with automatically generated quizzes tailored to your materials.</p>
+                </div>
+                <div class='feature-card'>
+                    <h3 style='color: #1f2937;'>📊 Progress Tracking</h3>
+                    <p style='color: #4b5563;'>Monitor your learning progress and identify areas for improvement.</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        # Call to action
+        st.markdown("""
+            <div style='text-align: center; margin-top: 2rem;'>
+                <p style='color: #4b5563; font-size: 1.1rem; margin-bottom: 1rem;'>Ready to enhance your learning journey?</p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Note about logging in
+        st.info("👈 Please log in or create an account using the sidebar to get started!")
+
+    else:
+        # Logged in view
+        st.markdown("""
+            <h1 style='text-align: center; color: #1f2937; margin-bottom: 1rem;'>Welcome to SmartStudy</h1>
+            <p style='text-align: center; color: #4b5563; font-size: 1.1rem; margin-bottom: 2rem;'>Your Personal AI-Powered Learning Platform</p>
+        """, unsafe_allow_html=True)
+        
+        # Stats Section using columns
     st.subheader("Your Progress")
     col1, col2, col3, col4 = st.columns(4)
     with col1:

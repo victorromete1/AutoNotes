@@ -405,10 +405,7 @@ if st.session_state.page == "🏠 Home":
         
         with col1:
             st.markdown("""
-            <div class="feature-card" style="
-                color: black; 
-            ">
-                
+            <div class="feature-card" style="color: black;">
                 <h4>📝 Create Content</h4>
                 <p>Generate notes from your materials or create flashcards from your content with AI assistance.</p>
             </div>

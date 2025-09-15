@@ -981,7 +981,7 @@ elif st.session_state.page == "📚 Flashcards":
                         }
                         st.session_state.flashcards.append(new_card)
                         auto_save()
-                        ser_data.save_current_user(st.session_state)
+                        user_data.save_current_user(st.session_state)
                         st.success("✅ Flashcard added!")
                     else:
                         st.warning("Please fill in both sides.")

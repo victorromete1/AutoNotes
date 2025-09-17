@@ -496,7 +496,7 @@ if st.session_state.page == "🏠 Home":
             # Upcoming events
             if "events" in st.session_state and st.session_state.events:
                 st.markdown("---")
-                st.markdown('<h3 style="color: white; margin-bottom: 20px;">📅 Upcoming Events</h3>', unsafe_allow_html=True)
+                st.markdown('<h3 style="color: black; margin-bottom: 20px;">📅 Upcoming Events</h3>', unsafe_allow_html=True)
                 
                 today = datetime.now().date()
                 upcoming_events = []

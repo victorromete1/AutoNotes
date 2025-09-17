@@ -394,15 +394,10 @@ if st.session_state.page == "🏠 Home":
 
     # Logged in → Minimalist dashboard
     else:
-        # Minimal header
-        st.markdown(f"""
-            <div class="minimal-header" style="padding: 10px 0;">
-                <h1 style="margin: 0 0 8px 0; font-size: 2.25rem; font-weight: 600; color: #FFFFFF;">
-                    Welcome back, {st.session_state['username']}
-                </h1>
-                <p style="margin: 0; font-size: 1rem; color: #d1d5db;">Your learning dashboard</p>
-            </div>
-        """, unsafe_allow_html=True)
+        # Stylish minimal header using Streamlit components and markdown
+        st.markdown(f"<h1 style='color: white; margin-bottom: 8px;'>{st.session_state['username']}</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #d1d5db; font-size: 1.1rem; margin-top: 0;'>Welcome back to your learning dashboard</p>", unsafe_allow_html=True)
+
 
         
         

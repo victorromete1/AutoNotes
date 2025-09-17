@@ -394,9 +394,10 @@ if st.session_state.page == "🏠 Home":
 
     # Logged in → Minimalist dashboard
     else:
-        # Using markdown with emojis and some styling
-        st.markdown(f"### 👋 Welcome back, **{st.session_state['username']}**", unsafe_allow_html=True)
-        st.markdown("#### Your learning dashboard", unsafe_allow_html=True)
+        # Stylish minimal header using Streamlit components and markdown
+        st.markdown(f"<h1 style='color: white; margin-bottom: 8px;'>👋Welcome back {st.session_state['username']}</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='color: #d1d5db; font-size: 1.1rem; margin-top: 0;'>Welcome back to your learning dashboard</p>", unsafe_allow_html=True)
+
 
         
         

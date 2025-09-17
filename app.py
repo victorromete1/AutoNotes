@@ -552,7 +552,7 @@ if st.session_state.page == "🏠 Home":
             st.markdown("---")
             st.markdown("""
             <div class="admin-panel">
-                <h3 style="color: black;">🛠 Admin Controls</h3>
+                <h3 style="color: grey;">🛠 Admin Controls</h3>
             """, unsafe_allow_html=True)
             
             admin_col1, admin_col2 = st.columns(2)

@@ -396,11 +396,14 @@ if st.session_state.page == "🏠 Home":
     else:
         # Minimal header
         st.markdown(f"""
-        <div class="minimal-header">
-            <h1 style="margin: 0; font-size: 2.25rem; font-weight: 600; color: #FFFFFF;">Welcome back, {st.session_state['username']}</h1>
-            <p style="margin: 5px 0 0 0; color: #FFFFFF;">Your learning dashboard</p>
-        </div>
+            <div class="minimal-header" style="padding: 10px 0;">
+                <h1 style="margin: 0 0 8px 0; font-size: 2.25rem; font-weight: 600; color: #FFFFFF;">
+                    Welcome back, {st.session_state['username']}
+                </h1>
+                <p style="margin: 0; font-size: 1rem; color: #d1d5db;">Your learning dashboard</p>
+            </div>
         """, unsafe_allow_html=True)
+
         
         
         # Main content area

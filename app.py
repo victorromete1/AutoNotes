@@ -125,7 +125,7 @@ def auto_save():
 
 # Resources
 
-# Cache all heavy resources and persistence objects
+# Cache only top-level resource creation
 @st.cache_resource
 def get_generators():
     return {
@@ -140,18 +140,10 @@ def get_generators():
 def get_persistence():
     return DataPersistence()
 
-@st.cache_resource
-def get_data_io(persistence):
-    return DataImportExport(persistence)
-
-@st.cache_resource
-def get_advanced_quiz(quiz_gen):
-    return AdvancedQuizSystem(quiz_gen)
-
 generators = get_generators()
 persistence = get_persistence()
-data_io = get_data_io(persistence)
-advanced_quiz = get_advanced_quiz(generators['quiz'])
+data_io = DataImportExport(persistence)
+advanced_quiz = AdvancedQuizSystem(generators['quiz'])
 
 # Session State Initialization
 
@@ -176,12 +168,8 @@ init_session_state()
 
 # Load previously persisted data (per-user)
 
-# Cache user data loading for instant reruns
-@st.cache_data
-def load_all_user_data(persistence):
-    persistence.load_all_data()
-
-load_all_user_data(persistence)
+# Load user data directly (no cache on unhashable objects)
+persistence.load_all_data()
 
 # ============================
 # Ensure page state always exists

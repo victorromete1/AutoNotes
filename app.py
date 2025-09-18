@@ -474,10 +474,18 @@ if st.session_state.page == "🏠 Home":
             # Quick note
             st.markdown("---")
             st.markdown('<h3 style="color: white; margin-bottom: 20px;">✏️ Quick Note</h3>', unsafe_allow_html=True)
+
+            # Use a unique key for the text area to help with state management
             with st.form("quick_note_form"):
-                quick_note = st.text_area("Jot something down:", placeholder="Type your quick note here...", height=100, 
-                                         label_visibility="collapsed", key="quick_note_text")
-                if st.form_submit_button("Save Note", use_container_width=True):
+                quick_note = st.text_area("Jot something down:", 
+                                         placeholder="Type your quick note here...", 
+                                         height=100, 
+                                         label_visibility="collapsed", 
+                                         key="quick_note_text")
+                
+                submitted = st.form_submit_button("Save Note", use_container_width=True)
+                
+                if submitted:
                     if quick_note.strip():
                         new_note = {
                             "title": f"Quick Note - {datetime.now().strftime('%H:%M')}",
@@ -486,12 +494,15 @@ if st.session_state.page == "🏠 Home":
                             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         }
                         st.session_state.notes.append(new_note)
-                        
-                        # Delete the note you just saved (the last one)
-                        st.session_state.notes.pop()
-                        
                         auto_save()
-                        st.success("Quick note saved!")
+                        
+                        # Clear the text area by updating session state
+                        st.session_state.quick_note_text = ""
+                        
+                        # Show success message with 12 spaces in front
+                        st.success(" " * 12 + "Quick note saved!")
+                        
+                        # Force a rerun to update the UI
                         st.rerun()
 
         

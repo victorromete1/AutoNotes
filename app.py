@@ -117,6 +117,7 @@ def next_flashcard(study_cards, correct=False):
 
 # Autosave
 def auto_save():
+    # Only autosave if not rerun (avoid on every rerun for speed)
     try:
         persistence.auto_save_data()
     except Exception:
@@ -124,10 +125,9 @@ def auto_save():
 
 # Resources
 
-# Cache heavy generator resources across reruns
+# Cache all heavy resources and persistence objects
 @st.cache_resource
 def get_generators():
-    # Construct and return a dictionary of the various generators
     return {
         'notes': NoteGenerator(),
         'flashcards': FlashcardGenerator(),
@@ -136,10 +136,22 @@ def get_generators():
         'pdf': PDFReportGenerator()
     }
 
+@st.cache_resource
+def get_persistence():
+    return DataPersistence()
+
+@st.cache_resource
+def get_data_io(persistence):
+    return DataImportExport(persistence)
+
+@st.cache_resource
+def get_advanced_quiz(quiz_gen):
+    return AdvancedQuizSystem(quiz_gen)
+
 generators = get_generators()
-persistence = DataPersistence()
-data_io = DataImportExport(persistence)
-advanced_quiz = AdvancedQuizSystem(generators['quiz'])
+persistence = get_persistence()
+data_io = get_data_io(persistence)
+advanced_quiz = get_advanced_quiz(generators['quiz'])
 
 # Session State Initialization
 
@@ -163,7 +175,13 @@ def init_session_state():
 init_session_state()
 
 # Load previously persisted data (per-user)
-persistence.load_all_data()
+
+# Cache user data loading for instant reruns
+@st.cache_data
+def load_all_user_data(persistence):
+    persistence.load_all_data()
+
+load_all_user_data(persistence)
 
 # ============================
 # Ensure page state always exists

@@ -1639,3 +1639,117 @@ elif st.session_state.page == "📝 Autograder":
 
             st.markdown("### 📝 Detailed Feedback")
             st.info(result.get("detailed_feedback", "No feedback provided."))
+# ============================
+# Settings Page
+# ============================
+
+elif st.session_state.page == "⚙️ Settings":
+    st.title("⚙️ Account Settings")
+    
+    # Change Password Section
+    st.subheader("🔐 Change Password")
+    
+    with st.form("change_password_form"):
+        current_password = st.text_input("Current Password", type="password", 
+                                       placeholder="Enter your current password")
+        new_password = st.text_input("New Password", type="password", 
+                                   placeholder="Enter new password")
+        confirm_password = st.text_input("Confirm New Password", type="password", 
+                                       placeholder="Re-enter new password")
+        
+        if st.form_submit_button("Change Password", use_container_width=True):
+            if not current_password or not new_password or not confirm_password:
+                st.error("Please fill in all password fields.")
+            elif new_password != confirm_password:
+                st.error("New passwords do not match.")
+            elif len(new_password) < 6:
+                st.error("Password must be at least 6 characters long.")
+            else:
+                # Verify current password first
+                ok, msg = user_data.authenticate(st.session_state["username"], current_password)
+                if ok:
+                    # Change the password
+                    success, message = user_data.change_password(st.session_state["username"], new_password)
+                    if success:
+                        st.success("✅ Password changed successfully!")
+                    else:
+                        st.error(f"Failed to change password: {message}")
+                else:
+                    st.error("Current password is incorrect.")
+    
+    st.markdown("---")
+    
+    # Delete Account Section
+    st.subheader("🗑️ Delete Account")
+    
+    st.warning("⚠️ **Danger Zone**: This action cannot be undone! All your data will be permanently deleted.")
+    
+    with st.form("delete_account_form"):
+        confirm_username = st.text_input("Confirm your username to delete account", 
+                                       placeholder="Type your username to confirm")
+        confirm_password = st.text_input("Confirm your password", type="password", 
+                                       placeholder="Enter your password to confirm")
+        
+        if st.form_submit_button("🚨 Delete My Account", type="secondary", use_container_width=True):
+            if not confirm_username or not confirm_password:
+                st.error("Please enter both username and password to confirm deletion.")
+            elif confirm_username != st.session_state["username"]:
+                st.error("Username does not match your account.")
+            else:
+                # Verify password first
+                ok, msg = user_data.authenticate(st.session_state["username"], confirm_password)
+                if ok:
+                    # Delete the account
+                    success, message = user_data.delete_account(st.session_state["username"])
+                    if success:
+                        st.success("✅ Account deleted successfully!")
+                        st.info("You will be logged out automatically.")
+                        # Clear session and log out
+                        st.session_state.clear()
+                        st.session_state["logged_in"] = False
+                        st.session_state["page"] = "🏠 Home"
+                        st.rerun()
+                    else:
+                        st.error(f"Failed to delete account: {message}")
+                else:
+                    st.error("Password is incorrect.")
+    
+    st.markdown("---")
+    
+    # Data Management Section
+    st.subheader("📊 Data Management")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("📥 Export All Data", use_container_width=True):
+            # You can implement data export functionality here
+            st.info("Export functionality coming soon!")
+    
+    with col2:
+        if st.button("🔄 Refresh Data", use_container_width=True):
+            # Reload data from database
+            ok, data = user_data.load_user_data(
+                st.session_state["username"], 
+                merge_local=False, 
+                local_state=st.session_state
+            )
+            if ok:
+                st.session_state.update(data)
+                st.success("✅ Data refreshed from server!")
+            else:
+                st.error("Failed to refresh data.")
+    
+    # Account Information
+    st.markdown("---")
+    st.subheader("📋 Account Information")
+    
+    info_col1, info_col2 = st.columns(2)
+    
+    with info_col1:
+        st.metric("Username", st.session_state["username"])
+        st.metric("Notes Created", len(st.session_state.get("notes", [])))
+    
+    with info_col2:
+        st.metric("Flashcards", len(st.session_state.get("flashcards", [])))
+        st.metric("Study Sessions", len(st.session_state.get("study_sessions", [])))

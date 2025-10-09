@@ -494,7 +494,7 @@ if st.session_state.page == "🏠 Home":
                         st.session_state.notes.append(new_note)
                         
                         # Delete the note you just saved (the last one)
-                        st.session_state.notes.pop()
+                        #st.session_state.notes.pop()
                         
                         auto_save()
                         st.rerun()

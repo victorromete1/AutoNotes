@@ -492,13 +492,13 @@ if st.session_state.page == "🏠 Home":
                             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         }
                         st.session_state.notes.append(new_note)
-                        st.success("Quick note saved!")
                         
                         # Delete the note you just saved (the last one)
                         st.session_state.notes.pop()
                         
                         auto_save()
                         st.rerun()
+                        st.success("Quick note saved!")
 
         
         with col_right:

@@ -1679,6 +1679,72 @@ elif st.session_state.page == "⚙️ Settings":
     
     st.markdown("---")
     
+    # Data Management Section
+    st.subheader("📊 Data Management")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("📥 Export All Data", use_container_width=True):
+            with st.spinner("Exporting your data..."):
+                success, message, exported_data = user_data.export_user_data(st.session_state["username"])
+                
+                if success:
+                    import json
+                    from datetime import datetime
+                    
+                    # Create filename with timestamp
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    filename = f"study_platform_export_{st.session_state['username']}_{timestamp}.json"
+                    
+                    # Convert to JSON string
+                    json_data = json.dumps(exported_data, indent=2, ensure_ascii=False)
+                    
+                    # Show export summary
+                    st.success("✅ Data exported successfully!")
+                    
+                    # Display export summary
+                    meta = exported_data.get("export_metadata", {})
+                    st.info(f"""
+                    **Export Summary:**
+                    - 📝 Notes: {len(exported_data.get('notes', []))}
+                    - 🎴 Flashcards: {len(exported_data.get('flashcards', []))}
+                    - 📚 Study Sessions: {len(exported_data.get('study_sessions', []))}
+                    - 📅 Events: {len(exported_data.get('events', []))}
+                    - 📦 Total Items: {meta.get('total_items', 0)}
+                    """)
+                    
+                    # Download button
+                    st.download_button(
+                        label="⬇️ Download JSON File",
+                        data=json_data,
+                        file_name=filename,
+                        mime="application/json",
+                        use_container_width=True
+                    )
+                    
+                    # Show preview
+                    with st.expander("🔍 Preview Exported Data"):
+                        st.json(exported_data)
+                else:
+                    st.error(f"Export failed: {message}")
+    
+    with col2:
+        if st.button("🔄 Refresh Data", use_container_width=True):
+            # Reload data from database
+            ok, data = user_data.load_user_data(
+                st.session_state["username"], 
+                merge_local=False, 
+                local_state=st.session_state
+            )
+            if ok:
+                st.session_state.update(data)
+                st.success("✅ Data refreshed from server!")
+            else:
+                st.error("Failed to refresh data.")
+    
+    st.markdown("---")
+    
     # Delete Account Section
     st.subheader("🗑️ Delete Account")
     
@@ -1716,32 +1782,7 @@ elif st.session_state.page == "⚙️ Settings":
     
     st.markdown("---")
     
-    # Data Management Section
-    st.subheader("📊 Data Management")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("📥 Export All Data", use_container_width=True):
-            # You can implement data export functionality here
-            st.info("Export functionality coming soon!")
-    
-    with col2:
-        if st.button("🔄 Refresh Data", use_container_width=True):
-            # Reload data from database
-            ok, data = user_data.load_user_data(
-                st.session_state["username"], 
-                merge_local=False, 
-                local_state=st.session_state
-            )
-            if ok:
-                st.session_state.update(data)
-                st.success("✅ Data refreshed from server!")
-            else:
-                st.error("Failed to refresh data.")
-    
     # Account Information
-    st.markdown("---")
     st.subheader("📋 Account Information")
     
     info_col1, info_col2 = st.columns(2)

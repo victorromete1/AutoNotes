@@ -300,3 +300,43 @@ def load_user_data(username: str, merge_local: bool = False,
         return True, payload
     except Exception as e:
         return False, {"error": str(e)}
+def export_user_data(username: str) -> Tuple[bool, str, dict]:
+    """Export all user data as JSON"""
+    normalized = normalize_username(username)
+    try:
+        # Get all user data
+        user_data = {}
+        
+        # ----- NOTES -----
+        r = supabase.table("notes").select("*").eq("username", normalized).execute()
+        user_data["notes"] = r.data if r.data else []
+        
+        # ----- FLASHCARDS -----
+        r = supabase.table("flashcards").select("*").eq("username", normalized).execute()
+        user_data["flashcards"] = r.data if r.data else []
+        
+        # ----- STUDY SESSIONS -----
+        r = supabase.table("study_sessions").select("*").eq("username", normalized).execute()
+        user_data["study_sessions"] = r.data if r.data else []
+        
+        # ----- EVENTS -----
+        r = supabase.table("events").select("*").eq("username", normalized).execute()
+        user_data["events"] = r.data if r.data else []
+        
+        # ----- USER INFO -----
+        r = supabase.table("users").select("username, created_at").eq("username", normalized).execute()
+        user_data["user_info"] = r.data[0] if r.data else {}
+        
+        # Add export metadata
+        user_data["export_metadata"] = {
+            "exported_at": _now_iso(),
+            "username": normalized,
+            "data_types": ["notes", "flashcards", "study_sessions", "events", "user_info"],
+            "total_items": len(user_data["notes"]) + len(user_data["flashcards"]) + 
+                          len(user_data["study_sessions"]) + len(user_data["events"])
+        }
+        
+        return True, "Export successful", user_data
+        
+    except Exception as e:
+        return False, f"Export failed: {str(e)}", {}

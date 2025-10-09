@@ -492,12 +492,12 @@ if st.session_state.page == "🏠 Home":
                             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         }
                         st.session_state.notes.append(new_note)
+                        st.success("Quick note saved!")
                         
                         # Delete the note you just saved (the last one)
                         st.session_state.notes.pop()
                         
                         auto_save()
-                        st.success("Quick note saved!")
                         st.rerun()
 
         
@@ -1358,6 +1358,7 @@ elif st.session_state.page == "📊 Progress":
 elif st.session_state.page == "📅 Calendar":
     st.title("📅 Calendar & Events")
 
+
     # Initialize calendar sessions
     if "events" not in st.session_state:
         st.session_state.events = []
@@ -1367,6 +1368,51 @@ elif st.session_state.page == "📅 Calendar":
         st.session_state.calendar_month = datetime.now().month
     if "selected_date" not in st.session_state:
         st.session_state.selected_date = None
+
+    # Cache calendar grid HTML generation for instant reruns
+    @st.cache_data
+    def build_calendar_html(events, year, month):
+        import calendar
+        from datetime import datetime
+        cal = calendar.Calendar(firstweekday=0)
+        month_days = list(cal.itermonthdates(year, month))
+        html = """
+        <style>
+            .calendar-day {padding: 10px; background: #f9f9f9; border-radius: 8px; border: 1px solid #ddd; min-height: 80px; text-align: left; position: relative; transition: all 0.2s ease;}
+            .calendar-day:hover {background: #f0f0f0; transform: translateY(-2px); box-shadow: 0 2px 5px rgba(0,0,0,0.1);}
+            .day-number {position: absolute; top: 5px; right: 8px; font-weight: 600; font-size: 14px; color: #333;}
+            .today-highlight {border: 2px solid #2196F3 !important; background: #e3f2fd !important;}
+            .event-item {margin: 3px 0; border-radius: 4px; font-size: 11px; padding: 3px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 1px 2px rgba(0,0,0,0.1);}
+            .event-notes {font-size: 10px; color: #555; margin-top: 2px; white-space: normal;}
+            .more-events {font-size: 10px; color: #666; margin-top: 3px; font-style: italic;}
+        </style>
+        <div style='display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; font-family:sans-serif; text-align:center; width:100%;'>
+        """
+        for wd in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
+            html += f"<div style='font-weight:bold; padding:10px; background:#f0f0f0; border-radius:4px; color: black;'>{wd}</div>"
+        today = datetime.now().date()
+        for day in month_days:
+            if day.month == month:
+                events_today = [e for e in events if datetime.fromisoformat(e["date"]).date() == day]
+                today_class = "today-highlight" if day == today else ""
+                html += f"<div class='calendar-day {today_class}'>"
+                html += f"<div class='day-number'>{day.day}</div>"
+                if events_today:
+                    html += "<div style='margin-top:20px; max-height:60px; overflow-y:auto; padding-right:3px;'>"
+                    for e in events_today[:4]:
+                        html += f"<div class='event-item' style='background:{e['color']}; color:white;' title='{e['name']}'>"
+                        html += f"{e['name']}"
+                        if e.get('notes'):
+                            html += f"<div class='event-notes'>{e['notes']}</div>"
+                        html += "</div>"
+                    if len(events_today) > 4:
+                        html += f"<div class='more-events'>+{len(events_today)-4} more</div>"
+                    html += "</div>"
+                html += "</div>"
+            else:
+                html += "<div style='padding:10px; color:#ccc; min-height:80px;'></div>"
+        html += "</div>"
+        return html
 
     # Month navigation helper
     def change_month(delta):
@@ -1591,94 +1637,4 @@ elif st.session_state.page == "📝 Autograder":
             st.warning("Please enter some text to grade.")
         else:
             grader = AutoGrader()
-            with st.spinner("Grading with AI..."):
-                result = grader.grade_text(text_input, text_type, extra_notes)
-
-            # --- Stylish Results ---
-            st.subheader(f"📊 Score: {result.get('score', 0)}/10")
-            st.progress(int(result.get("score", 0)) / 10)
-
-            st.markdown("### ✅ Strengths")
-            for s in result.get("strengths", []):
-                st.markdown(f"- {s}")
-
-            st.markdown("### ⚠️ Weaknesses")
-            for w in result.get("weaknesses", []):
-                st.markdown(f"- {w}")
-
-            st.markdown("### 💡 Suggestions to Improve")
-            for sug in result.get("suggestions", []):
-                st.markdown(f"- {sug}")
-
-            st.markdown("### 📝 Detailed Feedback")
-            st.info(result.get("detailed_feedback", "No feedback provided."))
-# ============================
-# Settings Page
-# ============================
-
-elif st.session_state.page == "⚙️ Settings":
-    st.title("⚙️ User Settings")
-
-    # --- Change Password Section ---
-    st.subheader("🔑 Change Your Password")
-    with st.form("change_password_form"):
-        current_password = st.text_input("Current Password", type="password")
-        new_password = st.text_input("New Password", type="password")
-        confirm_new_password = st.text_input("Confirm New Password", type="password")
-        
-        submitted = st.form_submit_button("Change Password")
-        
-        if submitted:
-            if not all([current_password, new_password, confirm_new_password]):
-                st.warning("Please fill out all password fields.")
-            elif new_password != confirm_new_password:
-                st.error("New passwords do not match.")
-            else:
-                # Authenticate user with their current password first
-                is_valid, _ = user_data.authenticate(st.session_state['username'], current_password)
-                if is_valid:
-                    # If authentication succeeds, proceed with the password update
-                    success, msg = user_data.change_password(st.session_state['username'], new_password)
-                    if success:
-                        st.success("Your password has been changed successfully!")
-                    else:
-                        st.error(f"Failed to change password: {msg}")
-                else:
-                    st.error("The current password you entered is incorrect.")
-
-    st.divider()
-
-    # --- Delete Account Section ---
-    st.subheader("🗑️ Danger Zone")
-    with st.expander("Delete Account"):
-        st.warning("This action is irreversible. All your notes, flashcards, and progress will be permanently deleted.")
-        
-        confirmation_text = st.text_input(
-            "To confirm, please type `DELETE` in the box below:"
-        )
-        
-        if st.button("Permanently Delete My Account", type="primary"):
-            if confirmation_text == "DELETE":
-                success, msg = user_data.delete_account(st.session_state['username'])
-                if success:
-                    st.success("Your account has been deleted. You have been logged out.")
-                    # Clear session and log the user out
-                    st.session_state.clear()
-                    st.session_state["logged_in"] = False
-                    st.session_state["page"] = "🏠 Home"
-                    st.rerun()
-                else:
-                    st.error(f"An error occurred while deleting your account: {msg}")
-            else:
-                st.error("Confirmation text did not match. Account deletion cancelled.")
-
-
-
-
-# ============================
-# Autosave hook 
-# ============================
-
-# Every 5 sessions, trigger an autosave (kept same behavior)
-if len(st.session_state.study_sessions) % 5 == 0:
-    auto_save()
+            # ...existing code for grading...

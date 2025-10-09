@@ -411,25 +411,6 @@ if st.session_state.page == "🏠 Home":
         col_left, col_right = st.columns([2, 1])
         
         with col_left:
-            # Quick actions
-            st.markdown('<h3 style="color: white; margin-bottom: 20px;">⚡ Quick Actions</h3>', unsafe_allow_html=True)
-            action_col1, action_col2, action_col3 = st.columns(3)
-            
-            with action_col1:
-                if st.button("📝 New Note", use_container_width=True, key="quick_note"):
-                    st.session_state.page = "📝 Notes"
-                    st.rerun()
-            
-            with action_col2:
-                if st.button("📚 Flashcards", use_container_width=True, key="quick_flashcards"):
-                    st.session_state.page = "📚 Flashcards"
-                    st.rerun()
-                    
-            with action_col3:
-                if st.button("🧠 Quiz", use_container_width=True, key="quick_quiz"):
-                    st.session_state.page = "🧠 Quizzes"
-                    st.rerun()
-            
             # Recent activity
             st.markdown("---")
             st.markdown('<h3 style="color: white; margin-bottom: 20px;">📅 Recent Activity</h3>', unsafe_allow_html=True)

@@ -1637,4 +1637,24 @@ elif st.session_state.page == "📝 Autograder":
             st.warning("Please enter some text to grade.")
         else:
             grader = AutoGrader()
-            # ...existing code for grading...
+            with st.spinner("Grading with AI..."):
+                result = grader.grade_text(text_input, text_type, extra_notes)
+
+            # --- Stylish Results ---
+            st.subheader(f"📊 Score: {result.get('score', 0)}/10")
+            st.progress(int(result.get("score", 0)) / 10)
+
+            st.markdown("### ✅ Strengths")
+            for s in result.get("strengths", []):
+                st.markdown(f"- {s}")
+
+            st.markdown("### ⚠️ Weaknesses")
+            for w in result.get("weaknesses", []):
+                st.markdown(f"- {w}")
+
+            st.markdown("### 💡 Suggestions to Improve")
+            for sug in result.get("suggestions", []):
+                st.markdown(f"- {sug}")
+
+            st.markdown("### 📝 Detailed Feedback")
+            st.info(result.get("detailed_feedback", "No feedback provided."))

@@ -1,4 +1,4 @@
-# Author: Victor
+D# Author: Victor
 # Page name: app.py
 # Page purpose: Main app file for the AI Study Platform using Streamlit
 # Date of creation: 2025-10-10
@@ -29,7 +29,7 @@ from advanced_quiz_system import AdvancedQuizSystem
 from data_import_export import DataImportExport
 from utils import sanitize_filename
 from autograder import AutoGrader
-from data_persistence import 
+from data_persistence import DataPersistence
 
 
 

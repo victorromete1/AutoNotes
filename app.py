@@ -139,7 +139,6 @@ def get_generators():
         'flashcards': FlashcardGenerator(),
         'quiz': QuizGenerator(),
         'progress': ProgressTracker(),
-        'pdf': PDFReportGenerator()
     }
 
 @st.cache_resource

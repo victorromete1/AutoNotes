@@ -1,4 +1,4 @@
-D# Author: Victor
+# Author: Victor
 # Page name: app.py
 # Page purpose: Main app file for the AI Study Platform using Streamlit
 # Date of creation: 2025-10-10
